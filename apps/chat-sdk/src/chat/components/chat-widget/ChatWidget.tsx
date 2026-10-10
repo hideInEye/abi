@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { ConfigProvider, Popover, Table, Typography, message as antdMessage, theme as antdTheme } from 'antd'
+import { ConfigProvider, Dropdown, Popover, Table, Typography, message as antdMessage, theme as antdTheme } from 'antd'
 import { ApiOutlined, CheckOutlined, EyeOutlined, RightOutlined, SearchOutlined, ToolOutlined } from '@ant-design/icons'
 import zhCN from 'antd/es/locale/zh_CN'
 import { format as formatSql } from 'sql-formatter'
@@ -51,7 +51,10 @@ import {
   fetchHistory,
   fetchMaxRound,
   fetchSemanticDetail,
+  fetchSessionList,
   fetchViewContextByRound,
+  deleteSession,
+  updateSession,
   parseAiRaw,
   saveShareTheme,
   sendChatStream,
@@ -61,11 +64,13 @@ import {
   type WidgetSemanticNode,
   type WidgetSemanticSelection,
   type WidgetSession,
+  type WidgetSessionItem,
 } from './service'
 import type { AssistantBoundMcp, AssistantBoundSkill } from '../../pages/chat/workshop/assistantResources'
 import { ChartThemeContext, useChartTheme } from './ChartThemeContext'
 import { useTweenedChartStyle } from './useTweenedChartStyle'
 import ThemeCustomizer from './ThemeCustomizer'
+import HistoryDrawer from './HistoryDrawer'
 import {
   chartStyleFromConfig,
   DEFAULT_THEME,
@@ -138,6 +143,24 @@ const WIDGET_CHART_TYPES: Array<{ value: string; label: string }> = [
 
 const isValidChartType = (t: unknown): boolean =>
   typeof t === 'string' && WIDGET_CHART_TYPES.some((i) => i.value === t)
+
+/** 历史 AI 消息结构化解析（剥离思考段/尾部 JSON）；view 消息挂来的图表按白名单校正类型（初始化与切换会话共用） */
+const enrichHistoryMessages = (history: WidgetMessage[]): WidgetMessage[] =>
+  history.map((m) => {
+    if (m.role !== 'ai') return m
+    const { thinking, text } = parseAiRaw(m.content)
+    const chart = m.chart && !isValidChartType(m.chart.type) ? { ...m.chart, type: 'response_bar_chart' } : m.chart
+    // ai 内容无正文字段时回退 view 消息 desc（同主对话 ViewEle 正文口径）；信息条取 view 的 semantic_*
+    return {
+      ...m,
+      thinking: thinking || undefined,
+      content: text || chart?.desc || '',
+      chart,
+      semanticGroup: chart?.semanticGroup,
+      semanticName: chart?.semanticName,
+      semanticSchemaId: chart?.semanticSchemaId,
+    }
+  })
 
 /** 流内/查数 JSON 的语义元信息 → 消息信息条字段（同主对话 extractSemanticMeta 口径）；schemaId 供 chip 点击开 Schema 抽屉 */
 const semanticMetaOf = (json: any): Pick<WidgetMessage, 'semanticGroup' | 'semanticName' | 'semanticSchemaId'> => ({
@@ -219,6 +242,31 @@ const IconCustomize = (
     <line x1="1" y1="14" x2="7" y2="14" />
     <line x1="9" y1="8" x2="15" y2="8" />
     <line x1="17" y1="16" x2="23" y2="16" />
+  </svg>
+)
+
+/* 头部“更多”入口图标（竖向三点） */
+const IconMore = (
+  <svg viewBox="0 0 24 24" fill="currentColor">
+    <circle cx="12" cy="5" r="2" />
+    <circle cx="12" cy="12" r="2" />
+    <circle cx="12" cy="19" r="2" />
+  </svg>
+)
+
+/* 更多菜单“历史对话”图标（时钟） */
+const IconHistory = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="9" />
+    <polyline points="12 7 12 12 15 14" />
+  </svg>
+)
+
+/* 更多菜单“关闭页面”图标（叉） */
+const IconClose = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
   </svg>
 )
 
@@ -575,6 +623,12 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
   // 外观自定义抽屉开合与保存中态
   const [customizerOpen, setCustomizerOpen] = useState(false)
   const [savingTheme, setSavingTheme] = useState(false)
+  // 历史对话抽屉：开合态与会话列表（打开时拉列表，点列表项切换会话）
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [historySessions, setHistorySessions] = useState<WidgetSessionItem[]>([])
+  const [historyLoading, setHistoryLoading] = useState(false)
+  // 头部更多下拉开合（自定义面板内点击项后手动关闭）
+  const [moreOpen, setMoreOpen] = useState(false)
   // 生效配置：预设基准 + 宿主注入 + 接口下发 + 访客本地（后者覆盖前者）；CSS 仅叠 override 保 blue 零风险，图表取完整值
   const themeOverride = useMemo(() => mergeThemeOverride(initialThemeConfig, apiThemeConfig, customConfig), [initialThemeConfig, apiThemeConfig, customConfig])
   const fullThemeConfig = useMemo(() => resolveFullConfig(effectiveTheme, themeOverride), [effectiveTheme, themeOverride])
@@ -692,24 +746,7 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
       setConvSession(session)
       if (session) {
         const history = await fetchHistory(effectiveCfg, session.convUid)
-        // 历史 AI 消息同实时一样结构化解析（剥离思考段/尾部 JSON）；view 消息挂来的图表按白名单校正类型
-        // 图表数据仅取 view 消息自带结果行（同主对话历史链路不重查 sql）
-        const enriched = history.map((m) => {
-          if (m.role !== 'ai') return m
-          const { thinking, text } = parseAiRaw(m.content)
-          const chart = m.chart && !isValidChartType(m.chart.type) ? { ...m.chart, type: 'response_bar_chart' } : m.chart
-          // ai 内容无正文字段时回退 view 消息 desc（同主对话 ViewEle 正文口径）；信息条取 view 的 semantic_*
-          return {
-            ...m,
-            thinking: thinking || undefined,
-            content: text || chart?.desc || '',
-            chart,
-            semanticGroup: chart?.semanticGroup,
-            semanticName: chart?.semanticName,
-            semanticSchemaId: chart?.semanticSchemaId,
-          }
-        })
-        setMessages(enriched)
+        setMessages(enrichHistoryMessages(history))
       }
       setPhase('ready')
     },
@@ -1242,22 +1279,6 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
     window.addEventListener('pointerup', onUp)
   }
 
-  // 自定义抽屉打开时临时加宽面板：抽屉占位 340px，给左侧留出预览区，避免取色时看不到实时效果
-  useEffect(() => {
-    const el = panelRef.current
-    if (!el) return
-    const shouldWiden = customizerOpen && mode !== 'embed' && !maximized
-    if (shouldWiden) {
-      if (el.getBoundingClientRect().width < 760) {
-        el.dataset.cwPrevWidth = el.style.width
-        el.style.width = '760px'
-      }
-    } else if (el.dataset.cwPrevWidth !== undefined) {
-      el.style.width = el.dataset.cwPrevWidth
-      delete el.dataset.cwPrevWidth
-    }
-  }, [customizerOpen, mode, maximized])
-
   // 预设切换：记忆到 localStorage 并清空本地自定义（回到该预设的干净基准）
   const handlePresetChange = (id: ThemeId) => {
     setUserTheme(id)
@@ -1322,6 +1343,75 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
     panel.style.maxHeight = 'none'
     panel.style.transform = 'none'
     setMaximized(true)
+  }
+
+  // 拉历史会话列表（抽屉打开时静默刷新；接口失败展示空态不阻断）
+  const loadHistorySessions = useCallback(async () => {
+    if (!appId) return
+    setHistoryLoading(true)
+    const list = await fetchSessionList(cfg, appId, info?.spaceId)
+    setHistorySessions(list)
+    setHistoryLoading(false)
+  }, [appId, cfg, info?.spaceId])
+
+  // 点击历史对话：切换到该会话（中断当前流、清空时间线、重拉历史；探索/报告 hook 随 conv 变化自行清空）
+  const handleSwitchSession = async (item: WidgetSessionItem) => {
+    setHistoryOpen(false)
+    if (item.sessionId === sessionRef.current?.sessionId) return
+    abortRef.current?.abort()
+    abortRef.current = null
+    setSending(false)
+    const session: WidgetSession = { sessionId: item.sessionId, convUid: item.convUid, dbName: item.dbName }
+    sessionRef.current = session
+    setConvSession(session)
+    setMessages([])
+    setActiveExploreId(undefined)
+    userScrolledRef.current = false
+    lastBodyScrollTopRef.current = 0
+    const history = await fetchHistory(cfg, session.convUid)
+    // 守卫：await 期间用户又切了会话，丢弃过期结果
+    if (sessionRef.current?.sessionId !== session.sessionId) return
+    setMessages(enrichHistoryMessages(history))
+  }
+
+  // 重命名会话：成功后刷新列表；失败返回 false 保留抽屉行内编辑态
+  const handleRenameSession = async (item: WidgetSessionItem, title: string) => {
+    const ok = await updateSession(cfg, { sessionId: item.sessionId, title, spaceId: info?.spaceId })
+    if (ok) void loadHistorySessions()
+    else antdMessage.error('重命名失败')
+    return ok
+  }
+
+  // 置顶/取消置顶：sortOrder>0 表示置顶，新置顶取当前最大值+1（同主对话侧栏口径）
+  const handleToggleTopSession = async (item: WidgetSessionItem) => {
+    const maxSort = historySessions.reduce((m, s) => Math.max(m, s.sortOrder ?? 0), 0)
+    const ok = await updateSession(cfg, {
+      sessionId: item.sessionId,
+      sortOrder: (item.sortOrder ?? 0) > 0 ? 0 : maxSort + 1,
+      spaceId: info?.spaceId,
+    })
+    if (ok) void loadHistorySessions()
+    else antdMessage.error('操作失败')
+  }
+
+  // 删除会话：成功后刷新列表；删的是当前会话则新建会话回到开场态（同初始化链路）
+  const handleDeleteSession = async (item: WidgetSessionItem) => {
+    const ok = await deleteSession(cfg, { sessionId: item.sessionId, convUid: item.convUid })
+    if (!ok) {
+      antdMessage.error('删除失败')
+      return
+    }
+    void loadHistorySessions()
+    if (item.sessionId === sessionRef.current?.sessionId) {
+      abortRef.current?.abort()
+      abortRef.current = null
+      setSending(false)
+      setMessages([])
+      setActiveExploreId(undefined)
+      const session = await ensureSession(cfg, appId, info?.spaceId)
+      sessionRef.current = session
+      setConvSession(session)
+    }
   }
 
   // 点击信息条语义 chip：窗体自动放大，Schema 详情抽屉在面板内右侧滑出（同主对话 openSchemaModal 链路）
@@ -1550,17 +1640,6 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
           <span className="abi-cw-header-name" title={info?.name || '助手'}>
             AI {info?.name ? `· ${info.name}` : '智能问答'}
           </span>
-          {showThemeSwitch && (
-            <button
-              type="button"
-              className="abi-cw-action-btn"
-              onClick={() => setCustomizerOpen(true)}
-              aria-label="外观自定义"
-              title="外观自定义"
-            >
-              {IconCustomize}
-            </button>
-          )}
           {mode !== 'embed' && (
             <button
               type="button"
@@ -1572,14 +1651,61 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
               {maximized ? IconCompress : IconExpand}
             </button>
           )}
-          {mode === 'float' && onClose && (
-            <button type="button" className="abi-cw-action-btn" onClick={onClose} aria-label="关闭">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
+          {/* 更多菜单：历史对话/主题设置/关闭页面（自定义面板，不收 antd Menu 内部结构约束） */}
+          <Dropdown
+            trigger={['click']}
+            placement="bottomRight"
+            open={moreOpen}
+            onOpenChange={setMoreOpen}
+            getPopupContainer={() => panelRef.current as HTMLElement}
+            overlayClassName="abi-cw-menu"
+            dropdownRender={() => (
+              <div className="abi-cw-menu-panel">
+                <button
+                  type="button"
+                  className="abi-cw-menu-item"
+                  onClick={() => {
+                    setMoreOpen(false)
+                    setHistoryOpen(true)
+                    void loadHistorySessions()
+                  }}
+                >
+                  {IconHistory}
+                  <span>历史对话</span>
+                </button>
+                {showThemeSwitch && (
+                  <button
+                    type="button"
+                    className="abi-cw-menu-item"
+                    onClick={() => {
+                      setMoreOpen(false)
+                      setCustomizerOpen(true)
+                    }}
+                  >
+                    {IconCustomize}
+                    <span>主题设置</span>
+                  </button>
+                )}
+                {mode === 'float' && onClose && (
+                  <button
+                    type="button"
+                    className="abi-cw-menu-item"
+                    onClick={() => {
+                      setMoreOpen(false)
+                      onClose()
+                    }}
+                  >
+                    {IconClose}
+                    <span>关闭页面</span>
+                  </button>
+                )}
+              </div>
+            )}
+          >
+            <button type="button" className="abi-cw-action-btn" aria-label="更多" title="更多">
+              {IconMore}
             </button>
-          )}
+          </Dropdown>
         </div>
 
         <div className="abi-cw-body" ref={bodyRef} onScroll={handleBodyScroll}>
@@ -1946,7 +2072,21 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
           getContainer={() => panelRef.current as HTMLElement}
         />
 
-        {/* 外观自定义抽屉：挂载到面板内，实时预览背景/标题栏/字体/图表 */}
+        {/* 历史对话抽屉：挂载到面板内左侧滑出（最近对话列表，点击切换会话） */}
+        <HistoryDrawer
+          open={historyOpen}
+          loading={historyLoading}
+          sessions={historySessions}
+          activeSessionId={convSession?.sessionId}
+          getContainer={() => panelRef.current as HTMLElement}
+          onSelect={(item) => void handleSwitchSession(item)}
+          onRename={handleRenameSession}
+          onToggleTop={(item) => void handleToggleTopSession(item)}
+          onDelete={(item) => void handleDeleteSession(item)}
+          onClose={() => setHistoryOpen(false)}
+        />
+
+        {/* 外观自定义弹窗：挂载到面板内（abi 数据源编辑弹窗同款形态：右侧滑出、带遮罩） */}
         <ThemeCustomizer
           open={customizerOpen}
           value={fullThemeConfig}

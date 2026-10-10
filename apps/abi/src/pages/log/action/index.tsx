@@ -42,6 +42,7 @@ export function Component() {
       pageNum: 1,
       pageSize: 10,
       operName: '',
+      searchValue: '',
       title: '',
       businessType: '',
       operIp: '',

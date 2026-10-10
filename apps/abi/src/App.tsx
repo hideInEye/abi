@@ -1,5 +1,6 @@
 import { RouterProvider } from '@sa/simple-router';
 import { useUpdateEffect } from 'ahooks';
+import { App as AntdApp } from 'antd';
 import type { WatermarkProps } from 'antd';
 
 import { router } from '@/router';
@@ -67,19 +68,22 @@ const App = () => {
       renderEmpty={componentName => (componentName === 'Table' ? <TableEmpty /> : undefined)}
       theme={antdTheme}
     >
-      <AppProvider>
-        {themeSettings.watermark.visible ? (
-          <AWatermark
-            className="h-full"
-            content={themeSettings.watermark.text || 'Soybean'}
-            {...watermarkProps}
-          >
-            {appContent}
-          </AWatermark>
-        ) : (
-          <div className="h-full">{appContent}</div>
-        )}
-      </AppProvider>
+      {/* 页面里 App.useApp() 依赖 antd App 上下文，缺失时 modal/message 是空对象，confirm 会抛错且无任何反应 */}
+      <AntdApp component={false}>
+        <AppProvider>
+          {themeSettings.watermark.visible ? (
+            <AWatermark
+              className="h-full"
+              content={themeSettings.watermark.text || 'Soybean'}
+              {...watermarkProps}
+            >
+              {appContent}
+            </AWatermark>
+          ) : (
+            <div className="h-full">{appContent}</div>
+          )}
+        </AppProvider>
+      </AntdApp>
     </AConfigProvider>
   );
 };

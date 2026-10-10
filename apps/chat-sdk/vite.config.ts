@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath, URL } from 'node:url'
 
@@ -7,7 +7,6 @@ import tailwindcss from 'tailwindcss'
 import { defineConfig, type Plugin } from 'vite'
 
 const OUTPUT_NAME = 'abi-assistant-widget'
-const ARTIFACTS = [`${OUTPUT_NAME}.js`, `${OUTPUT_NAME}.css`]
 
 const GLOBAL_CSS = 'src/chat/index.css'
 const SCOPE = ':where(.abi-cw-root)'
@@ -40,29 +39,7 @@ function scopeGlobalCss(): PostcssPlugin {
   }
 }
 
-/** 构建产物同步到 chat/public，使 Chat 正常构建即可对外提供 JS + CSS */
-function copyArtifacts(): Plugin {
-  return {
-    name: 'abi-widget-copy-artifacts',
-    apply: 'build',
-    closeBundle() {
-      const rootDir = fileURLToPath(new URL('.', import.meta.url))
-      const distDir = path.join(rootDir, 'dist')
-
-      const targetDir = fileURLToPath(new URL('../chat/public', import.meta.url))
-      if (!existsSync(targetDir)) return
-
-      mkdirSync(targetDir, { recursive: true })
-      for (const file of ARTIFACTS) {
-        const src = path.join(distDir, file)
-        if (existsSync(src)) copyFileSync(src, path.join(targetDir, file))
-      }
-    },
-  }
-}
-
 // lib 模式不打包 index.html，产物目录缺入口文件时 nginx 直接 403；这里补一个生产调试页支持整目录独立部署。
-// 只写 dist 不同步 chat/public，避免覆盖 Chat 自身的 index.html。
 const STANDALONE_PAGE = `<!doctype html>
 <html lang="zh-CN">
   <head>
@@ -154,7 +131,7 @@ export default defineConfig({
       plugins: [tailwindcss, scopeGlobalCss()],
     },
   },
-  plugins: [copyArtifacts(), emitStandalonePage()],
+  plugins: [emitStandalonePage()],
   // 仅 dev：调试页 base="/api" 时转发到网关，保持同源免 CORS
   server: {
     port: 5199,

@@ -1,4 +1,5 @@
-import { Collapse, ColorPicker, ConfigProvider, Drawer, Segmented, Select, Slider, theme as antdTheme } from 'antd'
+import { BgColorsOutlined, CloseOutlined } from '@ant-design/icons'
+import { Collapse, ColorPicker, ConfigProvider, Drawer, Segmented, Select, Slider } from 'antd'
 import zhCN from 'antd/es/locale/zh_CN'
 import { useRef, type ReactNode } from 'react'
 
@@ -66,7 +67,7 @@ function SliderRow({ label, min, max, value, unit, onChange }: { label: string; 
         <Slider className={styles.slider} min={min} max={max} step={1} value={value} onChange={onChange} />
         <span className={styles.metric}>
           {value}
-          {unit}
+          {unit} 
         </span>
       </div>
     </Row>
@@ -77,7 +78,7 @@ export interface ThemeCustomizerProps {
   open: boolean
   /** 面板表单当前值（完整配置，由预设基准 + override 合成） */
   value: ThemeConfig
-  /** 当前预设基准（决定 antd 明暗算法与预设 chip 高亮） */
+  /** 当前预设基准（决定预设 chip 高亮） */
   preset: ThemeId
   saving?: boolean
   getContainer: () => HTMLElement
@@ -88,7 +89,7 @@ export interface ThemeCustomizerProps {
   onClose: () => void
 }
 
-/** 悬浮窗外观自定义抽屉：背景/标题栏/字体/图表四维，实时预览，保存回传后端 */
+/** 外观自定义弹窗：挂载在悬浮窗面板内（abi 数据源编辑弹窗同款形态：右侧滑出、带遮罩、宽度随视口自适应），背景/标题栏/字体/图表四维，保存回传后端 */
 export default function ThemeCustomizer({ open, value, preset, saving, getContainer, onChange, onPresetChange, onSave, onReset, onClose }: ThemeCustomizerProps) {
   // 取色/下拉弹层挂到抽屉内容节点：跟随抽屉滚动，也不会漂回面板其它位置
   const popupHostRef = useRef<HTMLDivElement>(null)
@@ -195,26 +196,35 @@ export default function ThemeCustomizer({ open, value, preset, saving, getContai
     <ConfigProvider
       locale={zhCN}
       theme={{
-        algorithm: preset === 'dark' ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
         components: { Collapse: { headerBg: 'transparent', contentBg: 'transparent', contentPadding: 0 } },
       }}
     >
       <Drawer
         open={open}
         onClose={onClose}
-        /* 不用遮罩：压暗面板会看不清取色实时预览，定制期间面板保持可读可操作 */
-        mask={false}
         getContainer={getContainer}
         /* 抽屉嵌在面板内：根节点改绝对定位，否则 rc-drawer 默认 fixed 会铺满视口 */
         rootStyle={{ position: 'absolute' }}
+        /* 同数据源编辑弹窗：右侧滑出、带遮罩；宽度按面板视口自适应（约六成、上限 736、下限 320），窄悬浮窗不铺满 */
         placement="right"
-        width={340}
-        title="外观自定义"
-        /* 弹窗配色只由 .drawer/.drawerDark 的局部变量决定，与面板自定义色完全隔离 */
-        rootClassName={`${styles.drawer} ${preset === 'dark' ? styles.drawerDark : ''}`}
+        width="clamp(320px, 60%, 736px)"
+        /* 同 abi CommonDrawer：关闭按钮放 extra，不用 antd 默认 closable */
+        closable={false}
+        closeIcon={null}
+        title={
+          <div className={styles.drawerTitle}>
+            <span className={styles.drawerTitleIcon}>
+              <BgColorsOutlined />
+            </span>
+            <span className={styles.drawerTitleText}>外观自定义</span>
+          </div>
+        }
+        extra={<CloseOutlined className={styles.drawerClose} onClick={onClose} />}
+        /* 弹窗配色只由 .drawer 的局部变量决定，与面板自定义色完全隔离 */
+        rootClassName={styles.drawer}
         styles={{
-          body: { padding: '4px 16px 16px', overflowY: 'auto' },
-          footer: { padding: '10px 16px' },
+          body: { padding: '16px 28px 24px', overflowY: 'auto' },
+          footer: { padding: 0 },
         }}
         footer={
           <div className={styles.footer}>
@@ -236,7 +246,7 @@ export default function ThemeCustomizer({ open, value, preset, saving, getContai
               </button>
             ))}
           </div>
-          <p className={styles.hint}>预设决定整体明暗与主色，下方各项在预设基础上微调，实时预览。</p>
+          <p className={styles.hint}>预设决定整体明暗与主色，下方各项在预设基础上微调。</p>
           <Collapse
             ghost
             defaultActiveKey={['bg']}

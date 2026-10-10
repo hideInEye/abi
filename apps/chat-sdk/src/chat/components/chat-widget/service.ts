@@ -59,6 +59,18 @@ export interface WidgetAssistantInfo {
   spaceId?: number | string
 }
 
+/** 历史会话列表项（历史对话抽屉：标题 + 会话标识；dbName 后端未下发时为空） */
+export interface WidgetSessionItem {
+  sessionId: string
+  convUid: string
+  title: string
+  dbName?: string
+  /** 更新时间（ms）：抽屉按今天/昨天/7天内/更早分组；缺失归“更早” */
+  updatedAt?: number
+  /** 置顶排序值（>0 表示置顶，值越大越靠前；同主对话侧栏口径） */
+  sortOrder?: number
+}
+
 /** 数据语义节点（助手详情下发绑定语义：仅 schema 叶子，无分组节点） */
 export interface WidgetSemanticNode {
   id: string | number
@@ -90,6 +102,11 @@ const API = {
   // 自定义主题配置保存（提案契约，后端最终路径待定，改动集中于此）
   saveShareTheme: '/dashboard/api/v1/project/saveShareTheme',
   sessionAdd: '/abi-chat/v1/app/session/add',
+  // 历史会话列表（同主对话侧栏 session/list；分享场景靠 token 识别用户，appId 隔离助手会话）
+  sessionList: '/abi-chat/v1/app/session/list',
+  // 会话更新（重命名/置顶 sortOrder）与会话删除（后端会话+消息一次删）
+  sessionUpdate: '/abi-chat/v1/app/session/update',
+  sessionDelete: '/abi-chat/v1/app/session/delete',
   messageQuery: '/abi-chat/v1/app/message/query',
   completions: '/chat-proxy/api/v2/workflow/chat/completions',
   // 以下三个与主对话同接口（网关路径一致），供图表数据/轮次/点赞点踩使用
@@ -315,6 +332,64 @@ export function parseRecQuery(raw: unknown): string[] {
     return Array.isArray(parsed) ? parsed.map((q) => String(q)).filter(Boolean) : []
   } catch {
     return []
+  }
+}
+
+/** 查询当前助手的历史会话列表（倒序由后端保证）；失败返回空列表不阻断抽屉展示 */
+export async function fetchSessionList(cfg: WidgetConfig, appId: string, spaceId?: number | string): Promise<WidgetSessionItem[]> {
+  try {
+    const json = await postJson(cfg, API.sessionList, {
+      appId: Number(appId) || 0,
+      spaceId: spaceId ?? undefined,
+    })
+    if (!isOk(json)) return []
+    const list = json?.data?.data ?? json?.data ?? []
+    if (!Array.isArray(list)) return []
+    return list
+      .map((it: any) => {
+        const sessionId = it?.sessionId ?? it?.session_id ?? it?.chat_id ?? it?.chatId
+        const convUid = it?.convUid ?? it?.conv_uid
+        const dbName = it?.dbName ?? it?.db_name
+        const rawTime = it?.update_time ?? it?.updateTime ?? it?.create_time ?? it?.createTime
+        const parsedTime = typeof rawTime === 'number' ? rawTime : rawTime ? Date.parse(String(rawTime)) : NaN
+        return {
+          sessionId: sessionId ? String(sessionId) : '',
+          convUid: convUid ? String(convUid) : '',
+          title: String(it?.title ?? it?.biz_name ?? '新建对话'),
+          dbName: dbName ? String(dbName) : undefined,
+          updatedAt: Number.isFinite(parsedTime) ? parsedTime : undefined,
+          sortOrder: Number(it?.sortOrder ?? it?.sort_order) || 0,
+        }
+      })
+      .filter((it: WidgetSessionItem) => it.sessionId && it.convUid)
+  } catch {
+    return []
+  }
+}
+
+/** 更新会话（重命名 title / 置顶 sortOrder，仅传需要改的字段避免覆盖）；返回是否成功 */
+export async function updateSession(
+  cfg: WidgetConfig,
+  params: { sessionId: string; title?: string; sortOrder?: number; spaceId?: number | string },
+): Promise<boolean> {
+  try {
+    const body: Record<string, unknown> = { sessionId: params.sessionId, spaceId: params.spaceId ?? undefined }
+    if (params.title !== undefined) body.title = params.title
+    if (params.sortOrder !== undefined) body.sortOrder = params.sortOrder
+    const json = await postJson(cfg, API.sessionUpdate, body)
+    return isOk(json)
+  } catch {
+    return false
+  }
+}
+
+/** 删除会话（后端会话与消息一次删）；返回是否成功 */
+export async function deleteSession(cfg: WidgetConfig, params: { sessionId: string; convUid: string }): Promise<boolean> {
+  try {
+    const json = await postJson(cfg, API.sessionDelete, { sessionId: params.sessionId, convUid: params.convUid })
+    return isOk(json)
+  } catch {
+    return false
   }
 }
 

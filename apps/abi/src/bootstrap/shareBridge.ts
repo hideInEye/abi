@@ -9,9 +9,9 @@ function loadAssistantSdk(): Promise<void> {
   const stylesheet = document.createElement('link')
   stylesheet.id = 'abi-assistant-widget-styles'
   stylesheet.rel = 'stylesheet'
-  stylesheet.href = `/chat-ui/abi-assistant-widget.css?v=${WIDGET_VERSION}`
+  stylesheet.href = `/chat-sdk/abi-assistant-widget.css?v=${WIDGET_VERSION}`
   const script = document.createElement('script')
-  script.src = `/chat-ui/abi-assistant-widget.js?v=${WIDGET_VERSION}`
+  script.src = `/chat-sdk/abi-assistant-widget.js?v=${WIDGET_VERSION}`
   script.async = true
 
   const load = (element: HTMLLinkElement | HTMLScriptElement) => new Promise<void>((resolve, reject) => {

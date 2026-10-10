@@ -77,8 +77,8 @@ const AssistantShareModal: React.FC<Props> = ({ agent, open, onClose, onShared, 
         projectId: agent.id,
         spaceId: spaceId || 0,
         type: 'workflow',
-        theme,
-        ...(apiKeys.length ? { apiKeys } : {}),
+        // 每个 API Key 一组配置，主题 UI 配置随组下发（JSON 字符串）
+        configs: apiKeys.map((apiKey) => ({ uiConfig: JSON.stringify({ theme }), apiKey })),
         ...(expirationDays !== undefined ? { expirationDays } : {}),
         ...(expirationDateStr ? { expirationDate: expirationDateStr } : {}),
       })

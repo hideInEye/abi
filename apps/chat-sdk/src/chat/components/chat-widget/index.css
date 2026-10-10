@@ -161,6 +161,55 @@
   user-select: none;
 }
 
+/* 头部更多菜单浮层：自定义面板（不用 antd Menu 内部结构），图标 15px + 文案单行 */
+.abi-cw-menu-panel {
+  min-width: 128px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--cw-surface, #fff);
+  border: 1px solid var(--cw-border, #e9edf4);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(26, 39, 68, 0.12);
+}
+
+.abi-cw-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--cw-text, #333);
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.abi-cw-menu-item:hover {
+  background: rgba(91, 124, 247, 0.08);
+  color: #5b7cf7;
+}
+
+.abi-cw-menu-item svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+/* 更多菜单危险项（删除二次确认臂入态） */
+.abi-cw-menu-item-danger {
+  color: #e5484d;
+}
+
+.abi-cw-menu-item-danger:hover {
+  background: rgba(229, 72, 77, 0.08);
+  color: #e5484d;
+}
+
 .abi-cw-header-logo {
   flex-shrink: 0;
   width: 28px;

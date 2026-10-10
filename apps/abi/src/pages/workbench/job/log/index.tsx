@@ -35,6 +35,7 @@ export function Component() {
   const { t } = useTranslation();
   const route = useRoute();
   const [viewJobLogId, setViewJobLogId] = useState('');
+  const [jumpValue, setJumpValue] = useState('');
   const [triggerMsgModal, setTriggerMsgModal] = useState<{ open: boolean; text: string }>({ open: false, text: '' });
   // 日志清理弹层：回显清理范围的执行器/任务 + 清理方式九选一；scope 为单条记录清理时的范围覆盖
   const [cleanModal, setCleanModal] = useState<{ groupText: string; jobText: string; open: boolean; scope?: { jobGroup?: any; jobId?: any }; type: number }>({ groupText: '全部', jobText: '全部', open: false, type: 1 });
@@ -457,8 +458,9 @@ export function Component() {
           <div className="data-source-pagination">
             {(() => {
               const pag = tableProps.pagination as any;
-              const current = pag?.current || 1;
-              const pageSizeVal = pag?.pageSize || 12;
+              // pagination.current 读的是 searchParams.current.current，与 onChange 写入的 pageNum 不对应，故直接从 searchParams 取当前页
+              const current = searchParams.current?.pageNum || 1;
+              const pageSizeVal = searchParams.current?.pageSize || 12;
               const totalVal = pag?.total || 0;
               const totalPages = Math.max(1, Math.ceil(totalVal / pageSizeVal));
               const onChange = pag?.onChange;
@@ -481,6 +483,23 @@ export function Component() {
                     <button className="page-btn" disabled={current === 1} onClick={() => onChange?.(current - 1, pageSizeVal)}><LeftOutlined /></button>
                     {pages.map(p => p < 0 ? <span key={p} className="page-item page-ellipsis">...</span> : <span key={p} className={`page-item${p === current ? ' page-active' : ''}`} onClick={() => onChange?.(p, pageSizeVal)}>{p}</span>)}
                     <button className="page-btn" disabled={current >= totalPages} onClick={() => onChange?.(current + 1, pageSizeVal)}><RightOutlined /></button>
+                    <span className="quick-jumper">
+                      前往
+                      <AInput
+                        className="jump-input"
+                        style={{ width: 48, textAlign: 'center' }}
+                        value={jumpValue}
+                        onChange={(e) => setJumpValue(e.target.value)}
+                        onPressEnter={() => {
+                          const page = parseInt(jumpValue, 10);
+                          if (!isNaN(page) && page >= 1 && page <= totalPages) {
+                            onChange?.(page, pageSizeVal);
+                            setJumpValue('');
+                          }
+                        }}
+                      />
+                      页
+                    </span>
                   </div>
                 </>
               );

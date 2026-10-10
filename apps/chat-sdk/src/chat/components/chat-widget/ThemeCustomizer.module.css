@@ -1,5 +1,5 @@
-/* 外观自定义抽屉：只消费本类定义的 --tk-* 局部变量（浅色值固定，.drawerDark 切深色值），
-   不读任何 --cw-*：访客自定义的颜色/字体无论如何都不会染到弹窗 */
+/* 外观自定义弹窗：完全照搬 abi 数据源编辑弹窗（CommonDrawer + ds-operate-drawer）的渐变玻璃四段样式；
+   只消费本类定义的 --tk-* 局部变量，不读任何 --cw-*：访客自定义的颜色/字体无论如何都不会染到弹窗 */
 
 .drawer {
   --tk-surface: #ffffff;
@@ -9,8 +9,8 @@
   --tk-border: #e5e7eb;
   --tk-chip-bg: #f2f4f8;
   /* 宿主（abi 分享页）对 drawer/下拉/输入框有全局 !important 规则，但取色都是 var(--abi-*)：
-     在抽屉子树遮蔽这两个变量，使那些规则整体退化为抽屉自身 surface，宿主不劫持弹窗配色 */
-  --abi-card-box-draw-pop-bg: var(--tk-surface);
+     在抽屉子树遮蔽这两个变量，使那些规则整体退化为 abi 编辑弹窗同款渐变，宿主不劫持弹窗配色 */
+  --abi-card-box-draw-pop-bg: linear-gradient(135deg, rgba(240, 244, 255, 0.95) 0%, rgba(239, 243, 255, 0.95) 45%, rgba(239, 242, 255, 0.95) 100%);
   --abi-input-bg: var(--tk-surface);
   /* 弹窗是控件面板不是预览内容：字体锁默认，不随自定义字族/字号/字重变化 */
   font-family: 'Helvetica Neue', Arial, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -18,45 +18,90 @@
   font-weight: 400;
 }
 
-.drawerDark {
-  --tk-surface: #1f2230;
-  --tk-text: #e8ecf5;
-  --tk-text-2: #a6b2c8;
-  --tk-muted: #8494ad;
-  --tk-border: rgba(255, 255, 255, 0.12);
-  --tk-chip-bg: #262a3a;
-  --abi-card-box-draw-pop-bg: var(--tk-surface);
-  --abi-input-bg: var(--tk-surface);
-}
-
-/* 抽屉四段背景/分隔线统一走局部 surface；!important 压过宿主全局 !important 规则 */
-.drawer :global(.ant-drawer-content),
-.drawer :global(.ant-drawer-header),
-.drawer :global(.ant-drawer-body),
-.drawer :global(.ant-drawer-footer) {
-  background: var(--tk-surface) !important;
+/* 四段背景/分隔线统一走 abi 编辑弹窗值；!important 压过宿主全局 !important 规则 */
+.drawer :global(.ant-drawer-content) {
+  backdrop-filter: blur(20px);
 }
 
 .drawer :global(.ant-drawer-header) {
-  border-bottom: 1px solid var(--tk-border) !important;
+  padding: 20px 28px !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(248, 250, 255, 0.8) 100%) !important;
+  border-bottom: 1px solid rgba(130, 140, 200, 0.15) !important;
+  box-shadow: 0 2px 12px rgba(91, 124, 247, 0.06);
+  backdrop-filter: blur(10px);
+}
+
+.drawer :global(.ant-drawer-body) {
+  background: transparent !important;
 }
 
 .drawer :global(.ant-drawer-footer) {
-  border-top: 1px solid var(--tk-border) !important;
+  padding: 0 !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(248, 250, 255, 0.8) 100%) !important;
+  border-top: 1px solid rgba(130, 140, 200, 0.15) !important;
+  box-shadow: 0 -2px 12px rgba(91, 124, 247, 0.06);
+  backdrop-filter: blur(10px);
 }
 
+/* 标题：同 abi CommonDrawer 的渐变图标块 + 粗标题 */
 .drawer :global(.ant-drawer-title) {
-  color: var(--tk-text);
-  font-size: 15px;
-  font-weight: 600;
+  min-width: 0;
 }
 
-.drawer :global(.ant-drawer-close) {
-  color: var(--tk-text-2);
+.drawerTitle {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 12px;
+  color: #1a2744;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.drawerTitleIcon {
+  position: relative;
+  display: flex;
+  flex: 0 0 36px;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  overflow: hidden;
+  color: #fff;
+  font-size: 18px;
+  background: linear-gradient(135deg, #5b7cf7 0%, #7091fa 100%);
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(91, 124, 247, 0.3);
+}
+
+.drawerTitleIcon::before {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  content: '';
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 100%);
+}
+
+.drawerTitleText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drawerClose {
+  color: #8c8c8c;
+  font-size: 16px;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.drawerClose:hover {
+  color: #5b7cf7;
 }
 
 .drawer :global(.ant-collapse-header) {
-  color: var(--tk-text) !important;
+  color: #1a2744 !important;
   font-weight: 600;
   font-size: 13px;
   padding: 10px 0 !important;
@@ -270,39 +315,46 @@
   color: var(--accent, #5b7cf7);
 }
 
+/* 底栏：同 abi ds-operate-footer，按钮组右对齐 */
 .footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
+  padding: 16px 28px;
 }
 
 .resetBtn {
-  height: 30px;
-  padding: 0 14px;
-  border: 1px solid var(--tk-border);
+  height: 34px;
+  padding: 8px 18px;
+  border: 1px solid rgba(130, 140, 200, 0.25);
   border-radius: 8px;
-  background: transparent;
-  color: var(--tk-text);
-  font-size: 12px;
+  background: #fff;
+  color: #3e5068;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
-  transition: border-color 0.15s, color 0.15s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .resetBtn:hover {
-  border-color: var(--accent, #5b7cf7);
-  color: var(--accent, #5b7cf7);
+  border-color: #5b7cf7;
+  color: #5b7cf7;
 }
 
+/* 同 abi btn-accent-gradient 主按钮 */
 .saveBtn {
-  height: 30px;
-  padding: 0 24px;
+  height: 34px;
+  padding: 8px 18px;
   border: none;
   border-radius: 8px;
-  background: linear-gradient(135deg, #5b7cf7, #8b5cf6);
+  background: linear-gradient(135deg, #5b7cf7, #7091fa);
   color: #fff;
-  font-size: 12px;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
+  box-shadow: 0 2px 10px rgba(91, 124, 247, 0.3);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .saveBtn:disabled {
