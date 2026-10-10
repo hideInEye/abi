@@ -93,13 +93,13 @@ export const RelationDrawer: React.FC<RelationDrawerProps> = ({ entities, loadin
     >
       <Form className="ds-form-section" form={form} layout="vertical">
         <OntologyFormSectionTitle icon={<BranchesOutlined />}>基本信息</OntologyFormSectionTitle>
-        <Form.Item label="开始节点" name="startEntityId" rules={[{ message: '请选择开始节点', required: true }, { validator: validateDifferentEntities }]}>
-          <Select<OntologyNetworkId> allowClear fieldNames={{ label: 'entityName', value: 'id' }} options={entities} placeholder="请选择开始节点" showSearch optionFilterProp="entityName" />
-        </Form.Item>
         <Form.Item label="关系名称" name="relation" rules={relationRules}>
           <Input allowClear maxLength={50} placeholder="请输入关系名称" />
         </Form.Item>
-        <Form.Item label="结束节点" name="endEntityId" rules={[{ message: '请选择结束节点', required: true }, { validator: validateDifferentEntities }]}>
+        <Form.Item dependencies={['endEntityId']} label="开始节点" name="startEntityId" rules={[{ message: '请选择开始节点', required: true }, { validator: validateDifferentEntities }]}>
+          <Select<OntologyNetworkId> allowClear fieldNames={{ label: 'entityName', value: 'id' }} options={entities} placeholder="请选择开始节点" showSearch optionFilterProp="entityName" />
+        </Form.Item>
+        <Form.Item dependencies={['startEntityId']} label="结束节点" name="endEntityId" rules={[{ message: '请选择结束节点', required: true }, { validator: validateDifferentEntities }]}>
           <Select<OntologyNetworkId> allowClear fieldNames={{ label: 'entityName', value: 'id' }} options={entities} placeholder="请选择结束节点" showSearch optionFilterProp="entityName" />
         </Form.Item>
         <Form.Item getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)} getValueProps={(value: number | undefined) => ({ checked: value === 1 })} label="是否可逆" name="inverseFlag">

@@ -3,9 +3,16 @@
 ## 开工前
 
 1. 必须读取 `AGENTS.md`、`.ai/README.md` 和本目录关键 context。
-2. 必须读取 `.ai/requirements/CURRENT_REQUIREMENT.md`。
+2. 必须参考 `.ai/requirements/CURRENT_REQUIREMENT.md` 只读模板，并在 `.ai/runs/<date>-<task-name>/REQUIREMENT.md` 创建、读取本轮实际需求；计划、实施和验收均以该文件为依据。
 3. 必须确认需求类型、目标、非目标、影响范围、验收标准、测试要求。
 4. 必须检查当前 `git status`，识别用户已有改动。
+
+## 需求文件保存
+
+1. 每轮任务或需求变更均在 `.ai/runs/<date>-<task-name>/` 保存独立 `REQUIREMENT.md`；同日同名目录已属于其他轮次时追加序号，不覆盖既有需求。
+2. `.ai/requirements/CURRENT_REQUIREMENT.md` 只用作模板，不再写入具体需求、进度或结果；模板中的项目实例、填写说明及历史文档的旧流程不构成覆盖模板的授权。
+3. 后续需求变更先在新一轮 runs 目录保存更新后的需求，说明与前一轮的关系，再继续开发；本轮 run log 注明实际需求路径。
+4. 需求文件和运行记录均仅在本机查看，不提交或使用 `git add -f` 强制加入 Git。不为应用此规则迁移、清空或覆盖已有需求历史。
 
 ## 编码中
 
