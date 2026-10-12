@@ -105,6 +105,7 @@ const DERIVATIVE_TEMPLATE_FIELDS: Array<keyof KnowledgeFormValues> = [
   'cumulativeMetricId',
   'cumulativeMode',
   'cumulativeTimeRange',
+  'customSourceFieldIds',
   'expr',
   'percentileValue',
   'ratioDenominatorId',
@@ -492,6 +493,7 @@ function buildFormValuesFromDetail(item: KnowledgeIndicatorItem): KnowledgeFormV
     atomicAggregationMethods: getAtomicAggregationMethods(item),
     bizName: mappedBizNameParts.displayName,
     atomicSourceFieldId: resolveTechFieldIdentity(atomicSourceField),
+    customSourceFieldIds: parseAtomicSourceFields(item.techId).map(getKnowledgeTechFieldId).filter(Boolean),
     dimensionFieldIds: item.dimensionFieldIds ?? item.relateDims,
     indAlias: splitAliasTags(item.indAlias),
     indicatorCode: mappedTechNameParts.displayName,
@@ -543,7 +545,8 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
   const indicatorSearchTextRef = useRef('')
   const semanticRequestRef = useRef(0)
   const submitLockRef = useRef(false)
-  const templateTypeVal = AForm.useWatch('templateType', form)!
+  const templateTypeWatch = AForm.useWatch('templateType', { form, preserve: true })
+  const templateTypeVal = templateTypeWatch ?? form.getFieldValue('templateType')
 
   const isEditing = Boolean(editingItem)
   const isAtomicEditing = normalizeIndicatorClass(editingItem?.indicatorClass) === 'atomic'
@@ -868,6 +871,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
         semanticType: undefined
       }
       if (isDerivativeCustom) {
+        nextValues.customSourceFieldIds = []
         nextValues.expr = undefined
       } else {
         nextValues.atomicAggregationExpression = undefined
@@ -1294,6 +1298,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
       spaceId: getKnowledgeSpaceId(),
       templateParams: buildTemplateParams(values, nextIndicatorClass, allFields)
     }
+    delete payload.customSourceFieldIds
 
     if (nextIndicatorClass === 'derived') {
       payload.indicatorCode = submitTechName

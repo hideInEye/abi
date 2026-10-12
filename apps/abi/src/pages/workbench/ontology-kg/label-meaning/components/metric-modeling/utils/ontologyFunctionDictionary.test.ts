@@ -4,6 +4,7 @@ import { queryDictDataList } from '@/service/api/dictionary'
 
 import {
   ONTOLOGY_FUNCTION_DICTIONARY_TYPES,
+  ONTOLOGY_OPERATOR_DICTIONARY_TYPES,
   adaptOntologyAggregationMethodOptions,
   adaptOntologyFunctionOptions,
   buildOntologyFunctionSnippet,
@@ -127,5 +128,39 @@ describe('ontology function dictionaries', () => {
       pageNum: 1,
       pageSize: 1000
     })
+  })
+
+  it('loads operators from ontology_operator and preserves the configured label and value', async () => {
+    queryDictDataListMock.mockResolvedValueOnce({
+      data: { rows: [{ dictCode: 7, dictLabel: '取模', dictValue: 'MOD', dictType: 'ontology_operator' }] },
+      error: null,
+    })
+    await expect(loadOntologyFunctionOptions(ONTOLOGY_OPERATOR_DICTIONARY_TYPES)).resolves.toEqual([
+      { dictType: 'ontology_operator', id: 'ontology_operator:7', label: '取模', value: 'MOD' },
+    ])
+    expect(queryDictDataListMock).toHaveBeenCalledWith({ dictType: 'ontology_operator', pageNum: 1, pageSize: 1000 })
+  })
+
+  it('preserves meaningful operator spacing and excludes empty dictionary values', () => {
+    expect(adaptOntologyFunctionOptions([
+      { data: { rows: [
+        { dictCode: 1, dictLabel: '逻辑与', dictValue: ' AND ' },
+        { dictCode: 2, dictLabel: '空值', dictValue: '   ' },
+      ] }, error: null },
+    ], ONTOLOGY_OPERATOR_DICTIONARY_TYPES)).toEqual([
+      { dictType: 'ontology_operator', id: 'ontology_operator:1', label: '逻辑与', value: ' AND ' },
+    ])
+  })
+
+  it('does not expose operator options before success or on a fulfilled API error', async () => {
+    const failure = new Error('operators unavailable')
+    let resolve!: (value: unknown) => void
+    queryDictDataListMock.mockReturnValueOnce(new Promise(done => { resolve = done }) as never)
+    const completed = vi.fn()
+    const pending = loadOntologyFunctionOptions(ONTOLOGY_OPERATOR_DICTIONARY_TYPES).then(completed)
+    expect(completed).not.toHaveBeenCalled()
+    resolve({ error: failure, data: { rows: [{ dictLabel: '加', dictValue: '+' }] } })
+    await expect(pending).rejects.toBe(failure)
+    expect(completed).not.toHaveBeenCalled()
   })
 })
