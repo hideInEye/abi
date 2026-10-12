@@ -1,7 +1,10 @@
 import React, {memo, useEffect, useRef, useState} from 'react';
 import type {Dayjs} from 'dayjs';
+import {Button, Popconfirm} from 'antd';
+import {AppstoreOutlined, DeleteOutlined, DownOutlined, PlusOutlined, SettingOutlined, UnorderedListOutlined} from '@ant-design/icons';
 
 import {LazyFeatureFallback, RetryableLazy} from '../../../runtime/RetryableLazy';
+import {SearchFilterBar} from './SearchFilterBar';
 
 const loadDateRangeFilter = () => import('../../my-screen/MyScreenDateRangeFilter');
 const loadProjectListTableView = () => import('./ProjectListTableView');
@@ -16,8 +19,7 @@ export interface ProjectListControlsProps {
     children: React.ReactNode;
     columnOptions: ProjectListColumnOption[];
     dateRange: [Dayjs | null, Dayjs | null] | null;
-    onApplyFilters: () => void;
-    onBatchDelete: () => void;
+    onBatchDelete: () => void | Promise<void>;
     onColumnToggle: (key: string, visible: boolean) => void;
     onDateRangeChange: (value: [Dayjs | null, Dayjs | null] | null) => void;
     onNewProject: () => void;
@@ -38,7 +40,6 @@ const ProjectListControls = memo((props: ProjectListControlsProps) => {
         children,
         columnOptions,
         dateRange,
-        onApplyFilters,
         onBatchDelete,
         onColumnToggle,
         onDateRangeChange,
@@ -55,7 +56,6 @@ const ProjectListControls = memo((props: ProjectListControlsProps) => {
         viewMode,
     } = props;
     const [colPickerOpen, setColPickerOpen] = useState(false);
-    const [filterOpen, setFilterOpen] = useState(false);
     const colPickerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -72,90 +72,47 @@ const ProjectListControls = memo((props: ProjectListControlsProps) => {
         return () => document.removeEventListener('mousedown', handleClick);
     }, [colPickerOpen]);
 
-    const handleReset = () => {
-        setFilterOpen(false);
-        onReset();
-    };
-
     return (
         <div className="project-list-container">
             <section className="abi-searchbar">
-                <div className="abi-search-row">
-                    <label className="my-screen-search-control">
-                        <span aria-hidden="true">⌕</span>
-                        <input
-                            aria-label="搜索项目名称"
-                            placeholder="搜索项目名称"
-                            value={searchKeyword}
-                            onChange={event => onSearchChange(event.target.value)}
-                            onKeyDown={event => {
-                                if (event.key === 'Enter') onSearchSubmit();
-                            }}
+                <SearchFilterBar
+                    searchPlaceholder="搜索项目名称"
+                    searchValue={searchKeyword}
+                    onSearchChange={onSearchChange}
+                    onQuery={onSearchSubmit}
+                    onReset={onReset}
+                    filters={
+                        <RetryableLazy
+                            loader={loadDateRangeFilter}
+                            componentProps={{onChange: onDateRangeChange, value: dateRange}}
+                            fallback={<LazyFeatureFallback label="正在加载日期筛选…" style={{height: 64, minHeight: 64, width: '100%'}}/>}
                         />
-                    </label>
-                    <div className="my-screen-filter-wrap">
-                        <button
-                            aria-expanded={filterOpen}
-                            className="my-screen-filter-button"
-                            onClick={() => setFilterOpen(open => !open)}
-                            onFocus={() => void loadDateRangeFilter()}
-                            onMouseEnter={() => void loadDateRangeFilter()}
-                            type="button"
-                        >
-                            <span aria-hidden="true">≡</span>
-                            高级筛选
-                            <span aria-hidden="true" className={filterOpen ? 'my-screen-filter-arrow open' : 'my-screen-filter-arrow'}>⌄</span>
-                        </button>
-                        {filterOpen ? (
-                            <div className="my-screen-filter-panel">
-                                <RetryableLazy
-                                    loader={loadDateRangeFilter}
-                                    componentProps={{onChange: onDateRangeChange, value: dateRange}}
-                                    fallback={<LazyFeatureFallback label="正在加载日期筛选…" style={{height: 64, minHeight: 64, width: '100%'}}/>}
-                                />
-                                <div className="my-screen-filter-actions">
-                                    <button type="button" onClick={handleReset}>重置</button>
-                                    <button
-                                        className="primary"
-                                        type="button"
-                                        onClick={() => {
-                                            setFilterOpen(false);
-                                            onApplyFilters();
-                                        }}
-                                    >
-                                        查询
-                                    </button>
-                                </div>
-                            </div>
-                        ) : null}
-                    </div>
-                </div>
+                    }
+                />
             </section>
 
             <section className="abi-data-area">
                 <div className="abi-toolbar">
                     <div className="abi-toolbar-left">
                         {!statusFilter ? (
-                            <button
+                            <Button
                                 className="btn-accent-gradient"
                                 onClick={onNewProject}
                                 onFocus={onPreloadNewProject}
                                 onMouseEnter={onPreloadNewProject}
-                                type="button"
                             >
-                                <span aria-hidden="true">＋</span>新增大屏
-                            </button>
+                                <PlusOutlined/>新增大屏
+                            </Button>
                         ) : null}
-                        <button
-                            className="btn-ghost-v5"
+                        <Popconfirm
+                            title="确定要批量删除选中的项目吗？"
+                            onConfirm={onBatchDelete}
                             disabled={selectedCount === 0}
-                            onClick={() => {
-                                if (window.confirm('确定要批量删除选中的项目吗？')) void onBatchDelete();
-                            }}
-                            type="button"
                         >
-                            <span aria-hidden="true">⌫</span> 批量删除{selectedCount ? `(${selectedCount})` : ''}
-                        </button>
+                            <Button danger disabled={selectedCount === 0}>
+                                <DeleteOutlined/> 批量删除{selectedCount ? `(${selectedCount})` : ''}
+                            </Button>
+                        </Popconfirm>
                     </div>
                     <div className="abi-toolbar-right">
                         <div className="abi-view-toggle">
@@ -170,7 +127,7 @@ const ProjectListControls = memo((props: ProjectListControlsProps) => {
                                 title="列表视图"
                                 type="button"
                             >
-                                <span aria-hidden="true">☷</span>
+                                <UnorderedListOutlined/>
                             </button>
                             <button
                                 className={`abi-vt-btn ${viewMode === 'card' ? 'active' : ''}`}
@@ -178,14 +135,14 @@ const ProjectListControls = memo((props: ProjectListControlsProps) => {
                                 title="卡片视图"
                                 type="button"
                             >
-                                <span aria-hidden="true">▦</span>
+                                <AppstoreOutlined/>
                             </button>
                         </div>
                         <div className="abi-col-picker" ref={colPickerRef}>
                             <button className="abi-col-picker-btn" onClick={() => setColPickerOpen(open => !open)} type="button">
-                                <span aria-hidden="true">⚙</span>
+                                <SettingOutlined/>
                                 列设置
-                                <span aria-hidden="true" style={{fontSize: 11, transform: colPickerOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s'}}>⌄</span>
+                                <DownOutlined style={{fontSize: 11, transform: colPickerOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s'}}/>
                             </button>
                             {colPickerOpen ? (
                                 <div className="abi-col-dropdown">

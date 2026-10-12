@@ -1,8 +1,11 @@
 import React, {memo, useEffect, useRef, useState} from 'react';
+import {Empty, Input, Select} from 'antd';
+import {LeftOutlined, RightOutlined} from '@ant-design/icons';
 import type {Dayjs} from 'dayjs';
 import type {IPage, IProjectInfo} from '../../designer/DesignerType.ts';
 import {LazyFeatureFallback, RetryableLazy} from '../../runtime/RetryableLazy.tsx';
 import MyScreenItem from './MyScreenItem.tsx';
+import {SearchFilterBar} from '../home/project-list/SearchFilterBar.tsx';
 import '../home/project-list/ProjectList.less';
 
 const loadBaseApi = () => import('../../api/BaseApi.ts').then(module => module.default);
@@ -34,8 +37,6 @@ const MyScreen = memo(({ title }: MyScreenProps) => {
     const [jumpValue, setJumpValue] = useState('');
     const [searchKeyword, setSearchKeyword] = useState('');
     const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
-    const [filterOpen, setFilterOpen] = useState(false);
-    const searchTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
     const spaceId = Number(localStorage.getItem('spaceId')) || undefined;
 
@@ -67,17 +68,9 @@ const MyScreen = memo(({ title }: MyScreenProps) => {
     };
 
     const handleReset = () => {
-        if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-        setFilterOpen(false);
         setSearchKeyword('');
         setDateRange(null);
         runQuery({keyword: '', range: null});
-    };
-
-    const handleSearchChange = (value: string) => {
-        setSearchKeyword(value);
-        if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-        searchTimerRef.current = setTimeout(() => runQuery({keyword: value}), value === '' ? 0 : 1000);
     };
 
     const pageChange = async (page: number, size: number) => {
@@ -151,9 +144,6 @@ const MyScreen = memo(({ title }: MyScreenProps) => {
 
     useEffect(() => {
         void fetchList(pageData.current, pageData.size);
-        return () => {
-            if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-        };
     }, []);
 
     // 主应用顶部切换空间时，大屏微应用会广播该事件；重置筛选并回到第 1 页按新空间重新拉取
@@ -210,56 +200,20 @@ const MyScreen = memo(({ title }: MyScreenProps) => {
             <>
             {/* v5 Searchbar */}
             <section className="abi-searchbar">
-                <div className="abi-search-row">
-                    <label className="my-screen-search-control">
-                        <span aria-hidden="true">⌕</span>
-                        <input
-                            aria-label="搜索项目名称"
-                            placeholder="搜索项目名称"
-                            value={searchKeyword}
-                            onChange={event => handleSearchChange(event.target.value)}
-                            onKeyDown={event => {
-                                if (event.key === 'Enter') runQuery();
-                            }}
+                <SearchFilterBar
+                    searchPlaceholder="搜索项目名称"
+                    searchValue={searchKeyword}
+                    onSearchChange={setSearchKeyword}
+                    onQuery={() => runQuery()}
+                    onReset={handleReset}
+                    filters={
+                        <RetryableLazy
+                            loader={loadDateRangeFilter}
+                            componentProps={{onChange: setDateRange, value: dateRange}}
+                            fallback={<LazyFeatureFallback label="正在加载日期筛选…" style={{height: 64, minHeight: 64, width: '100%'}}/>}
                         />
-                    </label>
-                    <div className="my-screen-filter-wrap">
-                        <button
-                            type="button"
-                            className="my-screen-filter-button"
-                            aria-expanded={filterOpen}
-                            onClick={() => setFilterOpen(open => !open)}
-                            onFocus={() => void loadDateRangeFilter()}
-                            onMouseEnter={() => void loadDateRangeFilter()}
-                        >
-                            <span aria-hidden="true">≡</span>
-                            高级筛选
-                            <span className={filterOpen ? 'my-screen-filter-arrow open' : 'my-screen-filter-arrow'} aria-hidden="true">⌄</span>
-                        </button>
-                        {filterOpen ? (
-                            <div className="my-screen-filter-panel">
-                                <RetryableLazy
-                                    loader={loadDateRangeFilter}
-                                    componentProps={{onChange: setDateRange, value: dateRange}}
-                                    fallback={<LazyFeatureFallback label="正在加载日期筛选…" style={{height: 64, minHeight: 64, width: '100%'}}/>}
-                                />
-                                <div className="my-screen-filter-actions">
-                                    <button type="button" onClick={handleReset}>重置</button>
-                                    <button
-                                        type="button"
-                                        className="primary"
-                                        onClick={() => {
-                                            setFilterOpen(false);
-                                            runQuery();
-                                        }}
-                                    >
-                                        查询
-                                    </button>
-                                </div>
-                            </div>
-                        ) : null}
-                    </div>
-                </div>
+                    }
+                />
             </section>
 
             {/* v5 Data Area */}
@@ -275,10 +229,7 @@ const MyScreen = memo(({ title }: MyScreenProps) => {
                         </div>
                     ) : (
                         <div className="abi-card-empty">
-                            <div className="my-screen-empty-state">
-                                <span className="my-screen-empty-icon" aria-hidden="true">▦</span>
-                                <span>暂无当前启用的大屏</span>
-                            </div>
+                            <Empty description="暂无当前启用的大屏" image={Empty.PRESENTED_IMAGE_SIMPLE}/>
                         </div>
                     )}
                 </div>
@@ -286,43 +237,38 @@ const MyScreen = memo(({ title }: MyScreenProps) => {
                 <div className="data-source-pagination">
                     <span className="total-text">共 {totalCount} 条</span>
                     <div className="pagination-controls">
-                        <select
+                        <Select
                             aria-label="每页条数"
                             value={pageSize}
-                            onChange={event => {
-                                const value = Number(event.target.value);
+                            onChange={(value: number) => {
                                 setPageSize(value);
                                 setCurrentPage(1);
                                 pageChange(1, value);
                             }}
+                            options={[
+                                {label: '12条/页', value: 12},
+                                {label: '18条/页', value: 18},
+                                {label: '24条/页', value: 24},
+                                {label: '30条/页', value: 30},
+                            ]}
                             className="page-size-select"
-                        >
-                            <option value={12}>12条/页</option>
-                            <option value={18}>18条/页</option>
-                            <option value={24}>24条/页</option>
-                            <option value={30}>30条/页</option>
-                        </select>
+                        />
                         <button className="page-btn" disabled={currentPage === 1} onClick={handlePrev}>
-                            <span aria-hidden="true">‹</span>
+                            <LeftOutlined/>
                         </button>
                         {renderPageNumbers()}
                         <button className="page-btn" disabled={currentPage === totalPages} onClick={handleNext}>
-                            <span aria-hidden="true">›</span>
+                            <RightOutlined/>
                         </button>
                         <span className="quick-jumper">
                             前往
-                            <input
+                            <Input
                                 aria-label="跳转页码"
-                                type="number"
-                                min={1}
-                                max={totalPages}
                                 className="jump-input"
                                 style={{ width: 48, textAlign: 'center' }}
                                 value={jumpValue}
                                 onChange={(e: any) => setJumpValue(e.target.value)}
-                                onKeyDown={event => {
-                                    if (event.key === 'Enter') handleJump();
-                                }}
+                                onPressEnter={handleJump}
                             />
                             页
                         </span>

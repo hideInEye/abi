@@ -813,6 +813,7 @@
       }
 
       .abi-card-more {
+        margin-left: auto;
         width: 28px;
         height: 28px;
         border-radius: 8px;
@@ -833,50 +834,6 @@
         }
       }
 
-      .abi-card-menu-wrap {
-        position: relative;
-        margin-left: auto;
-      }
-
-      .abi-card-menu {
-        position: absolute;
-        right: 0;
-        bottom: calc(100% + 6px);
-        z-index: 10;
-        min-width: 112px;
-        padding: 5px;
-        border: 1px solid rgba(130, 140, 200, 0.18);
-        border-radius: 8px;
-        background: rgba(255, 255, 255, 0.98);
-        box-shadow: 0 10px 28px rgba(26, 39, 68, 0.16);
-
-        button {
-          display: block;
-          width: 100%;
-          padding: 7px 10px;
-          border: 0;
-          border-radius: 5px;
-          background: transparent;
-          color: #3e5068;
-          cursor: pointer;
-          font: inherit;
-          font-size: 12px;
-          text-align: left;
-
-          &:hover {
-            background: rgba(91, 124, 247, 0.1);
-            color: #5b7cf7;
-          }
-
-          &.danger {
-            color: #cf3f43;
-
-            &:hover {
-              background: rgba(255, 77, 79, 0.08);
-            }
-          }
-        }
-      }
     }
   }
 
@@ -998,7 +955,7 @@
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    padding: 14px 0 0;
+    padding: 14px  0;
     margin-top: auto;
     flex-shrink: 0;
 
@@ -1015,12 +972,20 @@
 
       .page-size-select {
         min-width: 100px;
-        height: 34px;
-        padding: 0 28px 0 10px;
-        border: 1px solid rgba(130, 140, 200, 0.18);
-        border-radius: 8px;
-        background: rgba(255, 255, 255, 0.72);
-        color: #3e5068;
+
+        .ant-select-selector {
+          border-radius: 8px !important;
+          border-color: rgba(130, 140, 200, 0.18) !important;
+        }
+
+        &:not(.ant-select) {
+          height: 34px;
+          padding: 0 28px 0 10px;
+          border: 1px solid rgba(130, 140, 200, 0.18);
+          border-radius: 8px;
+          background: rgba(255, 255, 255, 0.72);
+          color: #3e5068;
+        }
       }
 
       .page-btn {
@@ -1100,12 +1065,17 @@
         margin-left: 4px;
 
         .jump-input {
-          height: 34px;
-          padding: 0 4px;
-          border: 1px solid rgba(130, 140, 200, 0.18);
+          border-color: rgba(130, 140, 200, 0.18);
           border-radius: 8px;
-          background: rgba(255, 255, 255, 0.72);
-          color: #3e5068;
+
+          &:not(.ant-input) {
+            height: 34px;
+            padding: 0 4px;
+            border-width: 1px;
+            border-style: solid;
+            background: rgba(255, 255, 255, 0.72);
+            color: #3e5068;
+          }
         }
       }
     }
