@@ -12,6 +12,7 @@ export const LAYOUT_MAX_Z_INDEX = 100
  * @param props Css vars props
  */
 function createLayoutCssVarsByCssVarsProps(props: LayoutCssVarsProps) {
+  console.error('siderWidth', props.siderWidth)
   const cssVars: LayoutCssVars = {
     '--soy-footer-height': `${props.footerHeight}px`,
     '--soy-footer-z-index': props.footerZIndex,
