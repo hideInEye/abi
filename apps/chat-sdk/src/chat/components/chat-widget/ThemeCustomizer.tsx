@@ -1,5 +1,5 @@
 import { BgColorsOutlined, CloseOutlined } from '@ant-design/icons'
-import { Collapse, ColorPicker, ConfigProvider, Drawer, Segmented, Select, Slider } from 'antd'
+import { Collapse, ColorPicker, ConfigProvider, Drawer, Segmented, Select, Slider, theme as antdTheme } from 'antd'
 import zhCN from 'antd/es/locale/zh_CN'
 import { useRef, type ReactNode } from 'react'
 
@@ -196,6 +196,8 @@ export default function ThemeCustomizer({ open, value, preset, saving, getContai
     <ConfigProvider
       locale={zhCN}
       theme={{
+        /* 黑色系预设下 antd 控件切暗色算法，避免亮色 Segmented/Select/Slider 浮在深色弹窗上 */
+        algorithm: preset === 'dark' ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
         components: { Collapse: { headerBg: 'transparent', contentBg: 'transparent', contentPadding: 0 } },
       }}
     >

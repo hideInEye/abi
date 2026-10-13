@@ -11,8 +11,7 @@
 
 import {useEffect, useState, useRef, lazy, Suspense} from 'react';
 import {useParams} from 'react-router-dom';
-import {Input, Button, Modal, Spin, message} from 'antd';
-import {LockOutlined} from '@ant-design/icons';
+import {Spin} from 'antd';
 import baseApi from '../../api/BaseApi.ts';
 import {globalMessage} from '../../framework/message/GlobalMessage.tsx';
 import {ShareDesignerLoader} from '../../designer/loader/ShareDesignerLoader.ts';
@@ -31,37 +30,22 @@ const ScreenFit = lazy(() => import('../../framework/screen-fit/ScreenFit.tsx'))
 const ShareViewPage = observer(() => {
     const {shareCode = ''} = useParams<{shareCode: string}>();
     const [loading, setLoading] = useState(true);
-    const [passwordModalVisible, setPasswordModalVisible] = useState(false);
-    const [password, setPassword] = useState('');
-    const [passwordLoading, setPasswordLoading] = useState(false);
     const [loaded, setLoaded] = useState(false);
     const loaderRef = useRef<ShareDesignerLoader | null>(new ShareDesignerLoader(DesignerMode.VIEW));
 
-    // 进入页面，先调 checkSharePassword（密码传空）判断是否需要密码，并拿到 projectId
+    // 进入页面，按 shareCode 免登录查询项目信息（getProjectInfo/dashboard），换出 projectId 后加载大屏
     useEffect(() => {
         if (!shareCode) return;
         const init = async () => {
             try {
-                const res = await baseApi.checkSharePassword(shareCode, '');
-                if (!res) {
+                const detail = await baseApi.getShareProjectInfo('dashboard', shareCode);
+                const projectId = String(detail?.projectId ?? detail?.appId ?? detail?.id ?? '');
+                if (!projectId) {
                     globalMessage.messageApi?.error('获取分享信息失败');
                     setLoading(false);
                     return;
                 }
-                const projectId = String(res.projectId ?? '');
-                if (!projectId) {
-                    globalMessage.messageApi?.error('分享信息缺少项目ID');
-                    setLoading(false);
-                    return;
-                }
-                if (res.passwordFlag) {
-                    // 需要密码，弹出密码框
-                    setPasswordModalVisible(true);
-                    setLoading(false);
-                } else {
-                    // 不需要密码，直接加载大屏
-                    await loadProjectData(projectId);
-                }
+                await loadProjectData(projectId);
             } catch {
                 globalMessage.messageApi?.error('获取分享信息失败');
                 setLoading(false);
@@ -78,31 +62,9 @@ const ShareViewPage = observer(() => {
         };
     }, []);
 
-    // 用户输入密码后校验
-    const handlePasswordSubmit = async () => {
-        if (!password) {
-            message.warning('请输入密码');
-            return;
-        }
-        setPasswordLoading(true);
-        try {
-            const res = await baseApi.checkSharePassword(shareCode, password);
-            const projectId = String(res?.projectId ?? '');
-            if (res?.result && projectId) {
-                setPasswordModalVisible(false);
-                await loadProjectData(projectId, password);
-            } else {
-                message.error('密码错误');
-            }
-        } finally {
-            setPasswordLoading(false);
-        }
-    };
-
     // 加载大屏数据
-    const loadProjectData = async (projectId: string, pwd?: string) => {
+    const loadProjectData = async (projectId: string) => {
         try {
-            loaderRef.current?.setShareInfo(shareCode, pwd);
             const succeeded = await loaderRef.current?.load(projectId, SaveType.SERVER);
             if (!succeeded) return;
             setLoaded(true);
@@ -130,41 +92,6 @@ const ShareViewPage = observer(() => {
 
     return (
         <div style={{width: '100vw', height: '100vh', background: '#fff'}}>
-            {/* 密码输入弹窗 */}
-            <Modal
-                title={
-                    <div style={{textAlign: 'center'}}>
-                        <LockOutlined style={{fontSize: 48, color: '#1890ff', marginBottom: 16}}/>
-                        <div>该分享需要密码访问</div>
-                    </div>
-                }
-                open={passwordModalVisible}
-                closable={false}
-                footer={null}
-                centered
-                width={400}
-            >
-                <div style={{padding: '20px 0'}}>
-                    <Input.Password
-                        placeholder="请输入访问密码"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        onPressEnter={handlePasswordSubmit}
-                        size="large"
-                        style={{marginBottom: 20}}
-                    />
-                    <Button
-                        type="primary"
-                        block
-                        size="large"
-                        loading={passwordLoading}
-                        onClick={handlePasswordSubmit}
-                    >
-                        确认
-                    </Button>
-                </div>
-            </Modal>
-
             {/* 大屏展示区域 */}
             {loaded && (
                 <Suspense fallback={<Loading/>}>

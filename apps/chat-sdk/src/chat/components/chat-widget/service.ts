@@ -3,6 +3,7 @@ import type { EventSourceMessage } from '@microsoft/fetch-event-source'
 
 import { mapShareHistory, type WidgetMessage } from './history'
 import type { AssistantBoundMcp, AssistantBoundSkill } from '../../pages/chat/workshop/assistantResources'
+import { shareApiKeyHeaders } from '../../service/request/share-api-key'
 import { normalizeThemeConfig, normalizeThemeId, type DeepPartial, type ThemeConfig, type ThemeId } from '../../../theme'
 
 /** Widget 配置：shareCode 为免登录凭证，apiBase 为网关前缀（空串表示同源） */
@@ -13,28 +14,12 @@ export interface WidgetConfig {
   token?: string
 }
 
-export interface ShareCheckResult {
-  passwordFlag: boolean
-  result: boolean
-  appId: string
-  /** 项目类型（后端分享校验已区分：自主助手=react，工作流助手=workflow，大屏=dashboard） */
-  type: ProjectType
-  /** 校验通过后后端下发的临时 token（无密码分享探测通过时同样返回） */
-  token?: string
-  /** 分享记录存储的主题风格；后端未下发时为 undefined，消费方回退接入属性/默认值 */
-  theme?: ThemeId
-  /** 分享记录存储的自定义主题配置（背景/标题栏/字体/图表）；后端未下发时为 undefined */
-  themeConfig?: DeepPartial<ThemeConfig>
-}
-
 /** 统一 project 接口的类型段：大屏=dashboard，自主助手=react，工作流助手=workflow */
 export type ProjectType = 'dashboard' | 'react' | 'workflow'
 
-/** 后端分享校验返回的 type 归一化：后端已确认响应携带 type（自主助手=react / 工作流助手=workflow / 大屏=dashboard）；异常值抛错便于联调时暴露字段问题 */
-function normalizeProjectType(raw: unknown): ProjectType {
-  if (raw === 'react' || raw === 'workflow' || raw === 'dashboard') return raw
-  throw new Error(`checkSharePassword 响应缺少有效 type：${String(raw)}`)
-}
+/** 分享页入口 type 段：助手分享页固定为工作流助手(workflow)，单类型直连不再探测；
+ * 若后续自主助手(react)也开放分享页，再在此追加并恢复顺序探测 */
+export const SHARE_PROBE_TYPES: ProjectType[] = ['workflow']
 
 export interface WidgetSession {
   sessionId: string
@@ -57,6 +42,16 @@ export interface WidgetAssistantInfo {
   mcps: AssistantBoundMcp[]
   /** 助手所属空间（建会话时随 spaceId 下发，同主对话） */
   spaceId?: number | string
+}
+
+/** 分享页入口响应：助手详情 + 后端按 shareCode 换出的 appId + 临时 token + 主题配置 */
+export interface ShareProjectInfo extends WidgetAssistantInfo {
+  /** 后端下发的临时 token，后续接口随 Authorization 携带 */
+  token?: string
+  /** 分享记录存储的主题风格；后端未下发时为 undefined，消费方回退接入属性/默认值 */
+  theme?: ThemeId
+  /** 分享记录存储的自定义主题配置（背景/标题栏/字体/图表）；后端未下发时为 undefined */
+  themeConfig?: DeepPartial<ThemeConfig>
 }
 
 /** 历史会话列表项（历史对话抽屉：标题 + 会话标识；dbName 后端未下发时为空） */
@@ -93,13 +88,12 @@ export interface WidgetSemanticSelection {
 
 /**
  * 接口路径（后端已就绪部分按实际协议，其余假设联调时仅改此处）。
- * 分享校验与大屏共用统一接口（网关路径 = apiBase + /dashboard/api/v1/project/...，同大屏）；
+ * 分享页入口与主题保存走统一 project 接口（网关路径 = apiBase + /dashboard/api/v1/project/...，同大屏）；
  * 会话三件套仍按 abi-chat 约定假设。
  */
 const API = {
-  checkShare: '/dashboard/api/v1/project/checkSharePassword',
   getProjectInfo: '/dashboard/api/v1/project/getProjectInfo',
-  // 自定义主题配置保存（提案契约，后端最终路径待定，改动集中于此）
+  // 自定义主题配置保存：uiConfig 为前端主题 UI 配置 JSON 字符串，整串覆盖更新
   saveShareTheme: '/dashboard/api/v1/project/saveShareTheme',
   sessionAdd: '/abi-chat/v1/app/session/add',
   // 历史会话列表（同主对话侧栏 session/list；分享场景靠 token 识别用户，appId 隔离助手会话）
@@ -117,14 +111,17 @@ const API = {
   feedback: '/abi-chat/v1/app/message/feedback/add',
   // 数据语义详情（同主对话 GET /api/copilot/v1/schema/{id}；/api 前缀由 apiBase 提供，避免双重拼接）
   semanticDetail: '/copilot/v1/schema',
+  // 按 API-Key 查绑定分享列表（密钥随 x-api-key/secrectKey 头；type 可选过滤，不传返回全部）
+  shareListByApiKey: '/dashboard/api/v1/project/shareListByApiKey',
 }
 
-/** 请求头：分享校验通过后的临时 token 以 Authorization: Bearer 携带（与主应用鉴权头同格式） */
+/** 请求头：分享校验通过后的临时 token 以 Authorization: Bearer 携带（与主应用鉴权头同格式）；
+ * 另附加第三方注入的分享页 API-Key 头（x-api-key / secrectKey），未配置时为空 */
 function buildHeaders(cfg: WidgetConfig, contentType?: string): Record<string, string> {
   const headers: Record<string, string> = {}
   if (contentType) headers['Content-Type'] = contentType
   if (cfg.token) headers.Authorization = `Bearer ${cfg.token}`
-  return headers
+  return { ...headers, ...shareApiKeyHeaders() }
 }
 
 /** 裸 fetch；不读 localStorage，供分享/嵌入免登录场景（shareCode 仅校验接口需要，其余接口靠 token） */
@@ -144,32 +141,14 @@ function isOk(json: any): boolean {
   return json?.success === true || Number(json?.code) === 200
 }
 
-/** 校验分享密码 / 获取分享信息（与大屏同接口、同字段名；密码传空串即探测是否需要密码） */
-export async function checkSharePassword(cfg: WidgetConfig, password: string): Promise<ShareCheckResult | null> {
-  const json = await postJson(cfg, API.checkShare, { sharePassword: password, shareCode: cfg.shareCode })
-  if (!isOk(json)) return null
-  const d = json?.data ?? {}
-  return {
-    passwordFlag: !!d.passwordFlag,
-    result: d.result !== false,
-    // 统一分享接口返回 projectId（=助手 appId），兼容后端直接返回 appId 的情况
-    appId: String(d.appId ?? d.projectId ?? ''),
-    type: normalizeProjectType(d.type),
-    token: typeof d.token === 'string' && d.token ? d.token : undefined,
-    // 后端存了 theme 才生效；非法/缺省不下发，避免未就绪环境被回退值强制刷成 blue
-    theme: typeof d.theme === 'string' && d.theme ? normalizeThemeId(d.theme) : undefined,
-    // 自定义主题配置（背景/标题栏/字体/图表）；normalizeThemeConfig 校验剔除非法字段，无有效字段则 undefined
-    themeConfig: normalizeThemeConfig(d.themeConfig),
-  }
-}
-
 /**
  * 保存访客自定义主题配置（回传后端，与分享 Token 映射持久化）。
+ * uiConfig 为前端主题 UI 配置 JSON 字符串，整串覆盖更新；
  * 仅当接口明确成功返回 true；后端未就绪/网络异常/失败码一律 false，由调用方进入失败分支（保留可重试）。
  */
 export async function saveShareTheme(cfg: WidgetConfig, themeConfig: DeepPartial<ThemeConfig>): Promise<boolean> {
   try {
-    const json = await postJson(cfg, API.saveShareTheme, { shareCode: cfg.shareCode, themeConfig })
+    const json = await postJson(cfg, API.saveShareTheme, { shareCode: cfg.shareCode, uiConfig: JSON.stringify(themeConfig) })
     return isOk(json)
   } catch {
     return false
@@ -194,19 +173,35 @@ export async function fetchSemanticDetail(cfg: WidgetConfig, schemaId: number | 
   return json
 }
 
-/**
- * 拉取助手信息（名称/开场白/推荐问题/绑定数据语义），失败返回 null 由调用方兜底。
- * 进入分享页改走统一接口 GET /api/v1/project/getProjectInfo/{type}/{id}，
- * type 由分享校验响应携带（后端已确认：自主助手=react / 工作流助手=workflow）；响应字段与 app/get 一致。
- * 数据语义随助手详情一并下发（不再单独调 /copilot/v1/schema/tree），后端未加字段时降级为空列表。
- */
-export async function fetchAssistantInfo(cfg: WidgetConfig, appId: string, type: ProjectType = 'react'): Promise<WidgetAssistantInfo | null> {
+/** uiConfig 为前端主题 UI 配置 JSON 字符串（与 saveShareTheme 上送同构）；兼容后端直接下发对象，解析失败返回 null */
+function toUiConfigObject(raw: unknown): unknown {
+  if (typeof raw !== 'string') return raw
+  if (!raw.trim()) return null
   try {
-    const json = await getJson(cfg, `${API.getProjectInfo}/${type}/${appId}`, { shareCode: cfg.shareCode })
+    return JSON.parse(raw)
+  } catch {
+    return null
+  }
+}
+
+/**
+ * 分享页唯一入口 GET /api/v1/project/getProjectInfo/{type}?shareCode=（后端按 shareCode 换出项目/app id，路径无 id 段）。
+ * 响应字段与 app/get 一致，另携带 token 与主题配置；失败或缺 appId 返回 null，由调用方探测下一个 type。
+ */
+export async function fetchShareProjectInfo(cfg: WidgetConfig, type: ProjectType): Promise<ShareProjectInfo | null> {
+  try {
+    const json = await getJson(cfg, `${API.getProjectInfo}/${type}`, { shareCode: cfg.shareCode })
     if (!isOk(json)) return null
     const d = json?.data?.data ?? json?.data ?? {}
+    const appId = String(d.appId ?? d.projectId ?? '')
+    if (!appId) return null
+    const uiObj = toUiConfigObject(d.uiConfig ?? d.themeConfig) as Record<string, any> | null
+    // 预设主题三选一：ABI 分享时选择的风格存在 uiConfig JSON 的 theme 字段（如 {"theme":"dark"}），
+    // 兼容后端直接下发顶层 theme；两者皆无时 undefined（回退接入属性/默认蓝色系）
+    const presetTheme =
+      typeof d.theme === 'string' && d.theme ? d.theme : typeof uiObj?.theme === 'string' && uiObj.theme ? uiObj.theme : undefined
     return {
-      appId: String(d.appId ?? appId),
+      appId,
       name: d.appName || d.name || '',
       description: d.description || '',
       prologue: d.prologue || '',
@@ -214,9 +209,52 @@ export async function fetchAssistantInfo(cfg: WidgetConfig, appId: string, type:
       semantics: mapProjectSemantics(d),
       ...mapAssistantBoundToolResources(d),
       spaceId: d.spaceId ?? d.space_id,
+      token: typeof d.token === 'string' && d.token ? d.token : undefined,
+      // 非法/缺省不下发，避免未就绪环境被回退值强制刷成 blue
+      theme: presetTheme ? normalizeThemeId(presetTheme) : undefined,
+      // 自定义主题配置（背景/标题栏/字体/图表）；normalizeThemeConfig 校验剔除非法字段，无有效字段则 undefined
+      themeConfig: normalizeThemeConfig(uiObj),
     }
   } catch {
     return null
+  }
+}
+
+/** 分享列表项（头部助手切换用）：shareCode 为切换凭证，name 为展示名 */
+export interface WidgetShareItem {
+  shareCode: string
+  name: string
+}
+
+/** 从分享链接提取 shareCode（兼容 assistant_share_page / assistant-share-page / share_url / dashboard_share_page 几种路径） */
+function shareCodeFromShareUrl(url: unknown): string {
+  if (typeof url !== 'string' || !url) return ''
+  const m = url.match(/#\/(?:assistant_share_page|assistant-share-page|share_url|dashboard_share_page)\/([^/?#]+)/)
+  return m?.[1] || ''
+}
+
+/**
+ * 按 API-Key 查绑定分享列表 GET /api/v1/project/shareListByApiKey（密钥随 x-api-key/secrectKey 头）。
+ * 信封为 `{ total, shares: [{ shareCode, type, name }] }`，按 shareCode 去重供头部切换列表使用。
+ * 不传 type 过滤：实测同一 shareCode 在列表里标 workflow，而入口按 react 才返回数据，列表 type 不可信，过滤会误伤。
+ */
+export async function fetchShareListByApiKey(cfg: WidgetConfig): Promise<WidgetShareItem[]> {
+  try {
+    const json = await getJson(cfg, API.shareListByApiKey)
+    if (!isOk(json)) return []
+    const d = json?.data?.data ?? json?.data ?? {}
+    const records: any[] = Array.isArray(d) ? d : (d?.shares ?? d?.records ?? d?.rows ?? d?.list ?? [])
+    const seen = new Set<string>()
+    const out: WidgetShareItem[] = []
+    for (const r of records) {
+      const code = String(r?.shareCode || shareCodeFromShareUrl(r?.shareUrl) || '')
+      if (!code || seen.has(code)) continue
+      seen.add(code)
+      out.push({ shareCode: code, name: String(r?.appName || r?.name || '') })
+    }
+    return out
+  } catch {
+    return []
   }
 }
 
@@ -367,14 +405,19 @@ export async function fetchSessionList(cfg: WidgetConfig, appId: string, spaceId
   }
 }
 
-/** 更新会话（重命名 title / 置顶 sortOrder，仅传需要改的字段避免覆盖）；返回是否成功 */
+/** 更新会话（重命名 title / 置顶 sortOrder）；title 后端必填，调用方不改名时也需回传原标题；返回是否成功 */
 export async function updateSession(
   cfg: WidgetConfig,
-  params: { sessionId: string; title?: string; sortOrder?: number; spaceId?: number | string },
+  params: { sessionId: string; title: string; sortOrder?: number; spaceId?: number | string },
 ): Promise<boolean> {
   try {
-    const body: Record<string, unknown> = { sessionId: params.sessionId, spaceId: params.spaceId ?? undefined }
-    if (params.title !== undefined) body.title = params.title
+    const body: Record<string, unknown> = {
+      sessionId: params.sessionId,
+      title: params.title,
+      spaceId: params.spaceId ?? undefined,
+      // 后端必填：同 ensureSession/sendChatStream 口径，免登录缺失时落 0
+      userId: getCurrentUserId(),
+    }
     if (params.sortOrder !== undefined) body.sortOrder = params.sortOrder
     const json = await postJson(cfg, API.sessionUpdate, body)
     return isOk(json)

@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
-import { Button, Input, message, Tooltip } from 'antd'
+import { Button, Input, Tooltip } from 'antd'
 import { CopyOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
 import FileTag from '../../components/FileTag'
 import { parseMessageContent } from '../../utils'
+import { showWidgetToast } from '../chat-widget/widgetToast'
 
 interface HumanEleProps {
   data: {
@@ -71,9 +72,9 @@ const HumanEle: React.FC<HumanEleProps> = ({ data, id, onEditSubmit, onDelete })
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(plainText)
-      message.success('已复制')
+      showWidgetToast('success', '已复制')
     } catch {
-      message.error('复制失败')
+      showWidgetToast('error', '复制失败')
     }
   }
 

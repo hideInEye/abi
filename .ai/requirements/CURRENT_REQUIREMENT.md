@@ -1,3 +1,37 @@
+# 2026-10-12 分享接口适配（下线访客密码校验 + getProjectInfo 探测入口 + shareListByApiKey）
+
+## 文档状态
+
+- 状态：代码修改完成；tsc（改动文件零错误）+ vitest（chat-widget 46 用例通过）+ 死 CSS 清理完成。运行记录：`.ai/runs/2026-10-12-share-api-rework/RUN_LOG.md`。
+- 需求来源：用户按后端接口文档要求适配分享相关接口，并明确「`/api/v1/project/checkSharePassword` 去掉，不需要了」「密码功能已下线」。
+- 影响范围：chat 与 chat-sdk 两棵 chat-widget 树的分享入口/服务层、dashboard 分享预览页与加载器、abi 的 API-Key 分享列表接口与助手列表抽屉。
+
+## 目标与验收标准
+
+1. 保存分享主题 `saveShareTheme` 改为上送 `{shareCode, uiConfig}`，`uiConfig` 为主题 UI 配置的 JSON 字符串，整串覆盖（仅 chat-sdk 树有主题功能）。
+2. 分享页入口统一改用 `getProjectInfo/{type}?shareCode=xxx`（type 为路径变量：dashboard/react/workflow），后端据 shareCode 换出项目/助手 id；路径不再带 `{id}` 段。访客侧不再有密码弹窗/校验，`getProjectInfo` 为唯一入口，直接返回项目信息/token/主题。
+3. 新增按 API-Key 查询绑定分享列表 `shareListByApiKey`（`?apiKey=xxx&type=`，type 可选 react/workflow/dashboard），并接入 abi「API Key」页助手列表抽屉，替换原「全量拉取 + 前端 parseApiKeys 过滤」。
+4. 删除访客侧 `checkSharePassword` 相关：chat/chat-sdk 服务层与 `assistant.ts` 的 `checkAssistantShare`、dashboard `BaseApi.checkSharePassword`、ChatWidget/ShareViewPage 的密码 state 与 Modal、`.abi-cw-password*` 死 CSS。
+5. chat-widget 的 type 按 `SHARE_PROBE_TYPES = ['react']` 单类型直连（已按真实返回确认分享页仅自主助手开放；workflow 若开放再追加），取首个返回带 appId 的 type。
+6. 助手分享页（chat-sdk）所有接口附加 `x-api-key` 与 `secrectKey` 请求头；密钥对由第三方在平台「API Key」页创建后，通过 `<abi-assistant api-key secret-key>` 标签属性（或 React props）注入，未配置时不附加、登录态不受影响。
+7. `shareListByApiKey` 返回的助手列表在悬浮窗头部标题处支持切换（仅 chat-sdk）：后端信封为 `data.shares`，不传 `type` 过滤（列表 type 与实际可用入口类型不一致）；列表 >1 时标题变为下拉，重名项附 shareCode 尾注，选中后以新 shareCode 重挂载面板重置会话；chat 树无密钥上下文不镜像。
+8. 识别分享下发的预设主题：`getProjectInfo` 的 `uiConfig` JSON 内 `theme` 字段（如 `{"theme":"dark"}`）为 ABI 分享时三选一的风格，优先顶层 `theme`、回退 `uiConfig.theme`，缺失时不覆盖接入属性/默认值；同时移除访客主题的 localStorage 持久化，自定义仅本次会话生效，跨刷新以 `saveShareTheme` 保存后的后端下发为准。
+
+## 非目标
+
+- 不移除 dashboard「创建分享」侧的密码能力（`sharePasswordFlag`/`shareProject`/`getSharePassword`/分享记录列表），该能力不在本次 3 个接口文档范围内，保留但存在与访客侧不一致点，已在运行记录中列出待用户确认。
+- 不改登录态按 id 的 `getProjectInfo(id, type)` 核心流程（ViewDesignerLoader/EditorDesignerLoader/DatabaseConfig 等依赖）。
+- 不重构无关模块，不改全局样式。
+
+## 验证要求
+
+- 逐 app `tsc`：本次改动文件零类型错误（各 app 其余为 pre-existing 报错）。
+- 定向 vitest：`apps/chat/src/components/chat-widget`（4 文件 46 用例通过）；chat-sdk 树无测试副本。
+- grep 确认 `checkSharePassword`/`checkShare`/`checkAssistantShare`/`fetchAssistantInfo`/`.abi-cw-password` 零残留。
+- widget 产物 `dist` 已 gitignore，随部署 `vite build` 从源码重建，无需手工重建。
+
+---
+
 # 2026-10-08 原子指标映射中文名称校验
 
 ## 文档状态

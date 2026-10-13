@@ -14,9 +14,13 @@ export interface AbiAssistantProps {
   initialThemeConfig?: DeepPartial<ThemeConfig>
   /** 点击面板关闭按钮时回调；SDK 不自带悬浮球/开关，显示与隐藏由宿主系统控制 */
   onClose?: () => void
+  /** 第三方在平台创建的 API-Key，分享页所有请求随 x-api-key 头携带 */
+  apiKey?: string
+  /** 与 apiKey 配对的 secretKey，分享页所有请求随 secrectKey 头携带 */
+  secretKey?: string
 }
 
 /** 纯弹窗：直接渲染对话面板，不含悬浮球等触发入口；打开按钮与显示/隐藏由宿主系统自行控制 */
-export default function AbiAssistant({ shareCode, apiBase, theme = DEFAULT_THEME, themeSwitch = false, initialThemeConfig, onClose }: AbiAssistantProps) {
-  return <ChatWidget apiBase={apiBase} mode="float" onClose={onClose} shareCode={shareCode} theme={theme} showThemeSwitch={themeSwitch} initialThemeConfig={initialThemeConfig} />
+export default function AbiAssistant({ shareCode, apiBase, theme = DEFAULT_THEME, themeSwitch = false, initialThemeConfig, onClose, apiKey, secretKey }: AbiAssistantProps) {
+  return <ChatWidget apiBase={apiBase} mode="float" onClose={onClose} shareCode={shareCode} theme={theme} showThemeSwitch={themeSwitch} initialThemeConfig={initialThemeConfig} apiKey={apiKey} secretKey={secretKey} />
 }

@@ -1,8 +1,9 @@
 import { CheckOutlined, ClockCircleOutlined, CloseOutlined, CompassOutlined, DislikeOutlined, DownOutlined, ExpandOutlined, InboxOutlined, LikeOutlined, LoadingOutlined, MinusOutlined, OrderedListOutlined, ShrinkOutlined, ThunderboltOutlined, ToolOutlined } from '@ant-design/icons'
-import { Alert, message, Tooltip } from 'antd'
+import { Alert, Tooltip } from 'antd'
 import React, { useEffect, useRef, useState } from 'react'
 
 import ExploreCodeBlock, { detectCodeLanguage, type ExploreCodeEditPayload, type ExploreCodeLanguage } from './ExploreCodeBlock'
+import { showWidgetToast } from '../../chat-widget/widgetToast'
 import ExploreRichText, { containsText } from './ExploreRichText'
 import type { ExploreItem, ExploreStep, ExploreStepOutput } from './types'
 import styles from './styles.module.css'
@@ -421,12 +422,12 @@ const ExploreMessageRow: React.FC<ExploreMessageRowProps> = ({ item, active = fa
         {/* 底部工具栏：反馈按钮（占位功能，后续接入实际评价逻辑），样式对齐交互模式操作栏图标按钮 */}
         <div className={styles.footerBar}>
           <Tooltip title="点赞">
-            <button type="button" className={styles.footerAction} onClick={() => message.info('功能开发中...')}>
+            <button type="button" className={styles.footerAction} onClick={() => showWidgetToast('info', '功能开发中...')}>
               <LikeOutlined />
             </button>
           </Tooltip>
           <Tooltip title="点踩">
-            <button type="button" className={styles.footerAction} onClick={() => message.info('功能开发中...')}>
+            <button type="button" className={styles.footerAction} onClick={() => showWidgetToast('info', '功能开发中...')}>
               <DislikeOutlined />
             </button>
           </Tooltip>

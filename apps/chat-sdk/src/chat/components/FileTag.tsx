@@ -1,8 +1,9 @@
 import React from 'react';
-import { Tag, message } from 'antd';
+import { Tag } from 'antd';
 import { DownloadOutlined, FileExcelOutlined } from "@ant-design/icons";
 import { uploadExcelFile } from '@/service/api/conv';
 import { downloadFileByBlob } from '@/utils';
+import { showWidgetToast } from './chat-widget/widgetToast';
 
 interface FileTagProps {
   fileId: string | number;
@@ -43,10 +44,10 @@ const FileTag: React.FC<FileTagProps> = ({
         file_id: fileId
       });
       downloadFileByBlob(res, fileName);
-      message.success('下载成功');
+      showWidgetToast('success', '下载成功');
     }
     catch (error) {
-      message.error('下载失败');
+      showWidgetToast('error', '下载失败');
     }
   }
 

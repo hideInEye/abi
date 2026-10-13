@@ -73,10 +73,10 @@ const STANDALONE_PAGE = `<!doctype html>
     <button class="host-open-btn" id="hostOpenBtn" style="display: none">打开 AI 助手</button>
     <script src="./abi-assistant-widget.js"></script>
     <script>
-      // 独立部署调试页：shareCode/base 可用 URL 参数覆盖（?shareCode=xxx&base=/api），默认值与 dev 调试页一致
+      // 独立部署调试页：shareCode/base 用 URL 参数传入（?shareCode=xxx&base=/api），不写死测试值
       var params = new URLSearchParams(location.search)
       var assistant = document.createElement('abi-assistant')
-      assistant.setAttribute('share-code', params.get('shareCode') || 'rkh7lyn8')
+      assistant.setAttribute('share-code', params.get('shareCode') || '')
       assistant.setAttribute('base', params.get('base') || '/api')
       assistant.setAttribute('theme-switch', '')
       var hostOpenBtn = document.getElementById('hostOpenBtn')

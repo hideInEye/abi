@@ -278,24 +278,15 @@ class BaseApi extends AbstractApi {
     }
 
     /**
-     * 校验分享密码 / 获取分享信息
+     * 分享页入口：按 shareCode 免登录查询项目/助手信息（后端据 shareCode 换出项目 id）。
+     * @param type 项目类型：大屏=dashboard，自主助手=react，工作流助手=workflow
      * @param shareCode 分享码
-     * @param sharePassword 分享密码（无密码时传空字符串）
-     * @returns { passwordFlag: 是否需要密码, result: 密码校验结果 }
+     * @returns 项目详情（含 id/projectId/appId）；失败返回 null
      */
-    public async checkSharePassword(shareCode: string, sharePassword: string): Promise<{passwordFlag: boolean; result: boolean; projectId?: string | number} | null> {
-        const res = await FetchUtil.post('/dashboard/api/v1/project/checkSharePassword', {
-            shareCode,
-            sharePassword
-        }, {headers: {'X-Skip-Auth': 'true'}});
-        if (res.code === 200) {
-            return {
-                passwordFlag: res.data?.passwordFlag ?? false,
-                result: res.data?.result ?? false,
-                projectId: res.data?.projectId,
-            };
-        }
-        return null;
+    public async getShareProjectInfo(type: 'dashboard' | 'react' | 'workflow', shareCode: string): Promise<any | null> {
+        const res = await FetchUtil.get(`/dashboard/api/v1/project/getProjectInfo/${type}?shareCode=${encodeURIComponent(shareCode)}`, {headers: {'X-Skip-Auth': 'true'}});
+        if (res.code !== 200) return null;
+        return res.data?.data ?? res.data ?? null;
     }
 
 }

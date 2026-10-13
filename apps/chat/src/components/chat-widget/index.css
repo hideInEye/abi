@@ -106,45 +106,7 @@
   border-radius: 0 0 16px 16px;
 }
 
-.abi-cw-resize {
-  position: absolute;
-  z-index: 30;
-  touch-action: none;
-}
-
-.abi-cw-resize-n {
-  top: -4px;
-  left: 12px;
-  right: 12px;
-  height: 8px;
-  cursor: ns-resize;
-}
-
-.abi-cw-resize-s {
-  bottom: -4px;
-  left: 12px;
-  right: 12px;
-  height: 8px;
-  cursor: ns-resize;
-}
-
-.abi-cw-resize-e {
-  top: 12px;
-  bottom: 12px;
-  right: -4px;
-  width: 8px;
-  cursor: ew-resize;
-}
-
-.abi-cw-resize-w {
-  top: 12px;
-  bottom: 12px;
-  left: -4px;
-  width: 8px;
-  cursor: ew-resize;
-}
-
-/* ── 头部（拖拽把手，对齐大屏 ai-chat-header） ── */
+/* ── 头部（对齐大屏 ai-chat-header） ── */
 .abi-cw-header {
   flex-shrink: 0;
   display: flex;
@@ -155,8 +117,6 @@
   height: 52px;
   background: var(--cw-header-bg, rgba(255, 255, 255, 0.7));
   border-bottom: 1px solid var(--cw-header-border, rgba(130, 140, 200, 0.16));
-  cursor: move;
-  touch-action: none;
   user-select: none;
 }
 
@@ -279,40 +239,6 @@
   }
 }
 
-/* 密码表单（嵌入形态下的分享密码校验） */
-.abi-cw-password {
-  width: 100%;
-  max-width: 280px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.abi-cw-password-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--cw-text, #333);
-}
-
-.abi-cw-password input {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #d9d9d9;
-  border-radius: 8px;
-  font-size: 14px;
-  outline: none;
-}
-
-.abi-cw-password input:focus {
-  border-color: #5b7cf7;
-}
-
-.abi-cw-password-error {
-  color: #ff4d4f;
-  font-size: 12px;
-  min-height: 18px;
-}
-
 .abi-cw-btn-primary {
   border: none;
   border-radius: 8px;
@@ -419,23 +345,6 @@
 /* chip 文本：完整显示，不截断 */
 .abi-cw-infobar-chip-text {
   white-space: nowrap;
-}
-
-/* 手动接管后（拖回默认/更窄）：信息条改为占满宽度、超长名称省略号截断，不再硬裁切 */
-.abi-cw-panel.abi-cw-infobar-ellipsis .abi-cw-infobar {
-  width: 100%;
-  overflow: hidden;
-}
-
-.abi-cw-panel.abi-cw-infobar-ellipsis .abi-cw-infobar-chip {
-  flex-shrink: 1;
-  min-width: 0;
-}
-
-.abi-cw-panel.abi-cw-infobar-ellipsis .abi-cw-infobar-chip-text {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .abi-cw-infobar-chip-group {

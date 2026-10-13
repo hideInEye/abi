@@ -19,7 +19,7 @@ export interface HistoryDrawerProps {
   onClose: () => void
 }
 
-/* 线宽图标（同悬浮窗头部风格：strokeWidth 2 + 圆角线帽）：竖三点/重命名/置顶/删除/确认 */
+/* 线宽图标（同悬浮窗头部风格：strokeWidth 2 + 圆角线帽）：竖三点/重命名/置顶/删除 */
 const IconRowMore = (
   <svg viewBox="0 0 24 24" fill="currentColor">
     <circle cx="12" cy="5" r="2" />
@@ -46,11 +46,6 @@ const IconDelete = (
     <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
   </svg>
 )
-const IconCheck = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="20 6 9 17 4 12" />
-  </svg>
-)
 
 const DAY = 86400000
 type GroupKey = 'today' | 'yesterday' | 'week' | 'older'
@@ -72,9 +67,8 @@ function groupOf(ts: number | undefined, todayStart: number): GroupKey {
 
 /** 历史对话抽屉：与外观自定义弹窗同款形态（右锚向左侧拉开、渐变玻璃标题栏、同宽度规则）；透明遮罩点左侧可关闭；按时间分组 + 行内 ... 操作 */
 export default function HistoryDrawer({ open, loading, sessions, activeSessionId, getContainer, onSelect, onRename, onToggleTop, onDelete, onClose }: HistoryDrawerProps) {
-  // 行 ... 菜单开合（同刻仅一个）、删除二次确认臂、行内重命名态
+  // 行 ... 菜单开合（同刻仅一个）、行内重命名态
   const [menuSessionId, setMenuSessionId] = useState<string | null>(null)
-  const [armedDeleteId, setArmedDeleteId] = useState<string | null>(null)
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameDraft, setRenameDraft] = useState('')
 
@@ -98,17 +92,27 @@ export default function HistoryDrawer({ open, loading, sessions, activeSessionId
 
   const closeMenus = () => {
     setMenuSessionId(null)
-    setArmedDeleteId(null)
   }
 
+  /* 确认重命名：回车/失焦提交；空标题或未改动视为取消，不发请求 */
   const submitRename = async (item: WidgetSessionItem) => {
     const title = renameDraft.trim()
-    if (!title) return
+    if (!title || title === item.title) {
+      setRenamingId(null)
+      setRenameDraft('')
+      return
+    }
     const ok = await onRename(item, title)
     if (ok !== false) {
+      // 先清草稿：卸载触发的失焦再进这里时按空标题走取消，避免重复提交
       setRenamingId(null)
       setRenameDraft('')
     }
+  }
+
+  const cancelRename = () => {
+    setRenamingId(null)
+    setRenameDraft('')
   }
 
   return (
@@ -143,31 +147,25 @@ export default function HistoryDrawer({ open, loading, sessions, activeSessionId
               <div className={styles.groupLabel}>{g.label}</div>
               <ul className={styles.list}>
                 {g.items.map((s) => (
-                  <li key={s.sessionId} className={styles.row}>
+                  <li key={s.sessionId} className={`${styles.row}${s.sessionId === activeSessionId ? ` ${styles.rowActive}` : ''}`}>
                     {renamingId === s.sessionId ? (
-                      <>
-                        <input
-                          className={styles.renameInput}
-                          autoFocus
-                          maxLength={40}
-                          value={renameDraft}
-                          onChange={(e) => setRenameDraft(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') void submitRename(s)
-                            if (e.key === 'Escape') {
-                              setRenamingId(null)
-                              setRenameDraft('')
-                            }
-                          }}
-                        />
-                        <button type="button" className={styles.renameOk} title="确认" onClick={() => void submitRename(s)}>
-                          {IconCheck}
-                        </button>
-                      </>
+                      /* 行内重命名：输入框占满整行，回车/失焦提交、Esc 取消，不带确认勾 */
+                      <input
+                        className={styles.renameInput}
+                        autoFocus
+                        maxLength={40}
+                        value={renameDraft}
+                        onChange={(e) => setRenameDraft(e.target.value)}
+                        onBlur={() => void submitRename(s)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') void submitRename(s)
+                          if (e.key === 'Escape') cancelRename()
+                        }}
+                      />
                     ) : (
                       <button
                         type="button"
-                        className={`${styles.item}${s.sessionId === activeSessionId ? ` ${styles.active}` : ''}`}
+                        className={styles.item}
                         title={s.title}
                         onClick={() => onSelect(s)}
                       >
@@ -181,7 +179,6 @@ export default function HistoryDrawer({ open, loading, sessions, activeSessionId
                         open={menuSessionId === s.sessionId}
                         onOpenChange={(o) => {
                           setMenuSessionId(o ? s.sessionId : null)
-                          if (!o) setArmedDeleteId(null)
                         }}
                         getPopupContainer={getContainer}
                         overlayClassName="abi-cw-menu"
@@ -212,19 +209,14 @@ export default function HistoryDrawer({ open, loading, sessions, activeSessionId
                             </button>
                             <button
                               type="button"
-                              className={`abi-cw-menu-item${armedDeleteId === s.sessionId ? ' abi-cw-menu-item-danger' : ''}`}
+                              className="abi-cw-menu-item abi-cw-menu-item-danger"
                               onClick={() => {
-                                // 二次确认：首次点击臂入“确认删除？”，再点才真删
-                                if (armedDeleteId !== s.sessionId) {
-                                  setArmedDeleteId(s.sessionId)
-                                  return
-                                }
                                 closeMenus()
                                 onDelete(s)
                               }}
                             >
                               {IconDelete}
-                              <span>{armedDeleteId === s.sessionId ? '确认删除？' : '删除'}</span>
+                              <span>删除</span>
                             </button>
                           </div>
                         )}

@@ -74,6 +74,21 @@ export function fetchProjectShareDetailApi(shareCode: string) {
 }
 
 /**
+ * 按 API-Key 查询其绑定的分享列表（apiKey 为查询参数；type 可选过滤：react=chat端助手 / workflow=abi助手 / dashboard=数据大屏，不传返回全部）。
+ * 网关路径与分享接口一致：/api + /dashboard/api/v1/project/shareListByApiKey。
+ */
+export function fetchShareListByApiKeyApi(params: {
+  apiKey: string;
+  type?: 'react' | 'workflow' | 'dashboard';
+}) {
+  return apiRequest({
+    method: 'get',
+    url: '/api/dashboard/api/v1/project/shareListByApiKey',
+    params
+  });
+}
+
+/**
  * 更新分享记录的应用状态（shareCodes 以重复 query key 传多个：?shareCodes=a&shareCodes=b）。
  * appStatus: 0-已删除 1-启用中 2-已离线(历史版本) 3-编辑中。
  * 手动拼 query 而非 axios 数组序列化，避免默认带 [] 后缀与后端 repeat 形式不符。

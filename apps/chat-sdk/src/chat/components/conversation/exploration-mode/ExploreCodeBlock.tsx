@@ -1,8 +1,10 @@
 import { CheckOutlined, CopyOutlined, FormOutlined } from '@ant-design/icons'
-import { message, Tooltip } from 'antd'
+import { Tooltip } from 'antd'
 import React, { useEffect, useRef, useState } from 'react'
 // @ts-ignore - react-syntax-highlighter 类型定义问题
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+
+import { showWidgetToast } from '../../chat-widget/widgetToast'
 // @ts-ignore
 import { oneLight, oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 
@@ -106,7 +108,7 @@ const ExploreCodeBlock: React.FC<ExploreCodeBlockProps> = ({ code, language, onE
       window.clearTimeout(copyTimerRef.current)
       copyTimerRef.current = window.setTimeout(() => setCopied(false), 1600)
     } catch {
-      message.error('复制失败')
+      showWidgetToast('error', '复制失败')
     }
   }
 

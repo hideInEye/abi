@@ -1,24 +1,39 @@
 /* 历史对话抽屉：与外观自定义弹窗同款形态（abi 编辑弹窗渐变玻璃标题栏），唯一区别无遮罩；
-   只消费本类定义的固定浅色变量，不读 --cw-*：访客自定义主题不染到抽屉 chrome 与列表 */
+   chrome 与列表配色派生自 --cw-*：预设/自定义切换时抽屉跟随面板同变 */
 
 .drawer {
-  --hd-text: #1f2733;
-  --hd-muted: #9aa4b2;
-  --hd-accent: #5b7cf7;
+  --hd-text: var(--cw-text, #1f2733);
+  --hd-muted: var(--cw-text-muted, #9aa4b2);
+  --hd-accent: var(--accent, #5b7cf7);
+  --hd-head-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(248, 250, 255, 0.8) 100%);
+  --hd-head-border: rgba(130, 140, 200, 0.15);
+  --hd-row-hover: rgba(91, 124, 247, 0.06);
+  --hd-row-active: rgba(91, 124, 247, 0.1);
+  --hd-input-bg: #fff;
   /* 宿主（abi 分享页）对 drawer 有全局 !important 规则：遮蔽变量使其退化为 abi 编辑弹窗同款渐变 */
   --abi-card-box-draw-pop-bg: linear-gradient(135deg, rgba(240, 244, 255, 0.95) 0%, rgba(239, 243, 255, 0.95) 45%, rgba(239, 242, 255, 0.95) 100%);
   font-family: 'Helvetica Neue', Arial, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 14px;
 }
 
+/* 黑色系：玻璃标题栏/行高亮/输入底转深色口径（文字类变量已由 --cw-* 自动反转） */
+[data-cw-theme='dark'] .drawer {
+  --hd-head-bg: linear-gradient(135deg, rgba(40, 44, 58, 0.86) 0%, rgba(31, 34, 48, 0.86) 100%);
+  --hd-head-border: rgba(255, 255, 255, 0.1);
+  --hd-row-hover: rgba(255, 255, 255, 0.06);
+  --hd-row-active: rgba(123, 150, 255, 0.16);
+  --hd-input-bg: rgba(255, 255, 255, 0.06);
+}
+
 .drawer :global(.ant-drawer-content) {
+  background: var(--cw-card-bg, #fff);
   backdrop-filter: blur(20px);
 }
 
 .drawer :global(.ant-drawer-header) {
   padding: 20px 28px !important;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(248, 250, 255, 0.8) 100%) !important;
-  border-bottom: 1px solid rgba(130, 140, 200, 0.15) !important;
+  background: var(--hd-head-bg) !important;
+  border-bottom: 1px solid var(--hd-head-border) !important;
   box-shadow: 0 2px 12px rgba(91, 124, 247, 0.06);
   backdrop-filter: blur(10px);
 }
@@ -40,7 +55,7 @@
 .drawerTitle {
   min-width: 0;
   overflow: hidden;
-  color: #1a2744;
+  color: var(--hd-text);
   font-size: 17px;
   font-weight: 700;
   text-overflow: ellipsis;
@@ -48,14 +63,14 @@
 }
 
 .drawerClose {
-  color: #8c8c8c;
+  color: var(--hd-muted);
   font-size: 16px;
   cursor: pointer;
   transition: color 0.2s ease;
 }
 
 .drawerClose:hover {
-  color: #5b7cf7;
+  color: var(--hd-accent);
 }
 
 /* 细滚动条：同外观自定义弹窗 */
@@ -65,7 +80,7 @@
 
 .drawer :global(.ant-drawer-body)::-webkit-scrollbar-thumb {
   border-radius: 3px;
-  background: #e5e7eb;
+  background: var(--cw-border-2, #e5e7eb);
 }
 
 .drawer :global(.ant-drawer-body)::-webkit-scrollbar-track {
@@ -76,60 +91,77 @@
   padding: 4px 0 12px;
 }
 
-/* 时间分组标签（今天/昨天/7天内/更早） */
-.groupLabel {
-  padding: 10px 28px 4px;
-  font-size: 12px;
+/* 时间分组标签（今天/昨天/7天内/更早）：与会话标题文字左对齐 */
+.drawer .groupLabel {
+  padding: 14px 24px 6px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.5;
   color: var(--hd-muted);
 }
 
-.list {
+.drawer .list {
   list-style: none;
   margin: 0;
-  padding: 0 16px 4px;
-}
-
-/* 行 = 会话标题 + 行内 ... 操作入口 */
-.row {
+  padding: 0 12px 6px;
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 2px;
 }
 
-.row .item {
+/* 行是单一圆角面：标题与 ... 共用同一 hover/选中底色，不再割裂成两块 */
+.drawer .row {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding-right: 4px;
+  border-radius: 8px;
+  transition: background 0.15s ease;
+}
+
+.drawer .row:hover {
+  background: var(--hd-row-hover);
+}
+
+/* 选中行：整行（含 ... 区）统一浅靛底 */
+.drawer .rowActive,
+.drawer .rowActive:hover {
+  background: var(--hd-row-active);
+}
+
+.drawer .row .item {
   flex: 1;
   min-width: 0;
 }
 
-.item {
+/* 字体/行高/字重显式给定：宿主页面按钮全局样式不会撑破行高或加粗标题 */
+.drawer .item {
   display: block;
   width: 100%;
   text-align: left;
   border: 0;
   background: transparent;
-  border-radius: 8px;
-  padding: 10px 12px;
+  padding: 8px 12px;
   font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
   color: var(--hd-text);
   cursor: pointer;
+  transition: color 0.15s ease;
   /* 不换行：抽屉宽度不足时省略号截断 */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.item:hover {
-  background: rgba(91, 124, 247, 0.08);
-}
-
-.active {
-  background: rgba(91, 124, 247, 0.12);
+/* 选中态只加到 500：中文 13px 上 600 显笨重 */
+.drawer .rowActive .item {
   color: var(--hd-accent);
-  font-weight: 600;
+  font-weight: 500;
 }
 
-/* 行内 ...：默认隐藏，行 hover / 菜单打开时常显 */
-.rowMore {
+/* 行内 ...：默认隐藏，行 hover / 菜单打开时常显；落在行面内与标题同属一块 */
+.drawer .rowMore {
   display: flex;
   flex-shrink: 0;
   border: 0;
@@ -138,55 +170,42 @@
   padding: 4px;
   cursor: pointer;
   color: var(--hd-muted);
+  line-height: 1;
   opacity: 0;
+  transition: opacity 0.15s ease, background 0.15s ease;
 }
 
-.row:hover .rowMore,
-.rowMoreOpen {
+.drawer .row:hover .rowMore,
+.drawer .rowMoreOpen {
   opacity: 1;
 }
 
-.rowMore:hover {
-  background: rgba(91, 124, 247, 0.12);
+/* hover 只加深颜色：自带底色会叠在行选中底色上形成两层高亮 */
+.drawer .rowMore:hover {
   color: var(--hd-accent);
 }
 
-.rowMore svg {
+.drawer .rowMore svg {
   width: 14px;
   height: 14px;
 }
 
-/* 行内重命名：输入框 + 确认勾 */
-.renameInput {
+/* 行内重命名：输入框占满整行（回车/失焦提交），无确认勾 */
+.drawer .renameInput {
   flex: 1;
   min-width: 0;
-  margin: 2px 0 2px 12px;
+  margin: 4px 8px 4px 12px;
   border: 1px solid var(--hd-accent);
   border-radius: 6px;
-  padding: 6px 8px;
+  padding: 6px 10px;
   font-size: 13px;
+  line-height: 1.5;
   outline: none;
   color: var(--hd-text);
-  background: #fff;
+  background: var(--hd-input-bg);
 }
 
-.renameOk {
-  display: flex;
-  flex-shrink: 0;
-  border: 0;
-  background: transparent;
-  border-radius: 6px;
-  padding: 4px;
-  cursor: pointer;
-  color: var(--hd-accent);
-}
-
-.renameOk svg {
-  width: 14px;
-  height: 14px;
-}
-
-.status {
+.drawer .status {
   padding: 28px 0;
   text-align: center;
   font-size: 12px;

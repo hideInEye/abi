@@ -1,13 +1,16 @@
 /* 外观自定义弹窗：完全照搬 abi 数据源编辑弹窗（CommonDrawer + ds-operate-drawer）的渐变玻璃四段样式；
-   只消费本类定义的 --tk-* 局部变量，不读任何 --cw-*：访客自定义的颜色/字体无论如何都不会染到弹窗 */
+   只消费本类定义的 --tk-* 局部变量（--tk-* 派生自 --cw-*）：预设切换跟随，字体锁默认不被自定义字族/字号/字重染到 */
 
 .drawer {
-  --tk-surface: #ffffff;
-  --tk-text: #1f2733;
-  --tk-text-2: #6b7688;
-  --tk-muted: #9aa4b2;
-  --tk-border: #e5e7eb;
-  --tk-chip-bg: #f2f4f8;
+  /* 控件面板配色派生自 --cw-*：预设/自定义切换时弹窗跟随面板同变 */
+  --tk-surface: var(--cw-card-bg, #ffffff);
+  --tk-text: var(--cw-text, #1f2733);
+  --tk-text-2: var(--cw-text-2, #6b7688);
+  --tk-muted: var(--cw-text-muted, #9aa4b2);
+  --tk-border: var(--cw-border, #e5e7eb);
+  --tk-chip-bg: var(--cw-input-bg, #f2f4f8);
+  --tk-head-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(248, 250, 255, 0.8) 100%);
+  --tk-head-border: rgba(130, 140, 200, 0.15);
   /* 宿主（abi 分享页）对 drawer/下拉/输入框有全局 !important 规则，但取色都是 var(--abi-*)：
      在抽屉子树遮蔽这两个变量，使那些规则整体退化为 abi 编辑弹窗同款渐变，宿主不劫持弹窗配色 */
   --abi-card-box-draw-pop-bg: linear-gradient(135deg, rgba(240, 244, 255, 0.95) 0%, rgba(239, 243, 255, 0.95) 45%, rgba(239, 242, 255, 0.95) 100%);
@@ -18,15 +21,23 @@
   font-weight: 400;
 }
 
+/* 黑色系：玻璃标题栏/底栏与 chip 底转深色口径（文字类变量已由 --cw-* 自动反转） */
+[data-cw-theme='dark'] .drawer {
+  --tk-head-bg: linear-gradient(135deg, rgba(40, 44, 58, 0.86) 0%, rgba(31, 34, 48, 0.86) 100%);
+  --tk-head-border: rgba(255, 255, 255, 0.1);
+  --tk-chip-bg: rgba(255, 255, 255, 0.06);
+}
+
 /* 四段背景/分隔线统一走 abi 编辑弹窗值；!important 压过宿主全局 !important 规则 */
 .drawer :global(.ant-drawer-content) {
+  background: var(--tk-surface);
   backdrop-filter: blur(20px);
 }
 
 .drawer :global(.ant-drawer-header) {
   padding: 20px 28px !important;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(248, 250, 255, 0.8) 100%) !important;
-  border-bottom: 1px solid rgba(130, 140, 200, 0.15) !important;
+  background: var(--tk-head-bg) !important;
+  border-bottom: 1px solid var(--tk-head-border) !important;
   box-shadow: 0 2px 12px rgba(91, 124, 247, 0.06);
   backdrop-filter: blur(10px);
 }
@@ -37,8 +48,8 @@
 
 .drawer :global(.ant-drawer-footer) {
   padding: 0 !important;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(248, 250, 255, 0.8) 100%) !important;
-  border-top: 1px solid rgba(130, 140, 200, 0.15) !important;
+  background: var(--tk-head-bg) !important;
+  border-top: 1px solid var(--tk-head-border) !important;
   box-shadow: 0 -2px 12px rgba(91, 124, 247, 0.06);
   backdrop-filter: blur(10px);
 }
@@ -53,7 +64,7 @@
   align-items: center;
   min-width: 0;
   gap: 12px;
-  color: #1a2744;
+  color: var(--tk-text);
   font-size: 17px;
   font-weight: 700;
 }
@@ -90,18 +101,18 @@
 }
 
 .drawerClose {
-  color: #8c8c8c;
+  color: var(--tk-muted);
   font-size: 16px;
   cursor: pointer;
   transition: color 0.2s ease;
 }
 
 .drawerClose:hover {
-  color: #5b7cf7;
+  color: var(--accent, #5b7cf7);
 }
 
 .drawer :global(.ant-collapse-header) {
-  color: #1a2744 !important;
+  color: var(--tk-text) !important;
   font-weight: 600;
   font-size: 13px;
   padding: 10px 0 !important;
@@ -327,10 +338,10 @@
 .resetBtn {
   height: 34px;
   padding: 8px 18px;
-  border: 1px solid rgba(130, 140, 200, 0.25);
+  border: 1px solid var(--tk-border);
   border-radius: 8px;
-  background: #fff;
-  color: #3e5068;
+  background: var(--tk-chip-bg);
+  color: var(--tk-text);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -338,8 +349,8 @@
 }
 
 .resetBtn:hover {
-  border-color: #5b7cf7;
-  color: #5b7cf7;
+  border-color: var(--accent, #5b7cf7);
+  color: var(--accent, #5b7cf7);
 }
 
 /* 同 abi btn-accent-gradient 主按钮 */

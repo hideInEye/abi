@@ -12,24 +12,12 @@ export interface WidgetConfig {
   token?: string
 }
 
-export interface ShareCheckResult {
-  passwordFlag: boolean
-  result: boolean
-  appId: string
-  /** 项目类型（后端分享校验已区分：自主助手=react，工作流助手=workflow，大屏=dashboard） */
-  type: ProjectType
-  /** 校验通过后后端下发的临时 token（无密码分享探测通过时同样返回） */
-  token?: string
-}
-
 /** 统一 project 接口的类型段：大屏=dashboard，自主助手=react，工作流助手=workflow */
 export type ProjectType = 'dashboard' | 'react' | 'workflow'
 
-/** 后端分享校验返回的 type 归一化：后端已确认响应携带 type（自主助手=react / 工作流助手=workflow / 大屏=dashboard）；异常值抛错便于联调时暴露字段问题 */
-function normalizeProjectType(raw: unknown): ProjectType {
-  if (raw === 'react' || raw === 'workflow' || raw === 'dashboard') return raw
-  throw new Error(`checkSharePassword 响应缺少有效 type：${String(raw)}`)
-}
+/** 分享页入口 type 段：助手分享页固定为工作流助手(workflow)，单类型直连不再探测；
+ * 若后续自主助手(react)也开放分享页，再在此追加并恢复顺序探测 */
+export const SHARE_PROBE_TYPES: ProjectType[] = ['workflow']
 
 export interface WidgetSession {
   sessionId: string
@@ -54,6 +42,12 @@ export interface WidgetAssistantInfo {
   spaceId?: number | string
 }
 
+/** 分享页入口响应：助手详情 + 后端按 shareCode 换出的 appId + 临时 token */
+export interface ShareProjectInfo extends WidgetAssistantInfo {
+  /** 后端下发的临时 token，后续接口随 Authorization 携带 */
+  token?: string
+}
+
 /** 数据语义节点（助手详情下发绑定语义：仅 schema 叶子，无分组节点） */
 export interface WidgetSemanticNode {
   id: string | number
@@ -76,11 +70,10 @@ export interface WidgetSemanticSelection {
 
 /**
  * 接口路径（后端已就绪部分按实际协议，其余假设联调时仅改此处）。
- * 分享校验与大屏共用统一接口（网关路径 = apiBase + /dashboard/api/v1/project/...，同大屏）；
+ * 分享页入口走统一 project 接口（网关路径 = apiBase + /dashboard/api/v1/project/...，同大屏）；
  * 会话三件套仍按 abi-chat 约定假设。
  */
 const API = {
-  checkShare: '/dashboard/api/v1/project/checkSharePassword',
   getProjectInfo: '/dashboard/api/v1/project/getProjectInfo',
   sessionAdd: '/abi-chat/v1/app/session/add',
   messageQuery: '/abi-chat/v1/app/message/query',
@@ -120,21 +113,6 @@ function isOk(json: any): boolean {
   return json?.success === true || Number(json?.code) === 200
 }
 
-/** 校验分享密码 / 获取分享信息（与大屏同接口、同字段名；密码传空串即探测是否需要密码） */
-export async function checkSharePassword(cfg: WidgetConfig, password: string): Promise<ShareCheckResult | null> {
-  const json = await postJson(cfg, API.checkShare, { sharePassword: password, shareCode: cfg.shareCode })
-  if (!isOk(json)) return null
-  const d = json?.data ?? {}
-  return {
-    passwordFlag: !!d.passwordFlag,
-    result: d.result !== false,
-    // 统一分享接口返回 projectId（=助手 appId），兼容后端直接返回 appId 的情况
-    appId: String(d.appId ?? d.projectId ?? ''),
-    type: normalizeProjectType(d.type),
-    token: typeof d.token === 'string' && d.token ? d.token : undefined,
-  }
-}
-
 /** 裸 fetch GET（免登录）；shareCode 仅 getProjectInfo 需要，由调用方随 params 显式传入 */
 async function getJson(cfg: WidgetConfig, path: string, params: Record<string, string | number> = {}) {
   const base = String(cfg.apiBase || '').replace(/\/+$/, '')
@@ -154,18 +132,19 @@ export async function fetchSemanticDetail(cfg: WidgetConfig, schemaId: number | 
 }
 
 /**
- * 拉取助手信息（名称/开场白/推荐问题/绑定数据语义），失败返回 null 由调用方兜底。
- * 进入分享页改走统一接口 GET /api/v1/project/getProjectInfo/{type}/{id}，
- * type 由分享校验响应携带（后端已确认：自主助手=react / 工作流助手=workflow）；响应字段与 app/get 一致。
+ * 分享页唯一入口 GET /api/v1/project/getProjectInfo/{type}?shareCode=（后端按 shareCode 换出项目/app id，路径无 id 段）。
+ * 响应字段与 app/get 一致，另携带 token；失败或缺 appId 返回 null，由调用方探测下一个 type。
  * 数据语义随助手详情一并下发（不再单独调 /copilot/v1/schema/tree），后端未加字段时降级为空列表。
  */
-export async function fetchAssistantInfo(cfg: WidgetConfig, appId: string, type: ProjectType = 'react'): Promise<WidgetAssistantInfo | null> {
+export async function fetchShareProjectInfo(cfg: WidgetConfig, type: ProjectType): Promise<ShareProjectInfo | null> {
   try {
-    const json = await getJson(cfg, `${API.getProjectInfo}/${type}/${appId}`, { shareCode: cfg.shareCode })
+    const json = await getJson(cfg, `${API.getProjectInfo}/${type}`, { shareCode: cfg.shareCode })
     if (!isOk(json)) return null
     const d = json?.data?.data ?? json?.data ?? {}
+    const appId = String(d.appId ?? d.projectId ?? '')
+    if (!appId) return null
     return {
-      appId: String(d.appId ?? appId),
+      appId,
       name: d.appName || d.name || '',
       description: d.description || '',
       prologue: d.prologue || '',
@@ -173,6 +152,7 @@ export async function fetchAssistantInfo(cfg: WidgetConfig, appId: string, type:
       semantics: mapProjectSemantics(d),
       ...mapAssistantBoundToolResources(d),
       spaceId: d.spaceId ?? d.space_id,
+      token: typeof d.token === 'string' && d.token ? d.token : undefined,
     }
   } catch {
     return null

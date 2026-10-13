@@ -15,18 +15,18 @@ import { nextUserScrolled } from './scrollFollow'
 import type { ExploreControllerHandle, ExploreControllerSnapshot } from './ExploreControllerBridge'
 import type { ReportControllerHandle, ReportControllerSnapshot } from './ReportControllerBridge'
 import {
-  checkSharePassword,
   ensureSession,
-  fetchAssistantInfo,
   fetchChartDataBySql,
   fetchHistory,
   fetchMaxRound,
   fetchSemanticDetail,
+  fetchShareProjectInfo,
   fetchViewContextByRound,
   parseAiRaw,
   sendChatStream,
+  SHARE_PROBE_TYPES,
   submitFeedback,
-  type ProjectType,
+  type ShareProjectInfo,
   type WidgetAssistantInfo,
   type WidgetSemanticNode,
   type WidgetSemanticSelection,
@@ -51,17 +51,11 @@ export interface ChatWidgetProps {
   apiBase: string
   /** page：分享路由页整页面板；float：第三方嵌入右侧悬浮面板；embed：iframe 直嵌（铺满 iframe，宿主自行控制悬浮定位与尺寸，禁拖拽/缩放/放大） */
   mode?: 'page' | 'float' | 'embed'
-  /** 外层（分享页）已完成校验并拿到 appId 时传入，跳过 widget 内部校验/密码表单 */
-  verifiedAppId?: string
-  /** 外层校验时后端返回的项目类型（自主助手=react / 工作流助手=workflow），随 verifiedAppId 透传 */
-  verifiedType?: ProjectType
-  /** 外层分享校验通过后后端下发的临时 token，后续接口随 Authorization 携带 */
-  verifiedToken?: string
   /** float 形态下的关闭回调 */
   onClose?: () => void
 }
 
-type Phase = 'checking' | 'password' | 'loading' | 'ready' | 'error'
+type Phase = 'checking' | 'loading' | 'ready' | 'error'
 
 /** 输入工具栏对话模式（标签同主对话，三模式各自对接发送协议与渲染） */
 type WidgetChatMode = 'interact' | 'report' | 'explore'
@@ -209,19 +203,17 @@ type WidgetTimelineEntry =
   | { key: string; sortKey: number; kind: 'report'; report: ReportItem }
 
 /** 助手分享对话悬浮框：无 store 依赖的纯组件，分享页与第三方嵌入共用；渲染层复用主对话组件 */
-const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verifiedType, verifiedToken, onClose }: ChatWidgetProps) => {
-  // 分享校验通过后的临时 token（外层传入或 widget 内部密码校验后写入），后续接口随 Authorization 携带
-  const [shareToken, setShareToken] = useState(verifiedToken || '')
+const ChatWidget = ({ shareCode, apiBase, mode = 'page', onClose }: ChatWidgetProps) => {
+  // 分享入口接口下发的临时 token，后续接口随 Authorization 携带
+  const [shareToken, setShareToken] = useState('')
   const cfg = useMemo(() => ({ shareCode, apiBase, token: shareToken || undefined }), [shareCode, apiBase, shareToken])
 
-  const [phase, setPhase] = useState<Phase>(verifiedAppId ? 'loading' : 'checking')
-  const [appId, setAppId] = useState(verifiedAppId || '')
+  const [phase, setPhase] = useState<Phase>('checking')
+  const [appId, setAppId] = useState('')
   const [info, setInfo] = useState<WidgetAssistantInfo | null>(null)
   const [messages, setMessages] = useState<WidgetMessage[]>([])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
-  const [password, setPassword] = useState('')
-  const [passwordError, setPasswordError] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
   // 点赞点踩请求中的消息索引（防连点重复提交；-1 表示空闲）
   const [fbBusyIndex, setFbBusyIndex] = useState(-1)
@@ -271,14 +263,12 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
   // 放大前的 inline 样式快照（还原时恢复拖拽/resize 自定义的位置尺寸）
   const panelCssTextRef = useRef('')
   const didInit = useRef(false)
-  // 用户手动拖拽改大小后交还控制权：不再自动抬高 min-width，允许拖回默认，信息条切省略号
-  const manualResizeRef = useRef(false)
 
   // 信息条内容超宽时抬高面板 min-width：默认宽度为下限，面板随信息条内容自适应变宽，正文仍正常换行
   const fitInfobarWidth = useCallback(() => {
     const panel = panelRef.current
     const body = bodyRef.current
-    if (!panel || !body || maximized || mode === 'embed' || manualResizeRef.current) return
+    if (!panel || !body || maximized || mode === 'embed') return
     const bars = body.querySelectorAll<HTMLElement>('.abi-cw-infobar')
     let maxBar = 0
     bars.forEach((b) => {
@@ -322,17 +312,16 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
   const handleExploreSnapshot = useCallback((snapshot: ExploreControllerSnapshot) => setExploreSnapshot(snapshot), [])
   const handleReportSnapshot = useCallback((snapshot: ReportControllerSnapshot) => setReportSnapshot(snapshot), [])
 
-  // 加载助手信息 + 会话 + 历史（type 为统一接口 getProjectInfo/{type}/{id} 的类型段）
+  // 入口成功后加载会话 + 历史（助手信息随入口接口 getProjectInfo/{type}?shareCode= 一并下发）
   const load = useCallback(
-    async (id: string, type: ProjectType = 'react', tokenOverride?: string) => {
-      // 校验刚返回的 token 尚未写入 state，本轮接口直接用覆盖配置携带凭证
+    async (shareInfo: ShareProjectInfo, tokenOverride?: string) => {
+      // 入口接口刚返回的 token 尚未写入 state，本轮接口直接用覆盖配置携带凭证
       const effectiveCfg = tokenOverride ? { ...cfg, token: tokenOverride } : cfg
-      setAppId(id)
+      setAppId(shareInfo.appId)
       setPhase('loading')
-      const assistantInfo = await fetchAssistantInfo(effectiveCfg, id, type)
-      setInfo(assistantInfo)
+      setInfo(shareInfo)
       // 数据语义随助手详情（getProjectInfo）一并下发；后端未加字段时为空列表，下拉显示“暂无数据语义”
-      setSemanticTree(assistantInfo?.semantics ?? [])
+      setSemanticTree(shareInfo.semantics ?? [])
       // 默认选中第一个数据语义（同主对话 findFirstSchemaLeaf：深度优先首个叶子）；已选中不覆盖
       const findFirstSchemaLeaf = (nodes: WidgetSemanticNode[]): WidgetSemanticNode | undefined => {
         for (const n of nodes) {
@@ -342,9 +331,9 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
         }
         return undefined
       }
-      const firstLeaf = findFirstSchemaLeaf(assistantInfo?.semantics ?? [])
+      const firstLeaf = findFirstSchemaLeaf(shareInfo.semantics ?? [])
       if (firstLeaf) setSelectedSemantic((prev) => prev ?? { name: firstLeaf.name, schemaId: firstLeaf.schemaId, groupName: firstLeaf.groupName })
-      const session = await ensureSession(effectiveCfg, id, assistantInfo?.spaceId)
+      const session = await ensureSession(effectiveCfg, shareInfo.appId, shareInfo.spaceId)
       sessionRef.current = session
       // 镜像到 state：探索/报告 hook 在渲染期读取 conv（sessionRef 不触发重渲染）
       setConvSession(session)
@@ -374,30 +363,26 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
     [cfg],
   )
 
-  // 进入先探测分享是否需要密码（密码传空串）
+  // 分享页唯一入口：getProjectInfo/{type}?shareCode=（type 固定 workflow，见 SHARE_PROBE_TYPES），返回 appId 即进入加载
   const initCheck = useCallback(async () => {
     setPhase('checking')
-    const res = await checkSharePassword(cfg, '').catch(() => null)
-    if (!res || !res.appId) {
-      setErrorMsg('获取分享信息失败')
-      setPhase('error')
+    for (const type of SHARE_PROBE_TYPES) {
+      const res = await fetchShareProjectInfo(cfg, type)
+      if (!res) continue
+      if (res.token) setShareToken(res.token)
+      await load(res, res.token)
       return
     }
-    if (res.passwordFlag) {
-      setPhase('password')
-      return
-    }
-    if (res.token) setShareToken(res.token)
-    await load(res.appId, res.type, res.token)
+    setErrorMsg('获取分享信息失败')
+    setPhase('error')
   }, [cfg, load])
 
   useEffect(() => {
     // 守卫：StrictMode 重挂载不重复初始化（避免重复建会话）
     if (didInit.current) return
     didInit.current = true
-    if (verifiedAppId) void load(verifiedAppId, verifiedType)
-    else void initCheck()
-  }, [verifiedAppId, verifiedType, load, initCheck])
+    void initCheck()
+  }, [initCheck])
 
   // 卸载时中断进行中的流式请求，避免向已卸载组件写状态
   useEffect(() => () => abortRef.current?.abort(), [])
@@ -457,21 +442,6 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
     ro.observe(panel)
     return () => ro.disconnect()
   }, [])
-
-  const handlePasswordSubmit = async () => {
-    if (!password) {
-      setPasswordError('请输入密码')
-      return
-    }
-    const res = await checkSharePassword(cfg, password).catch(() => null)
-    if (res?.result && res.appId) {
-      setPasswordError('')
-      if (res.token) setShareToken(res.token)
-      await load(res.appId, res.type, res.token)
-    } else {
-      setPasswordError('密码错误')
-    }
-  }
 
   // 增量合并消息字段：省略 index = 最后一条 AI（流式进行中）；指定 index = 历史消息回填（新消息只追加末尾，索引稳定）
   const patchMsg = (patch: Partial<WidgetMessage>, index?: number) => {
@@ -824,92 +794,6 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
     })
   }
 
-  // 按住头部拖拽面板：首次拖拽时把 CSS 定位切换为显式 left/top，之后跟随指针；放大态禁用
-  const handleDragStart = (e: React.PointerEvent) => {
-    // iframe 直嵌形态由宿主页面控制悬浮定位，面板铺满 iframe，禁用窗内拖拽
-    if (mode === 'embed') return
-    if (maximized) return
-    if ((e.target as HTMLElement).closest('button')) return
-    const panel = panelRef.current
-    if (!panel) return
-    const rect = panel.getBoundingClientRect()
-    const startX = e.clientX
-    const startY = e.clientY
-    panel.style.position = 'fixed'
-    panel.style.transform = 'none'
-    panel.style.right = 'auto'
-    panel.style.bottom = 'auto'
-    const onMove = (ev: PointerEvent) => {
-      const left = Math.min(Math.max(rect.left + ev.clientX - startX, 0), window.innerWidth - 80)
-      const top = Math.min(Math.max(rect.top + ev.clientY - startY, 0), window.innerHeight - 48)
-      panel.style.left = `${left}px`
-      panel.style.top = `${top}px`
-    }
-    const onUp = () => {
-      window.removeEventListener('pointermove', onMove)
-      window.removeEventListener('pointerup', onUp)
-    }
-    window.addEventListener('pointermove', onMove)
-    window.addEventListener('pointerup', onUp)
-  }
-
-  // 面板最小尺寸与视口安全边距（resize 约束，口径同头部拖拽）
-  const RESIZE_MIN_W = 380
-  const RESIZE_MIN_H = 420
-  const VIEWPORT_MARGIN = 16
-
-  // 四边拖拽改大小：按下时把 CSS 定位固化为显式 left/top/width/height，之后按方向跟随指针（视口内约束 + 最小尺寸）
-  const handleResizeStart = (dir: 'n' | 's' | 'e' | 'w', e: React.PointerEvent) => {
-    if (maximized) return
-    e.preventDefault()
-    e.stopPropagation()
-    const panel = panelRef.current
-    if (!panel) return
-    const rect = panel.getBoundingClientRect()
-    // 手动接管：先按当前（撑宽后）宽度量取 rect，再清除自动撑宽的 min-width 下限并把 width 钉在当前值，避免塌陷跳变；信息条切「超出省略号」模式
-    manualResizeRef.current = true
-    panel.style.width = `${rect.width}px`
-    panel.style.minWidth = ''
-    panel.classList.add('abi-cw-infobar-ellipsis')
-    const startX = e.clientX
-    const startY = e.clientY
-    panel.style.position = 'fixed'
-    panel.style.transform = 'none'
-    panel.style.right = 'auto'
-    panel.style.bottom = 'auto'
-    panel.style.left = `${rect.left}px`
-    panel.style.top = `${rect.top}px`
-    panel.style.width = `${rect.width}px`
-    panel.style.height = `${rect.height}px`
-    panel.style.maxWidth = 'none'
-    panel.style.maxHeight = 'none'
-    const clampW = (w: number) => Math.min(Math.max(w, RESIZE_MIN_W), window.innerWidth - VIEWPORT_MARGIN)
-    const clampH = (h: number) => Math.min(Math.max(h, RESIZE_MIN_H), window.innerHeight - VIEWPORT_MARGIN)
-    const onMove = (ev: PointerEvent) => {
-      const dx = ev.clientX - startX
-      const dy = ev.clientY - startY
-      if (dir === 'e') {
-        panel.style.width = `${clampW(rect.width + dx)}px`
-      } else if (dir === 's') {
-        panel.style.height = `${clampH(rect.height + dy)}px`
-      } else if (dir === 'w') {
-        // 左边拖过最小宽度后固定左缘，避免面板抖动
-        const w = clampW(rect.width - dx)
-        panel.style.left = `${Math.max(VIEWPORT_MARGIN, rect.right - w)}px`
-        panel.style.width = `${w}px`
-      } else {
-        const h = clampH(rect.height - dy)
-        panel.style.top = `${Math.max(0, rect.bottom - h)}px`
-        panel.style.height = `${h}px`
-      }
-    }
-    const onUp = () => {
-      window.removeEventListener('pointermove', onMove)
-      window.removeEventListener('pointerup', onUp)
-    }
-    window.addEventListener('pointermove', onMove)
-    window.addEventListener('pointerup', onUp)
-  }
 
   // 放大：快照当前 inline 样式后按视口百分比留边铺展（不占满全屏，保留圆角）；还原：恢复快照（保留拖拽/resize 自定义的位置尺寸）
   const handleToggleMaximize = () => {
@@ -1151,16 +1035,7 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
   return (
     <div className={`abi-cw-root ${mode === 'float' ? 'abi-cw-float' : mode === 'embed' ? 'abi-cw-embed' : 'abi-cw-page'}`}>
       <div className="abi-cw-panel" ref={panelRef}>
-        {/* 四边拖拽改大小把手（放大态隐藏；embed 直嵌形态由宿主控制尺寸，隐藏把手） */}
-        {!maximized && mode !== 'embed' && (
-          <>
-            <div className="abi-cw-resize abi-cw-resize-n" onPointerDown={(e) => handleResizeStart('n', e)} />
-            <div className="abi-cw-resize abi-cw-resize-s" onPointerDown={(e) => handleResizeStart('s', e)} />
-            <div className="abi-cw-resize abi-cw-resize-e" onPointerDown={(e) => handleResizeStart('e', e)} />
-            <div className="abi-cw-resize abi-cw-resize-w" onPointerDown={(e) => handleResizeStart('w', e)} />
-          </>
-        )}
-        <div className="abi-cw-header" onPointerDown={handleDragStart}>
+        <div className="abi-cw-header">
           <div className="abi-cw-header-logo">A</div>
           <span className="abi-cw-header-name" title={info?.name || '助手'}>
             AI {info?.name ? `· ${info.name}` : '智能问答'}
@@ -1198,25 +1073,6 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
               <button type="button" className="abi-cw-btn-primary" onClick={() => void initCheck()}>
                 重试
               </button>
-            </div>
-          ) : phase === 'password' ? (
-            <div className="abi-cw-status">
-              <div className="abi-cw-password">
-                <span className="abi-cw-password-title">该分享需要密码访问</span>
-                <input
-                  type="password"
-                  placeholder="请输入访问密码"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') void handlePasswordSubmit()
-                  }}
-                />
-                <span className="abi-cw-password-error">{passwordError}</span>
-                <button type="button" className="abi-cw-btn-primary" onClick={() => void handlePasswordSubmit()}>
-                  确认
-                </button>
-              </div>
             </div>
           ) : timeline.length === 0 ? (
             /* 开场白直接复用主对话 OpeningsEle（含 3 个一批 + 换一批） */

@@ -1,14 +1,12 @@
 import { createBrowserAuthAdapter } from '@sa/auth';
-import { message } from 'antd';
+
+import { showWidgetToast } from '../components/chat-widget/widgetToast';
 
 const adapter = createBrowserAuthAdapter({
   getEnvironment: () => window,
-  notify: ({ message: content, redirectDelay }) => {
-    message.warning({
-      content,
-      duration: Math.max(redirectDelay / 1000, 1.5),
-      key: 'chat-login-expired'
-    });
+  notify: ({ message: content }) => {
+    /* 窗内通知条统一 3s 自动消失，不再用 body 级 antd message（会被悬浮面板遮挡） */
+    showWidgetToast('warning', content);
   },
   stateKey: '__CHAT_AUTH_UNAUTHORIZED_STATE__'
 });
