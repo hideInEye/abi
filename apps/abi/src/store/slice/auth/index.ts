@@ -8,6 +8,7 @@ import type { AppThunk } from '../..';
 import { createAppSlice } from '../../createAppSlice';
 import { resetRouteStore } from '../route';
 import { clearTabs } from '../tab';
+import { resetTheme } from '../theme';
 
 import { clearAuthStorage, getToken, getUserInfo } from './shared';
 import { message } from 'antd';
@@ -98,7 +99,7 @@ export const authSlice = createAppSlice({
   name: 'auth',
   reducers: create => ({
     login: create.asyncThunk(
-      async ({ password, username, code, uuid }: { password: string; username: string; code?: string; uuid?: string }) => {
+      async ({ password, username, code, uuid }: { password: string; username: string; code?: string; uuid?: string }, { dispatch }) => {
         try {
           const { encrypt } = await import('@/utils/jsencrypt');
           const psd = encrypt(password) as string;
@@ -139,6 +140,7 @@ export const authSlice = createAppSlice({
 
           // 2. store user info
           localStg.set('userInfo', user);
+          dispatch(resetTheme());
           return {
             token: loginToken.token,
             userInfo: user
@@ -193,12 +195,14 @@ const { setAuthState } = authSlice.actions;
 export const { login, resetAuth } = authSlice.actions;
 
 export const syncAuthFromStorage = (): AppThunk => dispatch => {
+  const token = getToken();
   dispatch(
     setAuthState({
-      token: getToken(),
+      token,
       userInfo: getUserInfo()
     })
   );
+  if (token) dispatch(resetTheme());
 };
 // We can also write thunks by hand, which may contain both sync and async logic.
 // Here's an example of conditionally dispatching actions based on current state.

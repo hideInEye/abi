@@ -9,6 +9,7 @@
 - UI 框架：Ant Design 5，证据 `apps/abi/package.json`、`apps/abi/src/App.tsx`。
 - 样式方案：UnoCSS、SCSS、全局 CSS、Ant Design cssVar。证据 `apps/abi/uno.config.ts`、`apps/abi/src/plugins/assets.ts`、`apps/abi/src/styles/css/global.css`。
 - 主题系统：Redux `themeSlice` + `theme/settings.ts` + `theme/vars.ts`，运行时注入 CSS variables。
+- 全部主题默认值统一来自 `src/theme/settings.ts`；启动/刷新、登录成功和登录页恢复有效会话时重新初始化，不读取或回写历史 `themeSettings`、`themeColor`，不使用构建版本覆盖配置。运行时主题调整仅在当前页面会话中生效；启动加载页也使用配置文件主题色，系统配色变化只影响 `auto` 模式。
 - 颜色：默认主题色 `#3366ff`，全局 ABI v5 变量包含 `--abi-card-bg`、`--abi-panel-bg`、`--abi-input-bg` 等。
 - 字体：Ant Design token 中使用 Microsoft YaHei、PingFang SC、系统 sans-serif。
 - 间距/布局：侧边栏、tab、header 高度由 `themeSettings` 管理；Uno shortcuts 包括 `f-v`、`f-v-b`、`card-wrapper`。
