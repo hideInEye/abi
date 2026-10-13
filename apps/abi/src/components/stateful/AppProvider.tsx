@@ -1,15 +1,17 @@
-import message from 'antd/es/message';
-import modal from 'antd/es/modal';
-import notification from 'antd/es/notification';
+import App from 'antd/es/app';
 
 import { DARK_MODE_MEDIA_QUERY } from '@/constants/common';
 import { cacheTabs } from '@/store/slice/tab';
 import { cacheThemeSettings } from '@/store/slice/theme';
 import { setDarkMode } from '@/store/slice/theme/index.ts';
 
-window.$message ??= message;
-window.$modal ??= modal;
-window.$notification ??= notification;
+function ContextHolder() {
+  const { message, modal, notification } = App.useApp();
+  window.$message = message;
+  window.$modal = modal;
+  window.$notification = notification;
+  return null;
+}
 
 const AppProvider = memo(({ children }: { children: React.ReactNode }) => {
   const dispatch = useAppDispatch();
@@ -40,7 +42,12 @@ const AppProvider = memo(({ children }: { children: React.ReactNode }) => {
     };
   }, [dispatch]);
 
-  return children;
+  return (
+    <App className="h-full">
+      <ContextHolder />
+      {children}
+    </App>
+  );
 });
 
 export default AppProvider;

@@ -21,6 +21,7 @@ import {
   updateAbiClientStatus
 } from '@/service/api/abi-client'
 import { spaceList } from '@/service/api/data-space'
+import { isFlatRequestSuccess } from '@/service/request/flat-result'
 import { getSpaceId } from '@/store/slice/app'
 import { useAppSelector } from '@/hooks/business/useStore'
 
@@ -311,6 +312,7 @@ export function Component() {
       activeTimeout: values.activeTimeout || DEFAULT_ACTIVE_TIMEOUT,
       expireTime,
       ips: values.ipAccessType === 'whitelist' ? ipWhitelist.map(whitelist => ({ whitelist })) : undefined,
+      name: values.name,
       remark: values.description || '',
       restrictedIp,
       spaceId: values.spaceId
@@ -318,6 +320,8 @@ export function Component() {
 
     try {
       const res = await addAbiClient(payload)
+      if (!isFlatRequestSuccess(res)) return
+
       const msg = (res as any).response?.data?.msg || '创建成功'
       const createdSecretKey = extractSecretKey(res)
 

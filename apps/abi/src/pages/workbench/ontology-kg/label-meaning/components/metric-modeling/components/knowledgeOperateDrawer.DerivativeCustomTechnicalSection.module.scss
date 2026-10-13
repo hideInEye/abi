@@ -1,0 +1,35 @@
+.search {
+  padding: 8px 12px;
+}
+
+.fieldTitle {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.fieldName {
+  overflow: hidden;
+  color: #26354d;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  text-overflow: ellipsis;
+}
+
+.fieldLabel {
+  overflow: hidden;
+  color: #8995a8;
+  font-size: 12px;
+  text-overflow: ellipsis;
+}
+
+.selectionFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding: 6px 12px 0;
+  border-top: 1px solid #dbe5ff;
+  color: #8995a8;
+}

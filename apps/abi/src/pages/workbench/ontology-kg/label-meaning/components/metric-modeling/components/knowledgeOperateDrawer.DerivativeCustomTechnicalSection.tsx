@@ -1,6 +1,7 @@
-import { Alert, Empty, Spin } from 'antd'
+import { SearchOutlined } from '@ant-design/icons'
+import { Alert, Empty, Input, Spin } from 'antd'
 import type { FormInstance } from 'antd'
-import React, { useMemo, useRef } from 'react'
+import React, { useMemo, useState } from 'react'
 
 import { TableSemantics } from '@/components/tableSemantics'
 import type { TableSemanticParams } from '@/pages/workbench/data-preparation/data-table-meaning/types'
@@ -10,12 +11,14 @@ import {
 } from '@/pages/workbench/ontology-kg/label-meaning/components/rule-expression'
 
 import type { KnowledgeFormValues, KnowledgeTechField } from '../types/metricModeling.types'
+import { getMappedBizNameParts } from '../../../utils/ontologyName'
 import { getKnowledgeTechFieldId } from '../utils/atomicMetricSource'
 import { getCustomAtomicFieldTechnicalName } from '../utils/customAtomic'
+import type { ExpressionFieldOption } from '../utils/expressionCompletion'
 
 import type { AtomicSemanticSelection } from './knowledgeOperateDrawer.AtomicTechnicalStep'
 import { KnowledgeOperateFunctionExpressionField } from './knowledgeOperateDrawer.FunctionExpressionField'
-import type { KnowledgeOperateFunctionExpressionFieldHandle } from './knowledgeOperateDrawer.FunctionExpressionField'
+import styles from './knowledgeOperateDrawer.DerivativeCustomTechnicalSection.module.scss'
 
 interface Props {
   readonly allFields: KnowledgeTechField[]
@@ -38,14 +41,40 @@ export const KnowledgeOperateDerivativeCustomTechnicalSection: React.FC<Props> =
   onSchemaChange,
   validateSqlExpression
 }) => {
-  const expressionRef = useRef<KnowledgeOperateFunctionExpressionFieldHandle>(null)
-  const fieldTree = useMemo(() => buildRuleFieldTree(createRuleFieldOptions(allFields)), [allFields])
-
-  const insertSourceField = (fieldId: unknown) => {
-    const field = allFields.find(item => getKnowledgeTechFieldId(item) === String(fieldId || ''))
-    const fieldName = getCustomAtomicFieldTechnicalName(field)
-    if (fieldName) expressionRef.current?.insertText(fieldName)
-  }
+  const [searchText, setSearchText] = useState('')
+  const selectedIdsWatch = AForm.useWatch('customSourceFieldIds', { form, preserve: true })
+  const selectedIds: string[] = selectedIdsWatch ?? form.getFieldValue('customSourceFieldIds') ?? []
+  const ruleFields = useMemo(() => createRuleFieldOptions(allFields), [allFields])
+  const fieldOptions = useMemo<ExpressionFieldOption[]>(() => {
+    const categoryNames = { dates: '日期', dimensions: '维度', measures: '度量' }
+    const fieldsById = new Map(allFields.map(field => [getKnowledgeTechFieldId(field), field]))
+    return ruleFields.map(option => {
+      const field = fieldsById.get(option.id)
+      return {
+        category: categoryNames[option.category],
+        id: option.id,
+        label: getMappedBizNameParts(String(field?.bizName || field?.tfieldAlias || field?.fieldName || option.label)).displayName,
+        name: getCustomAtomicFieldTechnicalName(field) || option.sourceName,
+      }
+    })
+  }, [allFields, ruleFields])
+  const fieldTree = useMemo(() => {
+    const optionsById = new Map(fieldOptions.map(option => [option.id, option]))
+    return buildRuleFieldTree(ruleFields).map(root => ({
+      ...root,
+      checkable: false,
+      children: root.children?.flatMap(table => table.children || []).map(leaf => {
+        const option = optionsById.get(leaf.value)!
+        return {
+          ...leaf,
+          label: option.name,
+          searchText: `${option.name} ${option.label} ${option.category}`,
+          title: <span className={styles.fieldTitle}><span className={styles.fieldName}>{option.name}</span><span className={styles.fieldLabel}>{option.label}</span></span>,
+        }
+      }),
+    }))
+  }, [fieldOptions, ruleFields])
+  const selectedFields = useMemo(() => fieldOptions.filter(field => selectedIds.includes(field.id)), [fieldOptions, selectedIds])
 
   return (
     <>
@@ -59,17 +88,41 @@ export const KnowledgeOperateDerivativeCustomTechnicalSection: React.FC<Props> =
           label="数据语义"
           type="shema"
         />
-        <AForm.Item label="来源字段">
+        <AForm.Item label="来源字段" name="customSourceFieldIds">
           <ATreeSelect
+            allowClear
+            multiple
             showSearch
+            treeCheckable
             disabled={editing}
             treeDefaultExpandAll
-            fieldNames={{ label: 'title', value: 'value' }}
+            maxTagCount={2}
             loading={fieldLoading}
-            placeholder="点击字段插入到下方表达式"
+            placeholder="请选择来源字段"
+            searchValue={searchText}
             treeData={fieldTree}
-            treeNodeFilterProp="title"
-            value={undefined}
+            treeNodeFilterProp="searchText"
+            treeNodeLabelProp="label"
+            onSearch={setSearchText}
+            onDropdownVisibleChange={visible => { if (!visible) setSearchText('') }}
+            dropdownRender={menu => (
+              <>
+                <div className={styles.search} onKeyDown={event => event.stopPropagation()}>
+                  <Input
+                    allowClear
+                    placeholder="搜索来源字段"
+                    prefix={<SearchOutlined />}
+                    value={searchText}
+                    onChange={event => setSearchText(event.target.value)}
+                  />
+                </div>
+                {menu}
+                <div className={styles.selectionFooter}>
+                  <span>已选择 {selectedIds.length} 个字段</span>
+                  <AButton disabled={editing || !selectedIds.length} type="link" onClick={() => form.setFieldValue('customSourceFieldIds', [])}>清空</AButton>
+                </div>
+              </>
+            )}
             notFoundContent={
               fieldLoading ? (
                 <Spin size="small" />
@@ -80,7 +133,6 @@ export const KnowledgeOperateDerivativeCustomTechnicalSection: React.FC<Props> =
                 />
               )
             }
-            onSelect={insertSourceField}
           />
         </AForm.Item>
       </div>
@@ -102,7 +154,7 @@ export const KnowledgeOperateDerivativeCustomTechnicalSection: React.FC<Props> =
       ) : null}
 
       <KnowledgeOperateFunctionExpressionField
-        ref={expressionRef}
+        completionFields={selectedFields}
         dictionaryKind="composite"
         fieldName="expr"
         form={form}

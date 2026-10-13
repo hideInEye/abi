@@ -15,7 +15,7 @@ import {
   abortHomeResources,
   getCachedHomeOverview,
   getCachedHomeSpaces,
-  invalidateHomeSpaces,
+  invalidateHomeResources,
   loadHomeOverview,
   loadHomeSpaces,
 } from './homeResources'
@@ -109,7 +109,8 @@ export function Component() {
     }
     clearPersistedSpace()
     dispatch(clearTabs())
-    invalidateHomeSpaces()
+    invalidateHomeResources()
+    loadOverview(true)
     loadSpaces(true)
   }
 
@@ -126,7 +127,8 @@ export function Component() {
   }
 
   function updateSpace() {
-    invalidateHomeSpaces()
+    invalidateHomeResources()
+    loadOverview(true)
     loadSpaces(true)
   }
 

@@ -67,7 +67,6 @@ export const ProjectList = memo((props: ProjectListProps) => {
     const cloneIdRef = useRef('');
     const delIdRef = useRef('');
     const listRequestRunRef = useRef(0);
-    const searchTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
     useEffect(() => {
         const timer = window.setTimeout(() => setUiReady(true), 0);
@@ -265,14 +264,7 @@ export const ProjectList = memo((props: ProjectListProps) => {
         void getProjectPageList(1, pageSize, keywords, range);
     };
 
-    const handleSearchChange = (value: string) => {
-        setSearchKeyword(value);
-        if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-        searchTimerRef.current = setTimeout(() => runQuery({keyword: value}), value === '' ? 0 : 1000);
-    };
-
     const handleReset = () => {
-        if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
         setSearchKeyword('');
         setDateRange(null);
         runQuery({keyword: '', range: null});
@@ -308,7 +300,6 @@ export const ProjectList = memo((props: ProjectListProps) => {
     useEffect(() => {
         void getProjectPageList(1, 12, '', null);
         return () => {
-            if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
             const active = activeListRequestRef.current;
             if (active) projectListRequestClient.abort(active.key);
         };
@@ -338,7 +329,6 @@ export const ProjectList = memo((props: ProjectListProps) => {
                     dateRange,
                     listError,
                     listLoading,
-                    onApplyFilters: () => runQuery(),
                     onBatchDelete: handleBatchDelete,
                     onDateRangeChange: setDateRange,
                     onNewProject: toggleNewProVisible,
@@ -348,7 +338,7 @@ export const ProjectList = memo((props: ProjectListProps) => {
                     onRename: openRename,
                     onReset: handleReset,
                     onRetry: () => void getProjectPageList(currentPage, pageSize, searchKeyword, dateRange, true),
-                    onSearchChange: handleSearchChange,
+                    onSearchChange: setSearchKeyword,
                     onSearchSubmit: () => runQuery(),
                     onSelectionChange: setSelectedRowKeys,
                     pageSize,

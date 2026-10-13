@@ -27,7 +27,7 @@ const LAYOUTS_COMPONENTS: Record<UnionKey.ThemeLayoutMode, React.ReactNode> = {
   ),
   vertical: (
     <>
-      <div className={ClassNames('h-full w-18px', style['layout-sider'])} />
+      <div className={ClassNames('h-full w-18px')} />
       <div className={style['vertical-wrapper']}>
         <div className={style['layout-header']} />
         <div className={style['layout-main']} />

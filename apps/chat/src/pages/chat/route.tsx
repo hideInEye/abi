@@ -1,3 +1,4 @@
+import { ClockCircleOutlined } from '@ant-design/icons'
 import { Outlet, createFileRoute, useNavigate, useRouterState } from '@tanstack/react-router'
 import React, { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 
@@ -172,7 +173,7 @@ function ChatWorkbenchLayoutContent() {
               onFocus={() => void loadScheduleTaskDrawer()}
               onMouseEnter={() => void loadScheduleTaskDrawer()}
             >
-              <span aria-hidden="true">◷</span>
+              <ClockCircleOutlined />
               定时任务
             </button>
             {chromeReady ? (

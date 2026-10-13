@@ -325,6 +325,7 @@ export interface KnowledgeFormValues {
   atomicAggregationExpression?: string
   atomicAggregationMethods?: AggregationCode[]
   atomicSourceFieldId?: string
+  customSourceFieldIds?: string[]
   bizName?: string
   calcPeriod?: string
   compareMetricId?: number | string

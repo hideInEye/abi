@@ -28,6 +28,7 @@ export interface ApiKeyFormValues {
   description?: string
   expireTime?: Dayjs | string | null
   ipAccessType: IpAccessType
+  name: string
   spaceId: number
 }
 

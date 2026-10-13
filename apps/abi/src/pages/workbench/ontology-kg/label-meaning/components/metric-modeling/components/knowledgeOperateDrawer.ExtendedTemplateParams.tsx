@@ -200,7 +200,7 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
   )
 
   useEffect(() => {
-    if (templateTypeVal !== 'custom') {
+    if (templateTypeVal && templateTypeVal !== 'custom' && form.getFieldValue('templateType') === templateTypeVal) {
       form.setFieldValue('expr', preview.expression)
     }
   }, [form, preview.expression, templateTypeVal])
