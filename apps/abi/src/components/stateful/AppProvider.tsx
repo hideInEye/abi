@@ -2,8 +2,7 @@ import App from 'antd/es/app';
 
 import { DARK_MODE_MEDIA_QUERY } from '@/constants/common';
 import { cacheTabs } from '@/store/slice/tab';
-import { cacheThemeSettings } from '@/store/slice/theme';
-import { setDarkMode } from '@/store/slice/theme/index.ts';
+import { getThemeSettings, setDarkMode } from '@/store/slice/theme';
 
 function ContextHolder() {
   const { message, modal, notification } = App.useApp();
@@ -15,6 +14,7 @@ function ContextHolder() {
 
 const AppProvider = memo(({ children }: { children: React.ReactNode }) => {
   const dispatch = useAppDispatch();
+  const themeScheme = useAppSelector(state => getThemeSettings(state).themeScheme);
 
   useEventListener(
     'beforeunload',
@@ -25,12 +25,12 @@ const AppProvider = memo(({ children }: { children: React.ReactNode }) => {
       if ((window as any).__SKIP_CACHE_ON_UNLOAD) return;
 
       dispatch(cacheTabs());
-      dispatch(cacheThemeSettings());
     },
     { target: window }
   );
 
   useEffect(() => {
+    if (themeScheme !== 'auto') return;
     const mediaQueryList = window.matchMedia(DARK_MODE_MEDIA_QUERY);
     const handler = (event: MediaQueryListEvent) => {
       dispatch(setDarkMode(event.matches));
@@ -40,7 +40,7 @@ const AppProvider = memo(({ children }: { children: React.ReactNode }) => {
     return () => {
       mediaQueryList.removeEventListener('change', handler);
     };
-  }, [dispatch]);
+  }, [dispatch, themeScheme]);
 
   return (
     <App className="h-full">

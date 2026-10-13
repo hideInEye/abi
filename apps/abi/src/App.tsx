@@ -1,12 +1,10 @@
 import { RouterProvider } from '@sa/simple-router';
-import { useUpdateEffect } from 'ahooks';
 import type { WatermarkProps } from 'antd';
 
 import { router } from '@/router';
 import { getLocale } from '@/store/slice/app';
 import { getDarkMode, getThemeSettings, themeColors } from '@/store/slice/theme';
-import { getAntdTheme, setupThemeVarsToHtml, toggleCssDarkMode } from '@/store/slice/theme/shared';
-import { localStg } from '@/utils/storage';
+import { getAntdTheme, setupThemeVarsToHtml, toggleAuxiliaryColorModes, toggleCssDarkMode, toggleGrayscaleMode } from '@/store/slice/theme/shared';
 
 import AppProvider from './components/stateful/AppProvider';
 import GlobalLoading from './components/stateful/GlobalLoading';
@@ -34,13 +32,16 @@ function useTheme() {
 
   useEffect(() => {
     setupThemeVarsToHtml(colors, themeSettings.tokens, themeSettings.recommendColor);
-    localStg.set('themeColor', colors.primary);
   }, [colors, themeSettings]);
 
-  useUpdateEffect(() => {
+  useEffect(() => {
     toggleCssDarkMode(darkMode);
   }, [darkMode]);
 
+  useEffect(() => {
+    toggleGrayscaleMode(themeSettings.grayscale);
+    toggleAuxiliaryColorModes(themeSettings.colourWeakness);
+  }, [themeSettings.grayscale, themeSettings.colourWeakness]);
 
   return { antdTheme, themeSettings };
 }

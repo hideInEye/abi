@@ -1,7 +1,7 @@
 // @unocss-include
 import systemLogo from '@/assets/svg-icon/logo.svg?raw';
 import { $t } from '@/locales';
-import { localStg } from '@/utils/storage';
+import { themeSettings } from '@/theme/settings';
 
 function getLoadingRgb(color: string) {
   const shortHex = /^#([\da-f])([\da-f])([\da-f])$/i.exec(color);
@@ -22,7 +22,7 @@ function getLoadingRgb(color: string) {
 }
 
 export function setupLoading() {
-  const themeColor = localStg.get('themeColor') || '#646cff';
+  const themeColor = themeSettings.themeColor;
 
   const { b, g, r } = getLoadingRgb(themeColor);
 
