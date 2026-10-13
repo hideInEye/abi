@@ -9,23 +9,23 @@
 - `agents/`：角色化执行阶段。当前环境可用这些文件模拟 subagent。
 - `skills/`：可执行 SOP，覆盖启动项目、补测试、调试、回归、更新 AI 系统等常见动作。
 - `mcp/`：按当前项目技术栈推荐的 MCP 能力和使用规则。
-- `requirements/`：需求入口和规格模板。开发前必须先填写 `CURRENT_REQUIREMENT.md`。
-- `runs/`：每轮开发记录模板和后续实际 run log。
+- `requirements/`：需求规格模板和既有历史文档。`CURRENT_REQUIREMENT.md` 只用作只读模板，不再写入具体任务。
+- `runs/`：每轮实际需求 `REQUIREMENT.md` 与 run log，仅在本机生成、查看；整个目录由 Git 忽略，不加入版本控制。
 - `decisions/`：架构决策记录。
 - `checklists/`：编码前、提交前、完成前、测试和知识更新检查清单。
 
 ## 初始化后如何使用
 
 1. 新任务开始前读取 `AGENTS.md` 和本 README。
-2. 填写 `.ai/requirements/CURRENT_REQUIREMENT.md`。
+2. 参考 `.ai/requirements/CURRENT_REQUIREMENT.md`，新建并填写 `.ai/runs/<date>-<task-name>/REQUIREMENT.md`，不修改模板。每轮任务或需求变更独立保存，目录重名时追加序号，保留旧轮次需求。
 3. 按需求类型选择 `.ai/prompts/` 中的模板。
 4. 根据影响范围调用或模拟 `.ai/agents/` 中的角色。
 5. 按 `.ai/skills/` 执行开发、测试、调试和回归。
-6. 完成后创建 `.ai/runs/<date>-<task-name>/`，记录命令、结果、风险和知识更新建议。
+6. 完成后在本轮 runs 目录记录命令、结果、风险和知识更新建议，注明本轮实际需求文件路径。
 
 ## 新功能开发流程
 
-1. 填写 `requirements/CURRENT_REQUIREMENT.md`，明确目标、非目标、影响范围和验收标准。
+1. 在 `.ai/runs/<date>-<task-name>/REQUIREMENT.md` 填写实际需求，明确目标、非目标、影响范围和验收标准；`requirements/CURRENT_REQUIREMENT.md` 仅作为只读模板。
 2. 使用 `prompts/10_NEW_FEATURE_CONVERSATION_TEMPLATE.md`。
 3. 读取 `context/PROJECT_OVERVIEW.md`、`ARCHITECTURE.md`、`MODULE_MAP.md`、`CODE_STYLE.md`、`TESTING_STRATEGY.md`。
 4. 先定位所属应用或 package：`apps/abi`、`apps/chat`、`apps/dashboard` 或 `packages/*`。

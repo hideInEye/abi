@@ -2,8 +2,6 @@ import { createSelector, createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { getPaletteColorByNumber } from '@sa/color';
 
-import { localStg } from '@/utils/storage';
-
 import type { AppThunk } from '../..';
 
 import { initThemeSettings, toggleAuxiliaryColorModes, toggleGrayscaleMode, updateDarkMode } from './shared';
@@ -23,13 +21,13 @@ type DeepPartial<T> = {
 
 const themeSchemes: UnionKey.ThemeScheme[] = ['light', 'dark', 'auto'];
 
-const initialState: InitialStateType = {
-  darkMode: false,
-  settings: initThemeSettings()
-};
+function createInitialState(): InitialStateType {
+  const settings = initThemeSettings();
+  return { darkMode: updateDarkMode(settings.themeScheme), settings };
+}
 
 export const themeSlice = createSlice({
-  initialState,
+  initialState: createInitialState,
   name: 'theme',
   reducers: {
     changeReverseHorizontalMix(state, { payload }: PayloadAction<boolean>) {
@@ -37,7 +35,7 @@ export const themeSlice = createSlice({
     },
 
     resetTheme() {
-      return initialState;
+      return createInitialState();
     },
     /**
      * Set colourWeakness value
@@ -173,15 +171,6 @@ export const themeColors = createSelector([getThemeSettings], ({ isInfoFollowPri
   };
   return colors;
 });
-
-/** Cache theme settings */
-export const cacheThemeSettings = (): AppThunk => (_, getState) => {
-  const isProd = import.meta.env.PROD;
-
-  if (!isProd) return;
-
-  localStg.set('themeSettings', getThemeSettings(getState()));
-};
 
 export const settingsJson = createSelector([getThemeSettings], settings => {
   return JSON.stringify(settings);

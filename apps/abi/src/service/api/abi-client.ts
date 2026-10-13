@@ -65,6 +65,7 @@ export function addAbiClient(data: {
   activeTimeout?: number
   expireTime?: string | null
   ips?: AbiClientWhitelistItem[]
+  name: string
   remark?: string
   restrictedIp: 0 | 1
   spaceId: number

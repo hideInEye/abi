@@ -53,10 +53,12 @@ import {
   getMetricFieldOptionLabel,
   getMetricIndicatorOptionLabel,
   getMetricIndicatorOptionValue,
+  getMetricIndicatorSearchClasses,
   getStepItems,
   hasMoreMetricIndicatorSearchResults,
   mergeMetricIndicatorSearchResults,
   parseTemplateParams,
+  shouldReuseMetricIndicatorSearch,
   shouldShowMetricPrecomputeConfig
 } from '../utils/knowledgeOperateDrawer.utils'
 import { createKnowledgeOperateValidators } from '../utils/knowledgeOperateDrawer.validators'
@@ -103,6 +105,7 @@ const DERIVATIVE_TEMPLATE_FIELDS: Array<keyof KnowledgeFormValues> = [
   'cumulativeMetricId',
   'cumulativeMode',
   'cumulativeTimeRange',
+  'customSourceFieldIds',
   'expr',
   'percentileValue',
   'ratioDenominatorId',
@@ -490,6 +493,7 @@ function buildFormValuesFromDetail(item: KnowledgeIndicatorItem): KnowledgeFormV
     atomicAggregationMethods: getAtomicAggregationMethods(item),
     bizName: mappedBizNameParts.displayName,
     atomicSourceFieldId: resolveTechFieldIdentity(atomicSourceField),
+    customSourceFieldIds: parseAtomicSourceFields(item.techId).map(getKnowledgeTechFieldId).filter(Boolean),
     dimensionFieldIds: item.dimensionFieldIds ?? item.relateDims,
     indAlias: splitAliasTags(item.indAlias),
     indicatorCode: mappedTechNameParts.displayName,
@@ -535,13 +539,14 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
   const formValuesRef = useRef<Partial<KnowledgeFormValues>>({})
   const lastAtomicOptionRef = useRef<AtomicIndicatorOption>()
   const indicatorOptionsLoadingRef = useRef(false)
-  const indicatorSearchHasMoreRef = useRef(true)
+  const indicatorSearchClassesRef = useRef(getMetricIndicatorSearchClasses('derived'))
   const indicatorSearchPageRef = useRef(0)
   const indicatorSearchRequestRef = useRef(0)
   const indicatorSearchTextRef = useRef('')
   const semanticRequestRef = useRef(0)
   const submitLockRef = useRef(false)
-  const templateTypeVal = AForm.useWatch('templateType', form)!
+  const templateTypeWatch = AForm.useWatch('templateType', { form, preserve: true })
+  const templateTypeVal = templateTypeWatch ?? form.getFieldValue('templateType')
 
   const isEditing = Boolean(editingItem)
   const isAtomicEditing = normalizeIndicatorClass(editingItem?.indicatorClass) === 'atomic'
@@ -552,6 +557,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
   const isAtomicMode = isAtomicEditing || indicatorClass === 'atomic'
   const stepItems = useMemo(() => getStepItems(!isAtomicMode, isSimpleAtomicEditing), [isAtomicMode, isSimpleAtomicEditing])
   const currentStepKey = stepItems[current]?.key
+  const indicatorSearchActive = open && !isAtomicMode && currentStepKey !== 'business'
   const atomicIndicatorOptions = useMemo(() => {
     const allowedClasses = indicatorClass === 'composite' ? new Set(['atomic', 'derived']) : new Set(['atomic'])
 
@@ -612,15 +618,23 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
       indicatorOptionsLoadingRef.current = true
       setIndicatorOptionsLoading(true)
       try {
-        const res = await queryKnowledgeIndicators(
-          buildMetricIndicatorSearchQuery(searchText, getKnowledgeSpaceId(), pageNum)
-        )
-        assertFlatRequestSuccess(res)
+        const pages = await Promise.all(indicatorSearchClassesRef.current.map(async searchClass => {
+          const res = await queryKnowledgeIndicators(
+            buildMetricIndicatorSearchQuery(searchText, getKnowledgeSpaceId(), pageNum, searchClass)
+          )
+          assertFlatRequestSuccess(res)
+          const responseData = getApiResponseData(res)
+          const items = (Array.isArray(responseData.list) ? responseData.list : []).map(item =>
+            normalizeKnowledgeIndicatorListItem(item as KnowledgeIndicatorItem)
+          )
+          return {
+            hasMore: hasMoreMetricIndicatorSearchResults(responseData.total, items.length, pageNum),
+            items,
+            searchClass
+          }
+        }))
         if (requestId !== indicatorSearchRequestRef.current) return
-        const responseData = getApiResponseData(res)
-        const nextItems = (Array.isArray(responseData.list) ? responseData.list : []).map(item =>
-          normalizeKnowledgeIndicatorListItem(item as KnowledgeIndicatorItem)
-        )
+        const nextItems = pages.flatMap(page => page.items)
         const selectedValues = INDICATOR_OPTION_FORM_FIELDS.map(field => form.getFieldValue(field)).filter(
           value => typeof value === 'string' || typeof value === 'number'
         )
@@ -633,11 +647,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
           setReferenceIndicatorOptionSource(mergeItems)
         }
         indicatorSearchPageRef.current = pageNum
-        indicatorSearchHasMoreRef.current = hasMoreMetricIndicatorSearchResults(
-          responseData.total,
-          nextItems.length,
-          pageNum
-        )
+        indicatorSearchClassesRef.current = pages.filter(page => page.hasMore).map(page => page.searchClass)
       } catch {
         // The shared request layer reports the error; keep the last successful options.
       } finally {
@@ -659,20 +669,27 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
 
   const handleIndicatorSearch = useCallback(
     (searchText: string) => {
-      indicatorSearchTextRef.current = searchText
+      if (!indicatorSearchActive || shouldReuseMetricIndicatorSearch(
+        searchText, indicatorSearchTextRef.current, indicatorOptionsLoadingRef.current, indicatorSearchPageRef.current
+      )) return
+      const nextSearchText = searchText.trim()
+      indicatorSearchTextRef.current = nextSearchText
       indicatorSearchPageRef.current = 0
-      indicatorSearchHasMoreRef.current = true
+      indicatorSearchClassesRef.current = getMetricIndicatorSearchClasses(indicatorClass)
+      indicatorOptionsLoadingRef.current = true
+      setIndicatorOptionsLoading(true)
       const requestId = indicatorSearchRequestRef.current + 1
       indicatorSearchRequestRef.current = requestId
-      runIndicatorSearch(searchText, 1, requestId)
+      runIndicatorSearch(nextSearchText, 1, requestId)
     },
-    [runIndicatorSearch]
+    [indicatorClass, indicatorSearchActive, runIndicatorSearch]
   )
 
   const handleIndicatorLoadMore = useCallback(() => {
     if (
+      !indicatorSearchActive ||
       indicatorOptionsLoadingRef.current ||
-      !indicatorSearchHasMoreRef.current ||
+      !indicatorSearchClassesRef.current.length ||
       indicatorSearchPageRef.current < 1
     ) {
       return
@@ -680,7 +697,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
     const requestId = indicatorSearchRequestRef.current + 1
     indicatorSearchRequestRef.current = requestId
     queryIndicatorOptions(indicatorSearchTextRef.current, indicatorSearchPageRef.current + 1, requestId)
-  }, [queryIndicatorOptions])
+  }, [indicatorSearchActive, queryIndicatorOptions])
 
   const updateIndicatorOptionItem = useCallback((optionValue: string, values: KnowledgeIndicatorItem) => {
     const updateItems = (items: KnowledgeIndicatorItem[]) =>
@@ -854,6 +871,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
         semanticType: undefined
       }
       if (isDerivativeCustom) {
+        nextValues.customSourceFieldIds = []
         nextValues.expr = undefined
       } else {
         nextValues.atomicAggregationExpression = undefined
@@ -885,26 +903,24 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
   }, [form, loadAtomicSemanticFields, loadCustomAtomicSemanticFields])
 
   useEffect(() => {
-    if (!open) {
-      cancelIndicatorSearch()
-      indicatorSearchRequestRef.current += 1
-      indicatorOptionsLoadingRef.current = false
-      indicatorSearchHasMoreRef.current = true
-      indicatorSearchPageRef.current = 0
-      indicatorSearchTextRef.current = ''
-      setIndicatorOptionsLoading(false)
-      return
-    }
+    cancelIndicatorSearch()
     indicatorSearchTextRef.current = ''
     indicatorSearchPageRef.current = 0
-    indicatorSearchHasMoreRef.current = true
+    indicatorSearchClassesRef.current = getMetricIndicatorSearchClasses(indicatorClass)
     const requestId = indicatorSearchRequestRef.current + 1
     indicatorSearchRequestRef.current = requestId
-    queryIndicatorOptions('', 1, requestId)
-  }, [cancelIndicatorSearch, open, queryIndicatorOptions])
+    indicatorOptionsLoadingRef.current = false
+    setIndicatorOptionsLoading(false)
+    if (indicatorSearchActive) queryIndicatorOptions('', 1, requestId)
+    return () => {
+      cancelIndicatorSearch()
+      indicatorSearchRequestRef.current += 1
+    }
+  }, [cancelIndicatorSearch, indicatorClass, indicatorSearchActive, queryIndicatorOptions])
 
   useEffect(() => {
     if (!open) {
+      setCurrent(0)
       editMatchedRef.current = false
       semanticRequestRef.current += 1
       return
@@ -1282,6 +1298,7 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
       spaceId: getKnowledgeSpaceId(),
       templateParams: buildTemplateParams(values, nextIndicatorClass, allFields)
     }
+    delete payload.customSourceFieldIds
 
     if (nextIndicatorClass === 'derived') {
       payload.indicatorCode = submitTechName

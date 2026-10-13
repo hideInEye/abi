@@ -17,6 +17,20 @@
   }
 }
 
+.operatorSection {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.operatorButton {
+  min-width: 52px;
+  border-color: #dbe5ff;
+  color: #26354d;
+}
+
 .metaStrip {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

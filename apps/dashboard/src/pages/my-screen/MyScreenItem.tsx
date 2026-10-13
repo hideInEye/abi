@@ -1,4 +1,5 @@
 import {useState} from 'react';
+import {Popover} from 'antd';
 import {PreviewOpen, Share, Undo} from '@icon-park/react';
 import {IProjectInfo, SaveType} from '../../designer/DesignerType.ts';
 import {LazyFeatureFallback, RetryableLazy} from '../../runtime/RetryableLazy.tsx';
@@ -26,22 +27,25 @@ export default function MyScreenItem({item, onUnpublish}: MyScreenItemProps) {
             <div className="project-item-cover"
                  style={{backgroundImage: `url(${cover || defaultSnapshot})`, aspectRatio: 'unset', height: '105px'}}>
                 <div className="operate-icon-list">
-                    <button type="button" className="operate-icon" title="查看项目" onClick={handlePreview}>
-                        <PreviewOpen/>
-                    </button>
-                    <button type="button" className="operate-icon" title="取消发布" onClick={() => onUnpublish(id!)}>
-                        <Undo/>
-                    </button>
-                    <button
-                        type="button"
+                    <div className="operate-icon">
+                        <Popover content="查看项目">
+                            <PreviewOpen onClick={handlePreview}/>
+                        </Popover>
+                    </div>
+                    <div className="operate-icon">
+                        <Popover content="取消发布">
+                            <Undo onClick={() => onUnpublish(id!)}/>
+                        </Popover>
+                    </div>
+                    <div
                         className="operate-icon"
-                        title="分享项目"
-                        onClick={() => setShareModalVisible(true)}
                         onFocus={() => void loadShareDialog()}
                         onMouseEnter={() => void loadShareDialog()}
                     >
-                        <Share/>
-                    </button>
+                        <Popover content="分享项目">
+                            <Share onClick={() => setShareModalVisible(true)}/>
+                        </Popover>
+                    </div>
                 </div>
             </div>
             <div className="project-item-content">

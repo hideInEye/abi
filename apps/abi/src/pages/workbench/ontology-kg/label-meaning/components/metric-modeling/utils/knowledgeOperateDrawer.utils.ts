@@ -61,11 +61,20 @@ export function getMetricIndicatorOptionValue(item: Partial<KnowledgeIndicatorIt
   return String(item.termId || item.indId || item.indicatorCode || item.techName || item.bizName || '').trim()
 }
 
-export function buildMetricIndicatorSearchQuery(searchText: unknown, spaceId: number, pageNum = 1) {
+export function getMetricIndicatorSearchClasses(indicatorClass: string): Array<'atomic' | 'derived'> {
+  return indicatorClass === 'composite' ? ['atomic', 'derived'] : ['atomic']
+}
+
+export function shouldReuseMetricIndicatorSearch(searchText: string, currentText: string, loading: boolean, loadedPage: number) {
+  return searchText.trim() === currentText && (loading || loadedPage > 0)
+}
+
+export function buildMetricIndicatorSearchQuery(searchText: unknown, spaceId: number, pageNum = 1, indicatorClass?: 'atomic' | 'derived') {
   const bizName = trimText(searchText)
 
   return {
     bizName: bizName || undefined,
+    ...(indicatorClass ? { indicatorClass } : {}),
     pageNum,
     pageSize: METRIC_INDICATOR_SEARCH_PAGE_SIZE,
     spaceId

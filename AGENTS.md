@@ -12,9 +12,11 @@
 6. `.ai/context/TESTING_STRATEGY.md`
 7. `.ai/context/AI_DEVELOPMENT_RULES.md`
 8. `.ai/checklists/BEFORE_CODING.md`
-9. `.ai/requirements/CURRENT_REQUIREMENT.md`
+9. `.ai/requirements/CURRENT_REQUIREMENT.md`（只读模板）及本轮 `.ai/runs/<date>-<task-name>/REQUIREMENT.md`
 
-没有明确需求文件时，不允许直接开发业务功能。所有开发必须基于 `.ai/requirements/CURRENT_REQUIREMENT.md`，并在开始前确认目标、非目标、影响范围、验收标准和测试要求。
+没有明确需求文件时，不允许直接开发业务功能。每轮任务或需求变更必须先参考只读模板，在 `.ai/runs/<date>-<task-name>/REQUIREMENT.md` 保存本轮实际需求，并在开始前确认目标、非目标、影响范围、验收标准和测试要求。
+
+`.ai/requirements/CURRENT_REQUIREMENT.md` 只用作模板，不再写入任务需求、修改进度或验收结果，不得按任务覆盖或追加。模板中的实例和历史文档中的旧流程不作为当前任务依据。每轮使用独立 runs 目录，重名时追加序号，不覆盖其他轮次的需求；需求和运行记录仅在本机查看，不加入 Git。
 
 开发完成后，必须：
 

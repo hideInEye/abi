@@ -24,6 +24,7 @@ export const ONTOLOGY_FUNCTION_DICTIONARY_TYPES: Record<OntologyFunctionDictiona
 }
 
 export const ONTOLOGY_ATOMIC_AGGREGATION_DICTIONARY_TYPES = ['ontology_atomic'] as const
+export const ONTOLOGY_OPERATOR_DICTIONARY_TYPES = ['ontology_operator'] as const
 
 const ROW_KEYS = ['records', 'rows', 'list'] as const
 const WRAPPER_KEYS = ['data', 'page', 'response', 'result'] as const
@@ -60,19 +61,20 @@ export function adaptOntologyFunctionOptions(
       .filter(isRecord)
       .filter(item => text(item.status) !== '1')
       .map((item, index) => {
+        const dictType = text(item.dictType) || dictTypes[groupIndex] || ''
         const sort = item.dictSort === '' || item.dictSort === null || item.dictSort === undefined
           ? Number.MAX_SAFE_INTEGER
           : Number(item.dictSort)
         return {
-          dictType: text(item.dictType) || dictTypes[groupIndex] || '',
+          dictType,
           id: text(item.dictCode) || `${dictTypes[groupIndex] || 'dictionary'}-${index}`,
           index,
           label: text(item.dictLabel) || text(item.dictValue),
           sort: Number.isFinite(sort) ? sort : Number.MAX_SAFE_INTEGER,
-          value: text(item.dictValue)
+          value: dictType === 'ontology_operator' ? String(item.dictValue ?? '') : text(item.dictValue)
         }
       })
-      .filter(item => item.label && item.value)
+      .filter(item => item.label && item.value.trim())
       .sort((left, right) => left.sort - right.sort || left.index - right.index)
   )
 

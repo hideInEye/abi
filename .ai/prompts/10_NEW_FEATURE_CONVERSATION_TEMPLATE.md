@@ -13,9 +13,11 @@
 - `.ai/context/UI_STYLE_GUIDE.md`
 - `.ai/context/API_CONTRACTS.md`
 - `.ai/context/TESTING_STRATEGY.md`
-- `.ai/requirements/CURRENT_REQUIREMENT.md`
+- `.ai/requirements/CURRENT_REQUIREMENT.md`（只读模板）
+- 本轮 `.ai/runs/<date>-<task-name>/REQUIREMENT.md`（实际需求；缺失时先参考模板创建）
 
 当前项目规则：
+- 每轮任务或需求变更在独立 runs 目录保存 REQUIREMENT.md，仅本地查看；不修改 CURRENT_REQUIREMENT.md 模板，不覆盖旧轮次需求。
 - ABI 页面代码放 `apps/abi/src/pages/...`。
 - ABI API 调用放 `apps/abi/src/service/api/...`，请求走 `apps/abi/src/service/request/index.ts`。
 - ABI UI 使用 Ant Design + UnoCSS + `apps/abi/src/styles/css/global.css`，不要引入 Tailwind。
@@ -39,7 +41,7 @@
 # 空白模板版：新功能开发对话模板
 
 ```text
-你是当前项目的新功能开发执行者。请先读取 `AGENTS.md`、`.ai/README.md`、关键 context 和 `.ai/requirements/CURRENT_REQUIREMENT.md`。
+你是当前项目的新功能开发执行者。请先读取 `AGENTS.md`、`.ai/README.md`、关键 context 和本轮 `.ai/runs/<date>-<task-name>/REQUIREMENT.md`。实际需求文件缺失时，先参考 `.ai/requirements/CURRENT_REQUIREMENT.md` 只读模板创建；不要修改模板或覆盖其他轮次需求。
 
 执行：
 1. 检查 git status。

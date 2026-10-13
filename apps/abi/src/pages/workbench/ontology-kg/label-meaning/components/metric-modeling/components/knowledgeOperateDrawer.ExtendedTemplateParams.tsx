@@ -200,7 +200,7 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
   )
 
   useEffect(() => {
-    if (templateTypeVal !== 'custom') {
+    if (templateTypeVal && templateTypeVal !== 'custom' && form.getFieldValue('templateType') === templateTypeVal) {
       form.setFieldValue('expr', preview.expression)
     }
   }, [form, preview.expression, templateTypeVal])
@@ -358,7 +358,7 @@ export const KnowledgeOperateExtendedTemplateParams: React.FC<Props> = ({
               name="comparePeriod"
               rules={[{ validator: (_rule, value) => validatePositiveInt(value, '比较周期长度必须为大于0的正整数') }]}
             >
-              <AInput placeholder="请输入比较周期长度" />
+              <AInput placeholder="请输入周期值，如 1，3，7等数字" />
             </AForm.Item>
             <AForm.Item
               label="产出格式"

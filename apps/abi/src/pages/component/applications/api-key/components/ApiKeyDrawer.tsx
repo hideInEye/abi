@@ -45,6 +45,7 @@ export function ApiKeyDrawer({ defaultSpaceId, mode, onClose, onSubmit, open, op
       description: record?.description || '',
       expireTime: record?.expireTime ? dayjs(record.expireTime) : undefined,
       ipAccessType: record?.ipAccessType || 'unlimited',
+      name: '',
       spaceId: resolvedSpaceId,
     })
 
@@ -358,7 +359,7 @@ export function ApiKeyDrawer({ defaultSpaceId, mode, onClose, onSubmit, open, op
         {isView ? (
           renderViewMode()
         ) : (
-          <div style={{ padding: '0 24px 24px' }}>
+          <AForm form={form} initialValues={{ ipAccessType: 'unlimited' }} layout="vertical" style={{ padding: '0 24px 24px' }}>
             {/* 基础信息 Section */}
             <div
               style={{
@@ -399,15 +400,24 @@ export function ApiKeyDrawer({ defaultSpaceId, mode, onClose, onSubmit, open, op
                 marginBottom: 24,
               }}
             >
-              <AForm form={form} layout="vertical">
-                <AForm.Item label={<span style={{ color: '#3e5068', fontWeight: 500 }}>归属业务空间</span>} name="spaceId" rules={[{ message: '请选择归属业务空间', required: true }]}>
-                  <ASelect disabled options={options} placeholder="请选择归属业务空间" />
-                </AForm.Item>
+              <AForm.Item
+                label={<span style={{ color: '#3e5068', fontWeight: 500 }}>名称</span>}
+                name="name"
+                rules={[
+                  { message: '请输入名称', required: true },
+                  { message: '名称仅支持中英文、数字和下划线', pattern: /^[\u4e00-\u9fffA-Za-z0-9_]+$/ },
+                ]}
+              >
+                <AInput placeholder="请输入名称，仅支持中英文、数字和下划线" />
+              </AForm.Item>
 
-                <AForm.Item label={<span style={{ color: '#3e5068', fontWeight: 500 }}>描述</span>} name="description">
-                  <AInput.TextArea maxLength={200} placeholder="请输入描述信息，用于说明该 API Key 的用途" rows={4} style={{ borderRadius: 8 }} />
-                </AForm.Item>
-              </AForm>
+              <AForm.Item label={<span style={{ color: '#3e5068', fontWeight: 500 }}>归属业务空间</span>} name="spaceId" rules={[{ message: '请选择归属业务空间', required: true }]}>
+                <ASelect disabled options={options} placeholder="请选择归属业务空间" />
+              </AForm.Item>
+
+              <AForm.Item label={<span style={{ color: '#3e5068', fontWeight: 500 }}>描述</span>} name="description">
+                <AInput.TextArea maxLength={200} placeholder="请输入描述信息，用于说明该 API Key 的用途" rows={4} style={{ borderRadius: 8 }} />
+              </AForm.Item>
             </div>
 
             {/* 访问配置 Section */}
@@ -450,7 +460,7 @@ export function ApiKeyDrawer({ defaultSpaceId, mode, onClose, onSubmit, open, op
                 marginBottom: 24,
               }}
             >
-              <AForm.Item initialValue="unlimited" label={<span style={{ color: '#3e5068', fontWeight: 500 }}>IP 访问限制</span>} name="ipAccessType">
+              <AForm.Item label={<span style={{ color: '#3e5068', fontWeight: 500 }}>IP 访问限制</span>} name="ipAccessType">
                 <ARadio.Group>
                   <ARadio value="unlimited">不限制</ARadio>
                   <ARadio value="whitelist">仅白名单</ARadio>
@@ -584,7 +594,7 @@ export function ApiKeyDrawer({ defaultSpaceId, mode, onClose, onSubmit, open, op
                 <span>Secret Key 仅在创建成功后展示一次，请及时复制并妥善保存。</span>
               </div>
             </div>
-          </div>
+          </AForm>
         )}
       </CommonDrawer>
 

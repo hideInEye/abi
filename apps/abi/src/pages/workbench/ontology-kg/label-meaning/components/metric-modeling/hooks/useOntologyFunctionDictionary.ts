@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ONTOLOGY_ATOMIC_AGGREGATION_DICTIONARY_TYPES,
   ONTOLOGY_FUNCTION_DICTIONARY_TYPES,
+  ONTOLOGY_OPERATOR_DICTIONARY_TYPES,
   type OntologyFunctionDictionaryKind,
   type OntologyFunctionOption,
   adaptOntologyAggregationMethodOptions,
@@ -48,6 +49,10 @@ function useOntologyDictionaryOptions(dictTypes: readonly string[]) {
 
 export function useOntologyFunctionDictionary(kind: OntologyFunctionDictionaryKind) {
   return useOntologyDictionaryOptions(ONTOLOGY_FUNCTION_DICTIONARY_TYPES[kind])
+}
+
+export function useOntologyOperatorDictionary() {
+  return useOntologyDictionaryOptions(ONTOLOGY_OPERATOR_DICTIONARY_TYPES)
 }
 
 export function useOntologyAtomicAggregationDictionary() {

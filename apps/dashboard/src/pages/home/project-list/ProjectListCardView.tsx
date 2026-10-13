@@ -1,4 +1,5 @@
-import {useEffect, useState} from 'react';
+import {Dropdown} from 'antd';
+import {EditOutlined, EyeOutlined, MoreOutlined} from '@ant-design/icons';
 
 import type {IProjectInfo} from '../../../designer/DesignerType.ts';
 
@@ -10,17 +11,7 @@ interface ProjectListCardViewProps {
 }
 
 export default function ProjectListCardView({onOperate, onRename, records, visibleKeys}: ProjectListCardViewProps) {
-    const [openCardMenuId, setOpenCardMenuId] = useState<string | null>(null);
     const visibleKeySet = new Set(visibleKeys);
-
-    useEffect(() => {
-        if (!openCardMenuId) return undefined;
-        const handleClick = (event: MouseEvent) => {
-            if (!(event.target as Element | null)?.closest('.abi-card-menu-wrap')) setOpenCardMenuId(null);
-        };
-        document.addEventListener('mousedown', handleClick);
-        return () => document.removeEventListener('mousedown', handleClick);
-    }, [openCardMenuId]);
 
     return (
         <div className="abi-card-grid">
@@ -54,31 +45,31 @@ export default function ProjectListCardView({onOperate, onRename, records, visib
 
                         <div className="abi-data-card-footer">
                             <button className="abi-card-act" onClick={() => onOperate(item.id!, 'edit')}>
-                                <span aria-hidden="true">✎</span> 编辑
+                                <EditOutlined style={{marginRight: 3}}/>编辑
                             </button>
                             <button className="abi-card-act" onClick={() => onOperate(item.id!, 'show')}>
-                                <span aria-hidden="true">◉</span> 预览
+                                <EyeOutlined style={{marginRight: 3}}/>预览
                             </button>
-                            <div className="abi-card-menu-wrap">
+                            <Dropdown
+                                menu={{
+                                    items: [
+                                        {key: 'rename', label: '重命名', onClick: () => onRename(item.id!, item.name!)},
+                                        {key: 'clone', label: '复制', onClick: () => onOperate(item.id!, 'clone')},
+                                        {type: 'divider'},
+                                        {key: 'delete', danger: true, label: '删除', onClick: () => onOperate(item.id!, 'del')},
+                                    ],
+                                }}
+                                trigger={['click']}
+                            >
                                 <button
-                                    aria-expanded={openCardMenuId === String(item.id)}
                                     className="abi-card-more"
-                                    onClick={event => {
-                                        event.stopPropagation();
-                                        setOpenCardMenuId(current => current === String(item.id) ? null : String(item.id));
-                                    }}
+                                    aria-label="更多操作"
+                                    onClick={event => event.stopPropagation()}
                                     type="button"
                                 >
-                                    <span aria-hidden="true">⋯</span>
+                                    <MoreOutlined/>
                                 </button>
-                                {openCardMenuId === String(item.id) ? (
-                                    <div className="abi-card-menu">
-                                        <button type="button" onClick={() => { setOpenCardMenuId(null); onRename(item.id!, item.name!); }}>重命名</button>
-                                        <button type="button" onClick={() => { setOpenCardMenuId(null); onOperate(item.id!, 'clone'); }}>复制</button>
-                                        <button className="danger" type="button" onClick={() => { setOpenCardMenuId(null); onOperate(item.id!, 'del'); }}>删除</button>
-                                    </div>
-                                ) : null}
-                            </div>
+                            </Dropdown>
                         </div>
                     </div>
                 ))}

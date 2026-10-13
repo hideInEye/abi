@@ -20,3 +20,5 @@ npm-debug.log*
 
 .claude
 routeTree.gen.ts
+
+.ai/runs/

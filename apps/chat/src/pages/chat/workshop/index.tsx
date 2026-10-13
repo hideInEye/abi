@@ -1,6 +1,6 @@
-import { DownOutlined, EyeOutlined, FilterOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
+import { DownOutlined, EyeOutlined, FilterOutlined, FolderOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { Button, Empty, Input, Popover, Spin } from 'antd'
+import { Button, Empty, Input, Popover, Select, Spin } from 'antd'
 import dayjs from 'dayjs'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 
@@ -399,17 +399,16 @@ function WorkshopView() {
               fallback={<div aria-busy="true" className="ws-filter-btn ws-filter-btn--loading">正在加载目录…</div>}
             />
           ) : (
-            <button
-              type="button"
+            <Button
               className="ws-filter-btn"
+              icon={<FolderOutlined />}
               onClick={() => setDirectoryActivated(true)}
               onFocus={() => void loadDataDirectoryDropdown()}
               onMouseEnter={() => void loadDataDirectoryDropdown()}
             >
-              <span aria-hidden="true">▣</span>
               数据目录
-              <span className="ws-filter-arrow" aria-hidden="true">⌄</span>
-            </button>
+              <DownOutlined className="ws-filter-arrow" />
+            </Button>
           )
         )}
         <Popover
@@ -524,16 +523,13 @@ function WorkshopView() {
       <div className="ws-pagination">
         <span className="ws-total-text">共 {totalCount} 条</span>
         <div className="ws-pagination-controls">
-          <select
+          <Select
             aria-label="每页条数"
             className="ws-page-size-select"
             value={pageSize}
-            onChange={(event) => handlePageSizeChange(Number(event.target.value))}
-          >
-            {PAGE_SIZE_OPTIONS.map(option => (
-              <option key={option.value} value={option.value}>{option.label}</option>
-            ))}
-          </select>
+            options={PAGE_SIZE_OPTIONS}
+            onChange={handlePageSizeChange}
+          />
           <button
             type="button"
             className="ws-page-btn"
@@ -553,17 +549,12 @@ function WorkshopView() {
           </button>
           <span className="ws-quick-jumper">
             前往
-            <input
+            <Input
               aria-label="跳转页码"
-              type="number"
-              min={1}
-              max={totalPages}
               className="ws-jump-input"
               value={jumpValue}
               onChange={(e) => setJumpValue(e.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') handleJump()
-              }}
+              onPressEnter={handleJump}
             />
             页
           </span>

@@ -8,9 +8,11 @@ import {
   getMappedMetricFieldDisplayName,
   getMetricFieldOptionLabel,
   getMetricIndicatorOptionLabel,
+  getMetricIndicatorSearchClasses,
   getStepItems,
   hasMoreMetricIndicatorSearchResults,
   mergeMetricIndicatorSearchResults,
+  shouldReuseMetricIndicatorSearch,
   shouldShowMetricPrecomputeConfig,
 } from './knowledgeOperateDrawer.utils'
 
@@ -92,6 +94,31 @@ describe('metric create steps', () => {
 })
 
 describe('metric indicator fuzzy search', () => {
+  it('queries eligible classes before pagination without changing the string API contract', () => {
+    expect(getMetricIndicatorSearchClasses('derived')).toEqual(['atomic'])
+    expect(getMetricIndicatorSearchClasses('composite')).toEqual(['atomic', 'derived'])
+    const queries = getMetricIndicatorSearchClasses('composite').map(indicatorClass =>
+      buildMetricIndicatorSearchQuery(' 支付 ', 138, 2, indicatorClass)
+    )
+    expect(queries).toEqual([
+      { bizName: '支付', indicatorClass: 'atomic', pageNum: 2, pageSize: 10, spaceId: 138 },
+      { bizName: '支付', indicatorClass: 'derived', pageNum: 2, pageSize: 10, spaceId: 138 },
+    ])
+  })
+
+  it('reuses pending and successful searches, including empty results and already loaded pages', () => {
+    expect(shouldReuseMetricIndicatorSearch('', '', true, 0)).toBe(true)
+    expect(shouldReuseMetricIndicatorSearch(' 支付 ', '支付', true, 0)).toBe(true)
+    expect(shouldReuseMetricIndicatorSearch('', '', false, 1)).toBe(true)
+    expect(shouldReuseMetricIndicatorSearch('', '', false, 3)).toBe(true)
+  })
+
+  it('allows new keywords, clearing search and retrying a failed first page', () => {
+    expect(shouldReuseMetricIndicatorSearch('订单', '支付', true, 0)).toBe(false)
+    expect(shouldReuseMetricIndicatorSearch('', '支付', false, 1)).toBe(false)
+    expect(shouldReuseMetricIndicatorSearch('', '', false, 0)).toBe(false)
+  })
+
   it('builds the existing list query with a trimmed bizName', () => {
     expect(buildMetricIndicatorSearchQuery('  支付金额  ', 82)).toEqual({
       bizName: '支付金额',

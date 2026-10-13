@@ -1,6 +1,7 @@
 # 当前项目专用检查项
 
-- [ ] 需求是否达到 `.ai/requirements/CURRENT_REQUIREMENT.md` 验收标准
+- [ ] 是否达到本轮 `.ai/runs/<date>-<task-name>/REQUIREMENT.md` 的验收标准
+- [ ] `.ai/requirements/CURRENT_REQUIREMENT.md` 是否保持只读，本轮需求和运行记录是否仅在本机保存
 - [ ] 是否运行 `pnpm test`
 - [ ] 是否运行相关 app build：`chatbi`、`ai-bot` 或 `abi-dashboard`
 - [ ] 是否记录 `pnpm lint` / `pnpm type-check` 当前不可用或修复后的状态

@@ -1,56 +1,6 @@
-const LOCAL_ICON_NAMES = [
-  'activity',
-  'add-calculated-params',
-  'add-collection',
-  'at-sign',
-  'avatar',
-  'bot',
-  'calendar',
-  'cast',
-  'chart',
-  'chrome',
-  'connect-full',
-  'connect-inner',
-  'connect-left',
-  'connect-right',
-  'copy',
-  'custom-icon',
-  'db',
-  'fold',
-  'folder',
-  'heart',
-  'kinship',
-  'left',
-  'left_online',
-  'location',
-  'logo',
-  'menu-app-workshop',
-  'menu-data-dashboard',
-  'menu-data-preparation',
-  'menu-job-scheduling',
-  'menu-ontology-network',
-  'menu-smart-orchestration',
-  'more',
-  'nav-chat',
-  'nav-home',
-  'no-icon',
-  'relation',
-  'right_online',
-  'sider-chat',
-  'sider-components',
-  'sider-home',
-  'sider-workbench',
-  'sql',
-  'sql-code',
-  'statistics',
-  'table',
-  'text',
-  'time',
-  'url',
-  'value',
-  'wind'
-] as const;
-
 export function getLocalIcons(): string[] {
-  return [...LOCAL_ICON_NAMES];
+  const svgIcons = import.meta.glob('../assets/svg-icon/*.svg');
+  return Object.keys(svgIcons)
+    .map(path => path.split('/').at(-1)?.replace('.svg', '') || '')
+    .filter(Boolean);
 }

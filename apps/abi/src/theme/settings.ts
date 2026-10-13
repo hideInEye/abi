@@ -78,15 +78,3 @@ export const themeSettings: App.Theme.ThemeSetting = {
     visible: false
   }
 };
-
-/**
- * Override theme settings
- *
- * If publish new version, use `overrideThemeSettings` to override certain theme settings
- */
-export const overrideThemeSettings: Partial<App.Theme.ThemeSetting> = {
-  watermark: {
-    text: 'SoybeanAdmin',
-    visible: false
-  }
-};

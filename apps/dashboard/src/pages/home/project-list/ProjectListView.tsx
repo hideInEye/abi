@@ -1,5 +1,7 @@
 import React, {memo, useCallback, useEffect, useMemo, useState} from 'react';
 import type {Dayjs} from 'dayjs';
+import {Empty, Input, Select} from 'antd';
+import {LeftOutlined, RightOutlined} from '@ant-design/icons';
 
 import type {IProjectInfo} from '../../../designer/DesignerType';
 import {LazyFeatureFallback, RetryableLazy} from '../../../runtime/RetryableLazy';
@@ -14,8 +16,7 @@ export interface ProjectListViewProps {
     dateRange: [Dayjs | null, Dayjs | null] | null;
     listError: string;
     listLoading: boolean;
-    onApplyFilters: () => void;
-    onBatchDelete: () => void;
+    onBatchDelete: () => void | Promise<void>;
     onDateRangeChange: (value: [Dayjs | null, Dayjs | null] | null) => void;
     onNewProject: () => void;
     onOperate: (id: string, type: string) => void;
@@ -48,7 +49,6 @@ const ProjectListView = memo((props: ProjectListViewProps) => {
         dateRange,
         listError,
         listLoading,
-        onApplyFilters,
         onBatchDelete,
         onDateRangeChange,
         onNewProject,
@@ -139,10 +139,7 @@ const ProjectListView = memo((props: ProjectListViewProps) => {
                             />
                         ) : (
                             <div className="abi-card-empty">
-                                <div className="my-screen-empty-state">
-                                    <span className="my-screen-empty-icon" aria-hidden="true">▦</span>
-                                    <span>{listLoading ? '正在加载大屏…' : '暂无大屏'}</span>
-                                </div>
+                                <Empty description={listLoading ? '正在加载大屏…' : '暂无大屏'} image={Empty.PRESENTED_IMAGE_SIMPLE}/>
                             </div>
                         )}
                         {listLoading && records.length > 0 ? <div className="project-card-loading-indicator">正在刷新…</div> : null}
@@ -152,19 +149,20 @@ const ProjectListView = memo((props: ProjectListViewProps) => {
                 <div className="data-source-pagination">
                     <span className="total-text">共 {totalCount} 条</span>
                     <div className="pagination-controls">
-                        <select
+                        <Select
                             aria-label="每页条数"
                             className="page-size-select"
                             value={pageSize}
-                            onChange={event => onPageChange(1, Number(event.target.value))}
-                        >
-                            <option value={12}>12条/页</option>
-                            <option value={18}>18条/页</option>
-                            <option value={24}>24条/页</option>
-                            <option value={30}>30条/页</option>
-                        </select>
+                            onChange={(size: number) => onPageChange(1, size)}
+                            options={[
+                                {value: 12, label: '12条/页'},
+                                {value: 18, label: '18条/页'},
+                                {value: 24, label: '24条/页'},
+                                {value: 30, label: '30条/页'},
+                            ]}
+                        />
                         <button className="page-btn" disabled={currentPage === 1} onClick={() => onPageChange(currentPage - 1, pageSize)} type="button">
-                            <span aria-hidden="true">‹</span>
+                            <LeftOutlined/>
                         </button>
                         {pageNumbers.map(page => page < 0 ? (
                             <span key={page} className="page-item page-ellipsis">...</span>
@@ -179,22 +177,17 @@ const ProjectListView = memo((props: ProjectListViewProps) => {
                             </button>
                         ))}
                         <button className="page-btn" disabled={currentPage === totalPages} onClick={() => onPageChange(currentPage + 1, pageSize)} type="button">
-                            <span aria-hidden="true">›</span>
+                            <RightOutlined/>
                         </button>
                         <span className="quick-jumper">
                             前往
-                            <input
+                            <Input
                                 aria-label="跳转页码"
                                 className="jump-input"
-                                max={totalPages}
-                                min={1}
                                 style={{width: 48, textAlign: 'center'}}
-                                type="number"
                                 value={jumpValue}
                                 onChange={event => setJumpValue(event.target.value)}
-                                onKeyDown={event => {
-                                    if (event.key === 'Enter') handleJump();
-                                }}
+                                onPressEnter={handleJump}
                             />
                             页
                         </span>
@@ -213,7 +206,6 @@ const ProjectListView = memo((props: ProjectListViewProps) => {
                 children: content,
                 columnOptions,
                 dateRange,
-                onApplyFilters,
                 onBatchDelete,
                 onColumnToggle: (key: string, visible: boolean) => {
                     setColumnOptions(options => options.map(option => option.key === key ? {...option, visible} : option));
