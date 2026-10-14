@@ -31,15 +31,18 @@
     <!-- 仅 pnpm dev 使用：源码直接以 module 加载，样式随 Vite HMR 热更新；base 走 vite /api 代理 -->
     <script type="module" src="/src/index.ts"></script>
 
-    <!-- SDK 是纯弹窗：标签一放即渲染面板，不含悬浮球；theme-switch 让面板头部出现蓝/黑切换按钮 -->
-    <abi-assistant share-code="rkh7lyn8" base="/api" theme-switch></abi-assistant>
-
     <!-- 宿主系统自己的打开按钮 -->
     <button class="host-open-btn" id="hostOpenBtn" style="display: none">打开 AI 助手</button>
 
     <script>
+      // dev 调试页：shareCode/base 用 URL 参数传入（?shareCode=xxx&base=/api），不写死测试值
+      const params = new URLSearchParams(location.search)
+      const widget = document.createElement('abi-assistant')
+      widget.setAttribute('share-code', params.get('shareCode') || '')
+      widget.setAttribute('base', params.get('base') || '/api')
+      // theme-switch 让面板头部出现蓝/黑切换按钮
+      widget.setAttribute('theme-switch', '')
       // 宿主控制显隐：面板 close 事件 -> 隐藏面板、露出自己的打开按钮；点按钮 -> 重新显示面板
-      const widget = document.querySelector('abi-assistant')
       const hostOpenBtn = document.getElementById('hostOpenBtn')
       widget.addEventListener('close', () => {
         widget.style.display = 'none'
@@ -49,6 +52,7 @@
         widget.style.display = 'contents'
         hostOpenBtn.style.display = 'none'
       })
+      document.body.appendChild(widget)
     </script>
   </body>
 </html>

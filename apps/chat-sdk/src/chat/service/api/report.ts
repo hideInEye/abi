@@ -2,6 +2,7 @@ import { fetchEventSource } from '@microsoft/fetch-event-source'
 import type { EventSourceMessage } from '@microsoft/fetch-event-source'
 
 import { getAuthorization, handleLoginExpired } from '../../utils/auth'
+import { shareApiKeyHeaders } from '../request/share-api-key'
 
 export type SourceVersionId = string | number
 
@@ -132,7 +133,7 @@ function getReportSubmitApi() {
 
 function getAuthorizationHeaders(authorization?: string | null): Record<string, string> {
   const authHeader = authorization ?? getAuthorization()
-  return authHeader ? { Authorization: authHeader } : {}
+  return { ...(authHeader ? { Authorization: authHeader } : {}), ...shareApiKeyHeaders() }
 }
 
 function getBusinessApi(path: string) {

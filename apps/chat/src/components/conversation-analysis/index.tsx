@@ -302,7 +302,8 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
 
   useEffect(() => {
     if (currentSpaceId === null || Number.isNaN(currentSpaceId)) return
-    void getAppList({ silent: routeChatId === 'new' || Boolean(appList.length) })
+    // 路由已指向具体会话时只静默刷新列表：助手会话不在 session/list 内，非静默分支会因找不到而把 curConv 重置成别的会话或空，导致 assistantId 归零、已选技能被清空
+    void getAppList({ silent: Boolean(routeChatId) || Boolean(appList.length) })
   }, [appList.length, currentSpaceId, getAppList, routeChatId])
 
   useEffect(() => {
@@ -390,9 +391,11 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
     setCurConv(newApp)
     localStorage.setItem('chatId', String(app.chat_id))
     bootstrap.updateConversations(prev => [newApp, ...prev])
+    // 携带 appId 保持待命助手身份：navigate 后 pendingAssistantId 不丢，避免 assistantId 短暂归零触发绑定资源重载、连带清空已选技能
     navigate({
       to: TASK_DETAIL_ROUTE,
       params: { taskId: String(app.chat_id) },
+      search: options?.appId != null && options.appId !== '' ? { appId: String(options.appId) } : {},
     })
     return newApp
   }, [bootstrap.updateConversations, currentSpaceId, navigate])
@@ -754,6 +757,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
                       assistantSemanticTree: boundSemanticTree,
                       assistantSkills,
                       assistantMcps,
+                      assistantKey: assistantId,
                       selectedData,
                       onSelectData: setSelectedData,
                       selectedExcel,

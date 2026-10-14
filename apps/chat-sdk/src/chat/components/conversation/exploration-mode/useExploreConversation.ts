@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { message } from 'antd'
 
 import { streamExplorePlan } from '../../../service/api/conv'
+import { showWidgetToast } from '../../chat-widget/widgetToast'
 import { reduceExploreEvent, parseExploreStreamEvent } from './exploreStreamReducer'
 import type { ExploreItem, ExploreMcpSource, ExploreSendOptions } from './types'
 
@@ -82,7 +82,7 @@ export function useExploreConversation({ conv, spaceId, currentModelId, embedMod
 
   const handleSend = useCallback(async (question: string, schemaId: string | number, options?: ExploreSendOptions) => {
     if (!conv?.conv_uid || !conv?.chat_id) {
-      message.error('会话未就绪')
+      showWidgetToast('error', '会话未就绪')
       return
     }
     if (loading) return

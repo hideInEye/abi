@@ -130,14 +130,14 @@ const PALETTE = ['#dc4a33', '#1a9e6f', '#4a6ee0', '#c8880a', '#8b5cf6', '#0891b2
 
 type TabKey = 'overview' | 'dimension' | 'metric' | 'combo';
 
-/** 千分位格式化 */
+/** 千分位格式化：整数不带小数，小数最多保留 d 位 */
 const fmt = (n: number | null | undefined, d = 2): string =>
-  n == null ? '—' : Number(n).toLocaleString('zh-CN', { minimumFractionDigits: d, maximumFractionDigits: d });
+  n == null ? '—' : Number(n).toLocaleString('zh-CN', { maximumFractionDigits: d });
 
 /** 大数值缩写为 K */
 const fmtK = (n: number | null | undefined): string => {
   if (n == null) return '—';
-  if (Math.abs(n) >= 10000) return `${(n / 1000).toFixed(2)}K`;
+  if (Math.abs(n) >= 10000) return `${parseFloat((n / 1000).toFixed(2))}K`;
   return fmt(n);
 };
 
@@ -239,7 +239,7 @@ const AttributionDashboard: React.FC<AttributionDashboardProps> = ({ data, onDeb
           if (!f) return '';
           return `<div style="font-weight:700;margin-bottom:4px">${f.factor_value}</div>
             <div style="font-size:11px;color:#6b7280;margin-bottom:6px">${f.dimension}</div>
-            <div style="font-size:12px">贡献量: <span style="color:${colorOf(f.dimension)};font-weight:600">¥${fmt(f.contribution_amount)}</span></div>
+            <div style="font-size:12px">贡献量: <span style="color:${colorOf(f.dimension)};font-weight:600">${fmt(f.contribution_amount)}</span></div>
             <div style="font-size:12px">贡献率: ${fmtPct(f.contribution_pct)}</div>`;
         },
       },
@@ -326,14 +326,14 @@ const AttributionDashboard: React.FC<AttributionDashboardProps> = ({ data, onDeb
         formatter: (params: any) => {
           const d = dataWithBase[params[0].dataIndex];
           if (!d) return '';
-          if (d.type === 'start') return `<div style="font-weight:600">基准值</div><div style="font-size:12px;color:#6b7280;margin-top:4px">¥0.00</div>`;
-          if (d.type === 'end') return `<div style="font-weight:600">当前值</div><div style="font-size:12px;color:#c8880a;margin-top:4px">¥${fmt(d.value)}</div>`;
+          if (d.type === 'start') return `<div style="font-weight:600">基准值</div><div style="font-size:12px;color:#6b7280;margin-top:4px">0</div>`;
+          if (d.type === 'end') return `<div style="font-weight:600">当前值</div><div style="font-size:12px;color:#c8880a;margin-top:4px">${fmt(d.value)}</div>`;
           const dim = d.label.split('/')[0];
           const factor = d.label.split('/')[1];
           return `<div style="font-weight:700;margin-bottom:4px;color:${colorOf(dim)}">${factor}</div>
             <div style="font-size:11px;color:#6b7280;margin-bottom:6px">维度: ${dim}</div>
-            <div style="font-size:12px">贡献量: <span style="color:${colorOf(dim)};font-weight:600">+¥${fmt(d.value)}</span></div>
-            <div style="font-size:12px;color:#6b7280">累计: ¥${fmt(d.base + d.value)}</div>`;
+            <div style="font-size:12px">贡献量: <span style="color:${colorOf(dim)};font-weight:600">+${fmt(d.value)}</span></div>
+            <div style="font-size:12px;color:#6b7280">累计: ${fmt(d.base + d.value)}</div>`;
         },
       },
       xAxis: {
@@ -373,7 +373,7 @@ const AttributionDashboard: React.FC<AttributionDashboardProps> = ({ data, onDeb
                 type: 'group',
                 children: [
                   { type: 'rect', shape: { x: start[0] - width / 2, y: start[1] - 14, width, height: 14 }, style: { fill: 'rgba(200,136,10,0.1)' } },
-                  { type: 'text', style: { text: `¥${fmtK(d.value)}`, x: start[0], y: start[1] - 4, fill: '#c8880a', font: '700 11px sans-serif', textAlign: 'center' } },
+                  { type: 'text', style: { text: fmtK(d.value), x: start[0], y: start[1] - 4, fill: '#c8880a', font: '700 11px sans-serif', textAlign: 'center' } },
                 ],
               };
             }
@@ -455,7 +455,7 @@ const AttributionDashboard: React.FC<AttributionDashboardProps> = ({ data, onDeb
                   <span className={styles.medium}>{f.factor_value}</span>
                 </div>
               </td>
-              <td className={styles.tr} style={{ color }}><span className={styles.mono}>¥{fmt(f.contribution_amount)}</span></td>
+              <td className={styles.tr} style={{ color }}><span className={styles.mono}>{fmt(f.contribution_amount)}</span></td>
               <td className={`${styles.tr} ${styles.semibold}`}><span className={styles.mono}>{fmtPct(f.contribution_pct)}</span></td>
               <td>
                 <div className={styles.barTrack} style={{ height: 5 }}>
@@ -504,7 +504,7 @@ const AttributionDashboard: React.FC<AttributionDashboardProps> = ({ data, onDeb
                 <td>
                   <span className={styles.dimBadge} style={{ background: `${color}1a`, color, borderColor: `${color}40` }}>{f.dimension}</span>
                 </td>
-                <td className={styles.tr} style={{ color }}><span className={styles.mono}>¥{fmt(f.contribution_amount)}</span></td>
+                <td className={styles.tr} style={{ color }}><span className={styles.mono}>{fmt(f.contribution_amount)}</span></td>
                 <td className={`${styles.tr} ${styles.semibold}`}><span className={styles.mono}>{fmtPct(f.contribution_pct)}</span></td>
                 <td>
                   <div className={styles.barTrack} style={{ height: 5 }}>
@@ -540,7 +540,7 @@ const AttributionDashboard: React.FC<AttributionDashboardProps> = ({ data, onDeb
                   <div className={styles.crossSubTop}>
                     <span className={styles.medium}>{s.factor_value}</span>
                     <div className={styles.crossSubVals}>
-                      <span className={styles.crossSubAmount}>¥{fmtK(s.contribution_amount)}</span>
+                      <span className={styles.crossSubAmount}>{fmtK(s.contribution_amount)}</span>
                       <span className={styles.crossSubPct} style={{ color: sColor }}>{fmtPct(s.contribution_pct)}</span>
                     </div>
                   </div>
@@ -570,14 +570,14 @@ const AttributionDashboard: React.FC<AttributionDashboardProps> = ({ data, onDeb
               <span className={styles.badgeMuted}>Gini {d.gini_score.toFixed(4)}</span>
             </div>
             <div className={styles.comboName}>{d.dimension}</div>
-            <div className={styles.comboValue} style={{ color }}>¥{fmtK(total)}</div>
+            <div className={styles.comboValue} style={{ color }}>{fmtK(total)}</div>
             <div className={styles.comboSub}>贡献率 {fmtPct(d.contribution_pct)} · {group ? group.factors.length : 0} 个因子</div>
             {top && (
               <div className={styles.comboTopFactor}>
                 <div className={styles.comboTopLabel}>TOP 因子</div>
                 <div className={styles.comboTopRow}>
                   <span className={styles.medium}>{top.factor_value}</span>
-                  <span className={styles.mono} style={{ color }}>¥{fmtK(top.contribution_amount)}</span>
+                  <span className={styles.mono} style={{ color }}>{fmtK(top.contribution_amount)}</span>
                 </div>
               </div>
             )}
@@ -608,7 +608,8 @@ const AttributionDashboard: React.FC<AttributionDashboardProps> = ({ data, onDeb
           colorClass: styles.metricBlue,
           value: (
             <div className={styles.metricNum} style={{ color: '#5b7cf7' }}>
-              ¥{currentIntDec[0]}<span className={styles.metricNumDec}>.{currentIntDec[1] || '00'}</span>
+              {currentIntDec[0]}
+              {currentIntDec[1] ? <span className={styles.metricNumDec}>.{currentIntDec[1]}</span> : null}
             </div>
           ),
         },
@@ -619,7 +620,7 @@ const AttributionDashboard: React.FC<AttributionDashboardProps> = ({ data, onDeb
           iconSvg: '<path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/>',
           colorClass: styles.metricPurple,
           value: hasBaseline ? (
-            <div className={styles.metricNum} style={{ color: '#8b5cf6' }}>¥{fmt(overview.baseline_value)}</div>
+            <div className={styles.metricNum} style={{ color: '#8b5cf6' }}>{fmt(overview.baseline_value)}</div>
           ) : (
             <div className={styles.metricNum} style={{ color: 'var(--attr-muted)' }}>
               —<span className={styles.metricNumDec}> 无基准</span>
@@ -879,9 +880,9 @@ const AttributionDashboard: React.FC<AttributionDashboardProps> = ({ data, onDeb
                 <div className={styles.blockHead}>
                   <div>
                     <h3 className={styles.blockTitle}>贡献瀑布图</h3>
-                    <p className={styles.blockSub}>展示各 Top 因子对总金额的累积贡献（按维度分组）</p>
+                    <p className={styles.blockSub}>展示各 Top 因子对目标指标的累积贡献（按维度分组）</p>
                   </div>
-                  <span className={styles.badgeAmber}>最终值 ¥{fmt(overview?.current_value)}</span>
+                  <span className={styles.badgeAmber}>最终值 {fmt(overview?.current_value)}</span>
                 </div>
                 <EChart option={waterfallOption} style={{ height: '420px', width: '100%' }} handleClick={() => {}} />
               </div>

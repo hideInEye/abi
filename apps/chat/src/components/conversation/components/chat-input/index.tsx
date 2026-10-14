@@ -81,6 +81,8 @@ export interface ChatInputProps {
   assistantSkills?: ReadonlyArray<{ id: string; bizName: string; latestVersionId: string; skillType: string }> | null;
   /** MCP 候选仅用绑定列表（扁平，无分组）；非 null 时跳过全局 MCP 分组请求 */
   assistantMcps?: ReadonlyArray<{ id: string; name: string; protocol: 'sse' | 'streamable'; sseGroupIds?: ReadonlyArray<string | number>; namespaceId?: string }> | null;
+  /** 当前助手身份（appId，普通会话为 '0'）：仅切换助手时清空已选技能/MCP，避免绑定资源引用抖动误清 */
+  assistantKey?: string;
 }
 
 const ChatInput: React.FC<ChatInputProps> = React.memo(
@@ -90,7 +92,7 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
       selectedModeKey, onModeChange,
     semanticTree = [], selectedData, onSelectData, semLoading,
     externalValue, onExternalValueConsumed,
-    assistantSemanticTree, assistantSkills, assistantMcps
+    assistantSemanticTree, assistantSkills, assistantMcps, assistantKey
   }) => {
     // 当前模型是否支持关闭思考：1 为支持，0 或其他为不支持
     const isSupportCloseThinking = currentModel?.isSupportThinking === 1 || currentModel?.isSupportThinking === '1';
@@ -141,11 +143,11 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
       }
     }, [externalValue, onExternalValueConsumed]);
 
-    // 切换助手会话（绑定候选引用变化）时清空已选技能 / MCP，避免携带旧助手资源发送。
+    // 仅切换助手时清空已选技能 / MCP，避免携带旧助手资源发送；依赖稳定的助手身份而非资源引用，防止绑定资源重载导致误清。
     useEffect(() => {
       setSelectedSkills(new Set());
       setSelectedMCPs(new Set());
-    }, [assistantSkills, assistantMcps]);
+    }, [assistantKey]);
 
     useEffect(() => {
       // 父容器控制当前模式，输入框只负责展示和把发送 mode 上抛。

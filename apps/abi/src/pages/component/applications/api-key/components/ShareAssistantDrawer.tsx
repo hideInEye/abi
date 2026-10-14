@@ -4,7 +4,7 @@ import { Drawer, Empty, Spin } from 'antd'
 import { useAppSelector } from '@/hooks/business/useStore'
 import AssistantShareModal from '@/pages/workbench/app-workshop/my-assistant/AssistantShareModal'
 import { fetchAppListApi } from '@/service/api/abi-chat-app'
-import { fetchProjectShareListApi } from '@/service/api/share'
+import { fetchShareListByApiKeyApi } from '@/service/api/share'
 import { getSpaceId } from '@/store/slice/app'
 
 import type { ApiKeyItem } from '../types'
@@ -26,16 +26,9 @@ interface AssistantRow {
 
 const PAGE_SIZE = 12
 
-/** apiKeys 字段兼容数组 / 逗号分隔串（与分享记录列表口径一致） */
-function parseApiKeys(value: any): string[] {
-  if (Array.isArray(value)) return value.map((v: any) => String(v)).filter(Boolean)
-  if (typeof value === 'string') return value.split(',').map(v => v.trim()).filter(Boolean)
-  return []
-}
-
 /**
  * API Key「分享助手」抽屉：展示当前 API Key 绑定的助手列表。
- * 绑定关系取自分享记录的 apiKeys 字段（含该 accessKey 的记录），按助手去重、取最近一条记录的分享链接。
+ * 绑定关系由后端按 apiKey 直接返回（shareListByApiKey），按助手去重、取最近一条记录的分享链接。
  */
 export function ShareAssistantDrawer({ apiKey, open, onClose }: ShareAssistantDrawerProps) {
   const currentSpaceId = useAppSelector(getSpaceId)
@@ -53,7 +46,7 @@ export function ShareAssistantDrawer({ apiKey, open, onClose }: ShareAssistantDr
     setLoading(true)
     try {
       const [shareRes, appRes] = await Promise.all([
-        fetchProjectShareListApi({ type: 'workflow', current: 1, size: 999 }),
+        fetchShareListByApiKeyApi({ apiKey: accessKey, type: 'workflow' }),
         fetchAppListApi({ spaceId: currentSpaceId || undefined }),
       ])
       const sharePage = (shareRes as any)?.data ?? {}
@@ -67,13 +60,12 @@ export function ShareAssistantDrawer({ apiKey, open, onClose }: ShareAssistantDr
       }
       const rowMap = new Map<string, AssistantRow>()
       for (const r of Array.isArray(shareRecords) ? shareRecords : []) {
-        if (!parseApiKeys(r?.apiKeys ?? r?.accessKeys).includes(accessKey)) continue
-        const pid = String(r?.projectId ?? '')
+        const pid = String(r?.projectId ?? r?.appId ?? '')
         if (!pid || rowMap.has(pid)) continue
         const app = appMap.get(pid)
         rowMap.set(pid, {
           id: pid,
-          name: app?.appName || '-',
+          name: app?.appName || r?.appName || '-',
           shareUrl: r?.shareUrl || '',
           createBy: app?.createBy || r?.createBy || '-',
           createTime: app?.createTime

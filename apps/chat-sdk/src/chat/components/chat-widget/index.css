@@ -84,6 +84,7 @@
 }
 
 .abi-cw-panel {
+  position: relative;
   display: flex;
   flex-direction: column;
   background: var(--cw-surface, #fff);
@@ -161,6 +162,174 @@
   user-select: none;
 }
 
+/* 下拉浮层宽度随内容并封顶：触发器过宽时不把整行盖住，保留头部拖拽区 */
+.abi-cw-menu {
+  max-width: min(320px, calc(100% - 16px));
+}
+
+/* ── 窗内通知条：标题栏下方居中浮层，替代 body 级 antd message（后者会被悬浮面板遮挡）；
+   字号/内边距/图标对齐 antd message 规格，窗内同样醒目 ── */
+.abi-cw-toast {
+  position: absolute;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 32px);
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+  box-shadow: 0 6px 20px rgba(26, 39, 68, 0.16);
+  backdrop-filter: blur(8px);
+  pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  animation: abi-cw-toast-in 0.18s ease;
+}
+
+.abi-cw-toast svg {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+
+.abi-cw-toast-success {
+  background: rgba(240, 249, 244, 0.95);
+  border: 1px solid rgba(47, 158, 99, 0.25);
+  color: #2f9e63;
+}
+
+.abi-cw-toast-error {
+  background: rgba(254, 242, 242, 0.95);
+  border: 1px solid rgba(213, 61, 66, 0.25);
+  color: #d43d42;
+}
+
+.abi-cw-toast-warning {
+  background: rgba(255, 248, 235, 0.95);
+  border: 1px solid rgba(183, 121, 31, 0.25);
+  color: #b7791f;
+}
+
+.abi-cw-toast-info {
+  background: rgba(240, 244, 255, 0.95);
+  border: 1px solid rgba(91, 124, 247, 0.25);
+  color: #4c6ef5;
+}
+
+/* 黑色系：低透彩底 + 提亮文字，同抽屉深色口径 */
+[data-cw-theme='dark'] .abi-cw-toast-success {
+  background: rgba(47, 158, 99, 0.16);
+  border-color: rgba(52, 211, 153, 0.35);
+  color: #6fd79b;
+}
+
+[data-cw-theme='dark'] .abi-cw-toast-error {
+  background: rgba(255, 77, 79, 0.14);
+  border-color: rgba(255, 120, 117, 0.35);
+  color: #ff7875;
+}
+
+[data-cw-theme='dark'] .abi-cw-toast-warning {
+  background: rgba(245, 158, 11, 0.14);
+  border-color: rgba(245, 158, 11, 0.35);
+  color: #fbbf24;
+}
+
+[data-cw-theme='dark'] .abi-cw-toast-info {
+  background: rgba(123, 150, 255, 0.14);
+  border-color: rgba(123, 150, 255, 0.35);
+  color: #9db1ff;
+}
+
+@keyframes abi-cw-toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -6px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+/* 头部更多菜单浮层：自定义面板（不用 antd Menu 内部结构），图标 15px + 文案单行；玻璃态同悬浮窗整体语言 */
+.abi-cw-menu-panel {
+  min-width: 128px;
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--cw-surface, rgba(255, 255, 255, 0.96));
+  border: 1px solid var(--cw-border, rgba(130, 140, 200, 0.16));
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(26, 39, 68, 0.1);
+  backdrop-filter: blur(12px);
+}
+
+/* 双类名抬特异性：宿主页面按钮全局样式不会改菜单字号字重 */
+.abi-cw-menu .abi-cw-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  border-radius: 7px;
+  padding: 7px 10px;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--cw-text, #333);
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.abi-cw-menu .abi-cw-menu-item:hover {
+  background: rgba(91, 124, 247, 0.06);
+  color: var(--accent, #5b7cf7);
+}
+
+/* 切换下拉当前项：主题色文字 + 浅靛底高亮；各行结构一致，尾注右缘逐行对齐 */
+.abi-cw-menu .abi-cw-menu-item-active,
+.abi-cw-menu .abi-cw-menu-item-active:hover {
+  background: rgba(91, 124, 247, 0.1);
+  color: var(--accent, #5b7cf7);
+  font-weight: 500;
+}
+
+/* 黑色系：hover/选中底转低透亮靛与低透白，同历史对话抽屉口径 */
+[data-cw-theme='dark'] .abi-cw-menu .abi-cw-menu-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+[data-cw-theme='dark'] .abi-cw-menu .abi-cw-menu-item-active,
+[data-cw-theme='dark'] .abi-cw-menu .abi-cw-menu-item-active:hover {
+  background: rgba(123, 150, 255, 0.16);
+}
+
+.abi-cw-menu .abi-cw-menu-item svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+/* 更多菜单危险项（删除二次确认臂入态） */
+.abi-cw-menu .abi-cw-menu-item-danger {
+  color: #e5484d;
+}
+
+.abi-cw-menu .abi-cw-menu-item-danger:hover {
+  background: rgba(229, 72, 77, 0.08);
+  color: #e5484d;
+}
+
 .abi-cw-header-logo {
   flex-shrink: 0;
   width: 28px;
@@ -175,6 +344,14 @@
   font-weight: bold;
 }
 
+/* 标题占位容器：头部是 space-between，需由它吸收剩余空间，否则元素间距被均分拉散；内部按钮仍随内容收缩 */
+.abi-cw-header-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
 .abi-cw-header-name {
   flex: 1;
   min-width: 0;
@@ -185,6 +362,66 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* 头部助手切换：标题升级为按钮（重置默认按钮样式）+ 下拉 caret */
+button.abi-cw-header-switch {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  /* 宽度随内容收缩：整行宽的按钮会把下拉撑满整行，且 handleDragStart 排除 button，会吞掉整个头部拖拽区 */
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 70%;
+}
+
+/* 切换按钮内的标题文本：可收缩省略，caret 保持可见 */
+.abi-cw-switch-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.abi-cw-switch-caret {
+  flex-shrink: 0;
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+/* 切换下拉项内助手名占满剩余宽度，把当前项勾选图标推到右侧 */
+.abi-cw-switch-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+/* 助手切换面板：比普通菜单宽一档，名字与尾注不挤行 */
+.abi-cw-switch-panel {
+  min-width: 200px;
+}
+
+/* 重名助手的 shareCode 尾注：中性灰小标签，靛底行上也不糊 */
+.abi-cw-switch-code {
+  flex-shrink: 0;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: rgba(129, 140, 160, 0.12);
+  font-size: 10px;
+  line-height: 1.6;
+  letter-spacing: 0.2px;
+  opacity: 0.9;
+  font-family: var(--mono, SFMono-Regular, Consolas, monospace);
 }
 
 .abi-cw-action-btn {
@@ -284,40 +521,6 @@
   }
 }
 
-/* 密码表单（嵌入形态下的分享密码校验） */
-.abi-cw-password {
-  width: 100%;
-  max-width: 280px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.abi-cw-password-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--cw-text, #333);
-}
-
-.abi-cw-password input {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #d9d9d9;
-  border-radius: 8px;
-  font-size: 14px;
-  outline: none;
-}
-
-.abi-cw-password input:focus {
-  border-color: #5b7cf7;
-}
-
-.abi-cw-password-error {
-  color: #ff4d4f;
-  font-size: 12px;
-  min-height: 18px;
-}
-
 .abi-cw-btn-primary {
   border: none;
   border-radius: 8px;
@@ -335,6 +538,90 @@
 .abi-cw-btn-primary:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* ── 密钥填入弹窗（面板内 Modal）：宿主未经标签属性注入密钥时在悬浮窗内弹出，填入后进入 ── */
+/* antd Modal 的 mask/wrap 默认 fixed 铺满视口：改 absolute 收进面板（getContainer 指向面板），wrap 弹性居中 */
+.abi-cw-panel > .ant-modal-root .ant-modal-mask,
+.abi-cw-panel > .ant-modal-root .ant-modal-wrap {
+  position: absolute;
+}
+
+.abi-cw-panel > .ant-modal-root .ant-modal-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow: hidden;
+}
+
+.abi-cw-panel > .ant-modal-root .ant-modal {
+  top: 0;
+  margin: 0;
+  padding-bottom: 0;
+  /* 默认 max-width 按视口算，小面板下会溢出，改按容器收窄 */
+  max-width: calc(100% - 32px);
+}
+
+/* 弹窗卡片随主题变量（dark 下面板变暗，antd 默认白底卡片不搭） */
+.abi-cw-panel > .ant-modal-root .ant-modal-content {
+  background: var(--cw-surface, #fff);
+  border: 1px solid var(--cw-border, #e9edf4);
+}
+
+.abi-cw-panel > .ant-modal-root .ant-modal-title {
+  color: var(--cw-text, #333);
+}
+
+.abi-cw-keygate {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.abi-cw-keygate-desc {
+  font-size: 12px;
+  color: var(--cw-text-muted, #8c8c8c);
+  text-align: center;
+}
+
+.abi-cw-keygate-field {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.abi-cw-keygate-label {
+  font-size: 12px;
+  color: var(--cw-text-muted, #8c8c8c);
+}
+
+.abi-cw-keygate-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--cw-border, #e9edf4);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--cw-text, #333);
+  background: var(--cw-surface, #fff);
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.abi-cw-keygate-input:focus {
+  border-color: #5b7cf7;
+}
+
+.abi-cw-keygate-error {
+  font-size: 12px;
+  color: #e5484d;
+  min-height: 16px;
+}
+
+.abi-cw-keygate-submit {
+  width: 100%;
+  margin-top: 4px;
 }
 
 /* 消息流（对齐大屏 ai-message：时间置于气泡下方） */
@@ -502,7 +789,7 @@
   display: flex;
   align-items: center;
   padding: 4px 10px 8px;
-  gap: 8px;
+  gap: 4px;
   row-gap: 4px;
   flex-wrap: wrap;
 }
@@ -518,15 +805,15 @@
 .abi-cw-sem-trigger {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   height: 32px;
   max-width: 160px;
-  padding: 0 10px;
+  padding: 0 8px;
   border-radius: 8px;
   border: 1px solid var(--cw-header-border, rgba(130, 140, 200, 0.16));
   background: var(--cw-input-bg, rgba(255, 255, 255, 0.5));
   color: var(--cw-text-2, #8494ad);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   cursor: pointer;
   user-select: none;
@@ -821,14 +1108,14 @@
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   height: 32px;
-  padding: 0 10px;
+  padding: 0 8px;
   border-radius: 8px;
   border: 1px solid transparent;
   background: transparent;
   color: var(--cw-text-2, #8494ad);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   cursor: pointer;
   user-select: none;

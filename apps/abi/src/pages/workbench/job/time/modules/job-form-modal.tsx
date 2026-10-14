@@ -14,6 +14,7 @@ import {
   WEEK_DAY_OPTIONS,
 } from '@/constants/job'
 import { addJobInfo, updateJobInfo } from '@/service/api/job'
+import { getSpaceId } from '@/store/slice/app'
 import { buildCronPreview, describeScheduleForm, isJobRequestSuccess, normalizeSchedulePoints, parseScheduleConf } from '../../utils'
 
 import CronExpressionDrawer from './cron-expression-drawer'
@@ -284,6 +285,7 @@ function unpackStructuredConf(target: Record<string, any>, conf: Record<string, 
 
 const JobFormModal: FC<Props> = memo(({ initial, jobGroupOptions, onClose, onSuccess, open, operateType }) => {
   const [form] = AForm.useForm()
+  const spaceId = useAppSelector(getSpaceId)
   const [cronVisible, setCronVisible] = useState(false)
   // 高级配置默认折叠
   const [advancedOpen, setAdvancedOpen] = useState(false)
@@ -374,7 +376,9 @@ const JobFormModal: FC<Props> = memo(({ initial, jobGroupOptions, onClose, onSuc
         scheduleType: 'CRON',
         triggerStatus: Number(initial?.triggerStatus ?? 0),
       }
-      const res: any = operateType === 'edit' ? await updateJobInfo(String(initial?.id), payload) : await addJobInfo(payload)
+      const res: any = operateType === 'edit'
+        ? await updateJobInfo(String(initial?.id), payload)
+        : await addJobInfo({ ...payload, spaceId })
       if (!isJobRequestSuccess(res)) return
       message.success('操作成功')
       onSuccess()

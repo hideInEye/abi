@@ -1,7 +1,7 @@
 let assistantSdkPromise: Promise<void> | null = null
 
 // bundle 文件名无内容 hash，浏览器会强缓存旧版：dev 带时间戳永远拉新，生产带版本号（发新产物后 bump）
-const WIDGET_VERSION = import.meta.env.DEV ? String(Date.now()) : '20261008-1740'
+const WIDGET_VERSION = import.meta.env.DEV ? String(Date.now()) : '20261014-1501'
 
 function loadAssistantSdk(): Promise<void> {
   if (assistantSdkPromise) return assistantSdkPromise
@@ -9,9 +9,9 @@ function loadAssistantSdk(): Promise<void> {
   const stylesheet = document.createElement('link')
   stylesheet.id = 'abi-assistant-widget-styles'
   stylesheet.rel = 'stylesheet'
-  stylesheet.href = `/chat-ui/abi-assistant-widget.css?v=${WIDGET_VERSION}`
+  stylesheet.href = `/chat-sdk/abi-assistant-widget.css?v=${WIDGET_VERSION}`
   const script = document.createElement('script')
-  script.src = `/chat-ui/abi-assistant-widget.js?v=${WIDGET_VERSION}`
+  script.src = `/chat-sdk/abi-assistant-widget.js?v=${WIDGET_VERSION}`
   script.async = true
 
   const load = (element: HTMLLinkElement | HTMLScriptElement) => new Promise<void>((resolve, reject) => {

@@ -22,14 +22,6 @@ import {initializeViewRuntime} from '../runtime/viewRuntime.ts';
  */
 class ShareDesignerLoader extends DesignerLoader {
 
-    private shareCode: string = '';
-    private sharePassword: string = '';
-
-    setShareInfo(shareCode: string, sharePassword: string = '') {
-        this.shareCode = shareCode;
-        this.sharePassword = sharePassword;
-    }
-
     protected async getProjectData(id: string): Promise<ProjectDataType | null> {
         const projectInfo = await baseApi.getProjectInfo(id);
         if (!projectInfo) {

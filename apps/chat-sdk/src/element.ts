@@ -13,7 +13,7 @@ export const TAG_NAME = 'abi-assistant'
  */
 export class AbiAssistantElement extends HTMLElement {
   static get observedAttributes() {
-    return ['share-code', 'base', 'theme', 'theme-switch', 'theme-config']
+    return ['share-code', 'base', 'theme', 'theme-switch', 'theme-config', 'api-key', 'secret-key']
   }
 
   private root: Root | null = null
@@ -65,6 +65,9 @@ export class AbiAssistantElement extends HTMLElement {
         themeSwitch: this.hasAttribute('theme-switch'),
         // 宿主注入的初始自定义配置（优先级低于接口下发与访客本地自定义）
         initialThemeConfig,
+        // 第三方在平台创建的 API-Key 密钥对，分享页所有请求随 x-api-key / secrectKey 头携带
+        apiKey: this.getAttribute('api-key') || undefined,
+        secretKey: this.getAttribute('secret-key') || undefined,
         // 关闭按钮向外派发 close 事件，由宿主系统决定隐藏/移除
         onClose: () => this.dispatchEvent(new CustomEvent('close', { bubbles: true, composed: true })),
       }),

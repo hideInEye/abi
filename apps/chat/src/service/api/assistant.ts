@@ -168,13 +168,3 @@ export function shareAssistant(data: {
     baseURL: window.APP_CONFIG?.VITE_BASE_API,
   });
 }
-
-/** 7. 校验分享密码 / 获取分享信息（与大屏同接口；sharePassword 传空串即探测是否需要密码） */
-export function checkAssistantShare(data: { shareCode: string; sharePassword: string }) {
-  return request({
-    url: `${SHARE_BASE_URL}/checkSharePassword`,
-    method: 'post',
-    data,
-    baseURL: window.APP_CONFIG?.VITE_BASE_API,
-  });
-}

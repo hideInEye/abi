@@ -4,6 +4,7 @@ import { isBackendCodeIn } from "@sa/axios";
 import request from "../request/index";
 import { getChatbiBaseApi } from "../../utils/index";
 import { getAuthorization, handleLoginExpired } from "../../utils/auth";
+import { shareApiKeyHeaders } from "../request/share-api-key";
 
 // 与 axios 响应拦截器保持一致：后端可能以 HTTP 401，或 200 + { code: 401 } 业务码返回鉴权失效
 const TOKEN_EXPIRED_CODES = ['401'];
@@ -97,7 +98,8 @@ export function streamExplorePlan({ data, signal, authorization, onopen, onmessa
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      ...(authHeader ? { Authorization: authHeader } : {})
+      ...(authHeader ? { Authorization: authHeader } : {}),
+      ...shareApiKeyHeaders()
     },
     body: JSON.stringify(data),
     signal,

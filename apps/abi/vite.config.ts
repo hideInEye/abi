@@ -67,6 +67,18 @@ export default defineConfig(configEnv => {
           changeOrigin: true,
           ws: true,
         },
+        // CHAT_SDK_LOCAL=1 时转发本地 preview(4173) 联调最新 SDK 产物，否则转发网关已部署产物
+        '/chat-sdk': process.env.CHAT_SDK_LOCAL === '1'
+          ? {
+              target: 'http://localhost:4173',
+              changeOrigin: true,
+              rewrite: (path: string) => path.replace(/^\/chat-sdk/, ''),
+            }
+          : {
+              target: 'https://192.168.1.195/',
+              changeOrigin: true,
+              secure: false,
+            },
         ...createViteProxy(viteEnv, enableProxy),
         '/proxy-api': {
           changeOrigin: true,
