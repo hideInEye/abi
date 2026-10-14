@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { ScheduleFormItems, ScheduleModeSegmented } from '@/components/schedule/schedule-fields'
 import { addJobInfo, fetchJobGroupList, updateJobInfo } from '@/service/api/job'
 import { getCurrentUserName } from '@/utils/layout'
+import { getSpaceId } from '@/utils/runtime'
 import {
   buildCronPreview,
   describeScheduleForm,
@@ -147,7 +148,9 @@ export function ScheduleTaskForm({ defaultJobGroup, initial, onClose, onSuccess 
       scheduleType: 'CRON',
       triggerStatus: Number(initial?.triggerStatus ?? 0),
     }
-    const res: any = initial?.id ? await updateJobInfo(String(initial.id), payload) : await addJobInfo(payload)
+    const res: any = initial?.id
+      ? await updateJobInfo(String(initial.id), payload)
+      : await addJobInfo({ ...payload, spaceId: getSpaceId() })
     if (!(res?.code === 200 || res?.code === '200' || res?.success === true)) {
       message.error(res?.message || '保存失败')
       return

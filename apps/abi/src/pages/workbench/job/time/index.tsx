@@ -9,6 +9,7 @@ import { useRouter } from '~/packages/simple-router/src/hooks/useRouter';
 import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
 import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
+import { getSpaceId } from '@/store/slice/app';
 
 import JobFormModal from './modules/job-form-modal';
 import type { JobFormOperateType } from './modules/job-form-modal';
@@ -16,6 +17,7 @@ import type { JobFormOperateType } from './modules/job-form-modal';
 export function Component() {
   const { t } = useTranslation();
   const router = useRouter();
+  const spaceId = useAppSelector(getSpaceId);
   const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
   const [jumpValue, setJumpValue] = useState('');
   const [jobGroupOptions, setJobGroupOptions] = useState<{ label: string; value: number | string }[]>([]);
@@ -45,8 +47,9 @@ export function Component() {
     apiParams: useMemo(() => ({
       pageNum: 1,
       pageSize: 12,
+      spaceId,
       triggerStatus: '-1',
-    }), []),
+    }), [spaceId]),
     transformer: (res: any) => {
       const { records, total } = resolveJobPageResult(res);
       const pageNum = searchParams.current.pageNum || 1;

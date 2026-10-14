@@ -1289,8 +1289,11 @@ const ChatWidgetPanel = ({ shareCode, apiBase, mode = 'page', onClose, theme = D
     setSavingTheme(true)
     const ok = await saveShareTheme(cfg, fullThemeConfig)
     setSavingTheme(false)
-    if (ok) showWidgetToast('success', '主题已保存')
-    else showWidgetToast('error', '云端保存失败，请重试')
+    // 成功后自动关闭抽屉，失败保持打开便于重试
+    if (ok) {
+      setCustomizerOpen(false)
+      showWidgetToast('success', '主题已保存')
+    } else showWidgetToast('error', '云端保存失败，请重试')
   }
 
   // 恢复默认：清空本次会话的预设选择与自定义，回到接口下发/接入属性基准

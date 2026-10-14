@@ -11,6 +11,7 @@ import { useRoute } from '~/packages/simple-router/src';
 import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
 import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
+import { getSpaceId } from '@/store/slice/app';
 
 import JobLogDetailDrawer from './modules/job-log-detail-drawer';
 
@@ -34,6 +35,7 @@ const PRE_STYLE: React.CSSProperties = {
 export function Component() {
   const { t } = useTranslation();
   const route = useRoute();
+  const spaceId = useAppSelector(getSpaceId);
   const [viewJobLogId, setViewJobLogId] = useState('');
   const [jumpValue, setJumpValue] = useState('');
   const [triggerMsgModal, setTriggerMsgModal] = useState<{ open: boolean; text: string }>({ open: false, text: '' });
@@ -71,7 +73,8 @@ export function Component() {
       pageSize: 12,
       logStatus: '-1',
       filterTime: defaultFilterTime,
-    }), []),
+      spaceId,
+    }), [defaultFilterTime, spaceId]),
     transformer: (res: any) => {
       const { records, total } = resolveJobPageResult(res);
       const pageNum = searchParams.current.pageNum || 1;
@@ -211,7 +214,7 @@ export function Component() {
       jobNameMapRef.current = {};
       return;
     }
-    const res: any = await fetchJobInfoList({ jobGroup, pageNum: 1, pageSize: 500 });
+    const res: any = await fetchJobInfoList({ jobGroup, pageNum: 1, pageSize: 500, spaceId });
     const records = resolveJobPageResult(res).records;
     jobNameMapRef.current = Object.fromEntries(records.map((job: any) => [String(job.id), job.name]));
     setJobOptions(records.map((job: any) => ({ label: job.name, value: job.id })));
