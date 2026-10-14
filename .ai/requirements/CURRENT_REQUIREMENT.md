@@ -1,3 +1,21 @@
+# 2026-10-14 分享密钥填入闸（后端全改 apiKey 鉴权、不再返回 token 的补救）
+
+## 文档状态
+
+- 状态：代码完成；chat-sdk `vite build` 通过（4975 modules，产物含 keygate 样式与组件、无写死密钥）。运行记录：`.ai/runs/2026-10-14-share-key-gate/RUN_LOG.md`。
+- 需求来源：后端把分享相关接口全面改为 apiKey 鉴权，`getProjectInfo` 不再返回 token，入口后所有请求仅靠 `x-api-key`/`secrectKey` 头。而助手分享页经 `apps/abi` 的 `shareBridge.mountAssistantShare` 动态加载 chat-sdk IIFE、创建 `<abi-assistant>` 时只设 share-code/base/theme-switch、未注入密钥，导致分享页与本地调试无密钥头、接口全部失败。用户明确：密钥由前端判断、进入页面手填，且每次进入都填（不记住）。
+- 影响范围：仅 chat-sdk 一棵树。线上助手分享走 `main.tsx → shareBridge → chat-sdk IIFE`，apps/chat 的 `/share_url` 整页路由不参与助手分享，故不镜像。
+
+## 目标与验收标准
+
+1. chat-sdk 外层 `ChatWidget` 增加「密钥填入闸」：标签属性注入了 api-key/secret-key（第三方嵌入）直接挂载面板；未注入（分享页 shareBridge、本地调试）先渲染 `ShareKeyGate` 让使用者手填 API Key / Secret Key。
+2. 填入密钥只存组件内存 state、不落 localStorage，每次进入都重填；提交后先 `setShareApiKey` 写入请求上下文再挂载面板，保证面板首个请求 `getProjectInfo` 起所有出口都带 `x-api-key`/`secrectKey` 头。
+3. `ShareKeyGate` 复用 `.abi-cw-root`/`.abi-cw-panel` 同款容器与主题变量，float/page/embed 下与随后对话面板位置一致、切换无跳动。
+4. `ChatWidgetPanel` 与 service 层四出口密钥头合并逻辑零改动（此前已落）。
+5. 构建产物不含任何写死测试密钥。
+
+---
+
 # 2026-10-12 分享接口适配（下线访客密码校验 + getProjectInfo 探测入口 + shareListByApiKey）
 
 ## 文档状态

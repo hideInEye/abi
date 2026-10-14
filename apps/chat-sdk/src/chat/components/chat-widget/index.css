@@ -540,6 +540,90 @@ button.abi-cw-header-switch {
   cursor: not-allowed;
 }
 
+/* ── 密钥填入弹窗（面板内 Modal）：宿主未经标签属性注入密钥时在悬浮窗内弹出，填入后进入 ── */
+/* antd Modal 的 mask/wrap 默认 fixed 铺满视口：改 absolute 收进面板（getContainer 指向面板），wrap 弹性居中 */
+.abi-cw-panel > .ant-modal-root .ant-modal-mask,
+.abi-cw-panel > .ant-modal-root .ant-modal-wrap {
+  position: absolute;
+}
+
+.abi-cw-panel > .ant-modal-root .ant-modal-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow: hidden;
+}
+
+.abi-cw-panel > .ant-modal-root .ant-modal {
+  top: 0;
+  margin: 0;
+  padding-bottom: 0;
+  /* 默认 max-width 按视口算，小面板下会溢出，改按容器收窄 */
+  max-width: calc(100% - 32px);
+}
+
+/* 弹窗卡片随主题变量（dark 下面板变暗，antd 默认白底卡片不搭） */
+.abi-cw-panel > .ant-modal-root .ant-modal-content {
+  background: var(--cw-surface, #fff);
+  border: 1px solid var(--cw-border, #e9edf4);
+}
+
+.abi-cw-panel > .ant-modal-root .ant-modal-title {
+  color: var(--cw-text, #333);
+}
+
+.abi-cw-keygate {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.abi-cw-keygate-desc {
+  font-size: 12px;
+  color: var(--cw-text-muted, #8c8c8c);
+  text-align: center;
+}
+
+.abi-cw-keygate-field {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.abi-cw-keygate-label {
+  font-size: 12px;
+  color: var(--cw-text-muted, #8c8c8c);
+}
+
+.abi-cw-keygate-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--cw-border, #e9edf4);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--cw-text, #333);
+  background: var(--cw-surface, #fff);
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.abi-cw-keygate-input:focus {
+  border-color: #5b7cf7;
+}
+
+.abi-cw-keygate-error {
+  font-size: 12px;
+  color: #e5484d;
+  min-height: 16px;
+}
+
+.abi-cw-keygate-submit {
+  width: 100%;
+  margin-top: 4px;
+}
+
 /* 消息流（对齐大屏 ai-message：时间置于气泡下方） */
 .abi-cw-msg {
   display: flex;

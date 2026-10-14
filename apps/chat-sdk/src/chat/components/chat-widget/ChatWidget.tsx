@@ -74,6 +74,7 @@ import { ChartThemeContext, useChartTheme } from './ChartThemeContext'
 import { useTweenedChartStyle } from './useTweenedChartStyle'
 import ThemeCustomizer from './ThemeCustomizer'
 import HistoryDrawer from './HistoryDrawer'
+import ShareKeyGate from './ShareKeyGate'
 import {
   chartStyleFromConfig,
   DEFAULT_THEME,
@@ -119,6 +120,8 @@ interface ChatWidgetPanelProps extends ChatWidgetProps {
   initialPanelStyle?: string
   /** 拖拽/缩放结束时上报当前 inline 样式，供外层持久化，切换助手重挂载后恢复 */
   onPanelStyleChange?: (style: string) => void
+  /** 宿主未注入密钥时由使用者手填（写入外层 manualKey，只存内存不落盘） */
+  onManualKey?: (apiKey: string, secretKey: string) => void
 }
 
 type Phase = 'checking' | 'loading' | 'ready' | 'error'
@@ -599,7 +602,7 @@ const ChartCard = ({ chart, onTypeChange }: { chart: WidgetChart; onTypeChange: 
 }
 
 /** 助手分享对话悬浮框：无 store 依赖的纯组件，分享页与第三方嵌入共用；渲染层复用主对话组件 */
-const ChatWidgetPanel = ({ shareCode, apiBase, mode = 'page', onClose, theme = DEFAULT_THEME, showThemeSwitch = false, initialThemeConfig, apiKey, secretKey, assistants, onSwitchAssistant, initialPanelStyle, onPanelStyleChange }: ChatWidgetPanelProps) => {
+const ChatWidgetPanel = ({ shareCode, apiBase, mode = 'page', onClose, theme = DEFAULT_THEME, showThemeSwitch = false, initialThemeConfig, apiKey, secretKey, assistants, onSwitchAssistant, initialPanelStyle, onPanelStyleChange, onManualKey }: ChatWidgetPanelProps) => {
   // 分享入口接口下发的临时 token，后续接口随 Authorization 携带
   const [shareToken, setShareToken] = useState('')
   // 分享记录存储的预设主题：接口下发后覆盖接入标签属性（后端未下发时保持属性/默认值）
@@ -636,6 +639,8 @@ const ChatWidgetPanel = ({ shareCode, apiBase, mode = 'page', onClose, theme = D
   const cfg = useMemo(() => ({ shareCode, apiBase, token: shareToken || undefined }), [shareCode, apiBase, shareToken])
 
   const [phase, setPhase] = useState<Phase>('checking')
+  // 密钥填入弹窗开合：宿主未注入密钥时打开（面板照常渲染），填入提交后关闭并开始初始化
+  const keyGateOpen = !apiKey || !secretKey
   const [appId, setAppId] = useState('')
   const [info, setInfo] = useState<WidgetAssistantInfo | null>(null)
   const [messages, setMessages] = useState<WidgetMessage[]>([])
@@ -769,11 +774,11 @@ const ChatWidgetPanel = ({ shareCode, apiBase, mode = 'page', onClose, theme = D
   }, [apiKey, secretKey])
 
   useEffect(() => {
-    // 守卫：StrictMode 重挂载不重复初始化（避免重复建会话）
-    if (didInit.current) return
+    // 守卫：StrictMode 重挂载不重复初始化（避免重复建会话）；密钥未就位时先弹填入弹窗，不做初始化请求
+    if (didInit.current || keyGateOpen) return
     didInit.current = true
     void initCheck()
-  }, [initCheck])
+  }, [initCheck, keyGateOpen])
 
   // 卸载时中断进行中的流式请求，避免向已卸载组件写状态
   useEffect(() => () => abortRef.current?.abort(), [])
@@ -2113,6 +2118,13 @@ const ChatWidgetPanel = ({ shareCode, apiBase, mode = 'page', onClose, theme = D
           onReset={handleResetTheme}
           onClose={() => setCustomizerOpen(false)}
         />
+
+        {/* 密钥填入弹窗：挂载到面板内（宿主未注入 API Key 时弹出，填入提交后关闭并初始化） */}
+        <ShareKeyGate
+          open={keyGateOpen}
+          onSubmit={(ak, sk) => onManualKey?.(ak, sk)}
+          getContainer={() => panelRef.current as HTMLElement}
+        />
       </div>
     </div>
     </ChartThemeContext.Provider>
@@ -2128,15 +2140,20 @@ const ChatWidget = (props: ChatWidgetProps) => {
   const [assistants, setAssistants] = useState<WidgetShareItem[]>([])
   // 面板位置/大小快照：跨切换助手重挂载存活，重挂载后由面板恢复，避免回到初始右上角
   const panelStyleRef = useRef('')
+  // 密钥来源：标签属性注入优先；未注入时由使用者进入手填，只存内存不落盘，故每次进入都要重填
+  const [manualKey, setManualKey] = useState<{ apiKey: string; secretKey: string } | null>(null)
+  const effApiKey = props.apiKey || manualKey?.apiKey || ''
+  const effSecretKey = props.secretKey || manualKey?.secretKey || ''
 
   // 宿主外部改 shareCode 时跟随重置
   useEffect(() => {
     setCurrentShareCode(props.shareCode)
   }, [props.shareCode])
 
-  // 拉取同 API-Key 绑定分享列表（密钥头由 share-api-key 上下文提供），供头部切换
+  // 拉取同 API-Key 绑定分享列表（密钥头由 share-api-key 上下文提供），供头部切换；无密钥时不发，填入后再拉
   useEffect(() => {
-    setShareApiKey(props.apiKey, props.secretKey)
+    if (!effApiKey || !effSecretKey) return
+    setShareApiKey(effApiKey, effSecretKey)
     let alive = true
     void fetchShareListByApiKey({ shareCode: props.shareCode, apiBase: props.apiBase }).then((list) => {
       if (alive) setAssistants(list)
@@ -2144,15 +2161,19 @@ const ChatWidget = (props: ChatWidgetProps) => {
     return () => {
       alive = false
     }
-  }, [props.shareCode, props.apiBase, props.apiKey, props.secretKey])
+  }, [props.shareCode, props.apiBase, effApiKey, effSecretKey])
 
+  // 密钥就位后面板随 props 流拿到并初始化（首请求即带头）；未注入时面板内弹密钥填入弹窗
   return (
     <ChatWidgetPanel
       key={currentShareCode}
       {...props}
+      apiKey={effApiKey}
+      secretKey={effSecretKey}
       shareCode={currentShareCode}
       assistants={assistants}
       onSwitchAssistant={setCurrentShareCode}
+      onManualKey={(ak, sk) => setManualKey({ apiKey: ak, secretKey: sk })}
       initialPanelStyle={panelStyleRef.current}
       onPanelStyleChange={(css) => {
         panelStyleRef.current = css

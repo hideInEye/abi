@@ -70,7 +70,7 @@ export function dataSetList(
   return apiRequest({
     data,
     method: 'post',
-    url: '/api/abi-data/api/v1/dataset/qyeryDataSetList'
+    url: '/api/abi-data/api/v1/dataset/queryDataSetList'
   })
 }
 /** 查询数据集详情 */

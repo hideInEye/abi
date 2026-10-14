@@ -1,7 +1,7 @@
 let assistantSdkPromise: Promise<void> | null = null
 
 // bundle 文件名无内容 hash，浏览器会强缓存旧版：dev 带时间戳永远拉新，生产带版本号（发新产物后 bump）
-const WIDGET_VERSION = import.meta.env.DEV ? String(Date.now()) : '20261008-1740'
+const WIDGET_VERSION = import.meta.env.DEV ? String(Date.now()) : '20261014-1454'
 
 function loadAssistantSdk(): Promise<void> {
   if (assistantSdkPromise) return assistantSdkPromise
