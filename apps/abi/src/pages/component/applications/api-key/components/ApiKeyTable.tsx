@@ -65,6 +65,16 @@ export function ApiKeyTable({
     {
       align: 'left',
       className: 'col-apikey-left',
+      dataIndex: 'name',
+      key: 'name',
+      minWidth: 160,
+      onHeaderCell: () => ({ className: 'col-apikey-left' }),
+      render: (value: string) => value || '-',
+      title: '名称'
+    },
+    {
+      align: 'left',
+      className: 'col-apikey-left',
       dataIndex: 'businessSpace',
       key: 'businessSpace',
       minWidth: 160,
@@ -267,7 +277,7 @@ export function ApiKeyTable({
                   <div key={record.id} className="abi-data-card">
                     <div className="abi-data-card-head">
                       <div className="abi-data-card-title">
-                        <span className="abi-data-card-name">{record.clientId || '-'}</span>
+                        <span className="abi-data-card-name">{record.name || '-'}</span>
                       </div>
                       <ATag color={record.status === 'normal' ? 'default' : 'error'}>{record.status === 'normal' ? '正常' : '停用'}</ATag>
                     </div>

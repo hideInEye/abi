@@ -15,6 +15,7 @@ export interface AbiClientListItem {
   expireTime?: string | null
   id: number
   ipWhitelist?: string
+  name?: string | null
   remark?: string | null
   restrictedIp?: 0 | 1 | boolean
   secretKey?: string
@@ -33,6 +34,7 @@ export interface AbiClientDetailItem {
   createTime?: string
   expireTime?: string | null
   id: number
+  name?: string | null
   remark?: string | null
   restrictedIp?: 0 | 1 | boolean
   secretKey?: string
