@@ -120,11 +120,18 @@ export function useEntityManagement(spaceId: OntologyNetworkId): UseEntityManage
 
   const saveEntity = useCallback(
     async (values: EntityFormValues, editingEntity?: OntologyEntity): Promise<void> => {
+      const selection = Array.isArray(values.labelSelection) ? values.labelSelection[0] : values.labelSelection
       if (editingEntity) {
-        const result = await updateOntologyEntity({ color: values.color, id: editingEntity.id, remark: values.remark?.trim(), spaceId })
+        const result = await updateOntologyEntity({
+          color: values.color,
+          entityName: values.entityName.trim(),
+          id: editingEntity.id,
+          labelId: selection,
+          remark: values.remark?.trim(),
+          spaceId,
+        })
         assertFlatRequestSuccess(result)
       } else {
-        const selection = Array.isArray(values.labelSelection) ? values.labelSelection[0] : values.labelSelection
         const labelBizName = labelMap.get(String(selection)) ?? String(selection).trim()
         const result = await createOntologyEntity({
           color: values.color,
