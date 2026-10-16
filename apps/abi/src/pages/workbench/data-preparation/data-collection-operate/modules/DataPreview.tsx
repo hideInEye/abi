@@ -157,7 +157,7 @@ const DataPreview: React.FC<PropsType> = memo(({ isSql = false, previewData = {}
       >
         <div className="assistant-table-scroll" style={{ overflow: 'auto', maxHeight: '100%' }}>
           <Table<DataType>
-            className="abi-std-table"
+            className={`abi-std-table${isSql ? '' : ` ${styles['preview-sticky-table']}`}`}
             columns={columns as any[]}
             dataSource={dataSource}
             pagination={false}

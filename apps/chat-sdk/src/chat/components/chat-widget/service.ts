@@ -4,7 +4,7 @@ import type { EventSourceMessage } from '@microsoft/fetch-event-source'
 import { mapShareHistory, type WidgetMessage } from './history'
 import type { AssistantBoundMcp, AssistantBoundSkill } from '../../pages/chat/workshop/assistantResources'
 import { shareApiKeyHeaders } from '../../service/request/share-api-key'
-import { normalizeThemeConfig, normalizeThemeId, type DeepPartial, type ThemeConfig, type ThemeId } from '../../../theme'
+import { inferThemeIdFromConfig, normalizeThemeConfig, normalizeThemeId, type DeepPartial, type ThemeConfig, type ThemeId } from '../../../theme'
 
 /** Widget 配置：shareCode 为免登录凭证，apiBase 为网关前缀（空串表示同源） */
 export interface WidgetConfig {
@@ -17,9 +17,9 @@ export interface WidgetConfig {
 /** 统一 project 接口的类型段：大屏=dashboard，自主助手=react，工作流助手=workflow */
 export type ProjectType = 'dashboard' | 'react' | 'workflow'
 
-/** 分享页入口 type 段：助手分享页固定为工作流助手(workflow)，单类型直连不再探测；
- * 若后续自主助手(react)也开放分享页，再在此追加并恢复顺序探测 */
-export const SHARE_PROBE_TYPES: ProjectType[] = ['workflow']
+/** 分享页入口 type 段：助手分享页固定为自主助手(react)，单类型直连不再探测；
+ * 若后续工作流助手(workflow)也开放分享页，再在此追加并恢复顺序探测 */
+export const SHARE_PROBE_TYPES: ProjectType[] = ['react']
 
 export interface WidgetSession {
   sessionId: string
@@ -146,9 +146,11 @@ function isOk(json: any): boolean {
  * uiConfig 为前端主题 UI 配置 JSON 字符串，整串覆盖更新；
  * 仅当接口明确成功返回 true；后端未就绪/网络异常/失败码一律 false，由调用方进入失败分支（保留可重试）。
  */
-export async function saveShareTheme(cfg: WidgetConfig, themeConfig: DeepPartial<ThemeConfig>): Promise<boolean> {
+export async function saveShareTheme(cfg: WidgetConfig, themeConfig: DeepPartial<ThemeConfig>, themeId?: ThemeId): Promise<boolean> {
   try {
-    const json = await postJson(cfg, API.saveShareTheme, { shareCode: cfg.shareCode, uiConfig: JSON.stringify(themeConfig) })
+    // 预设风格随 theme 字段一并写入（读链路自 uiConfig.theme 取预设）：缺失则刷新后回退蓝色系，输入区等未建模变量残留浅色
+    const uiConfig = JSON.stringify(themeId ? { ...themeConfig, theme: themeId } : themeConfig)
+    const json = await postJson(cfg, API.saveShareTheme, { shareCode: cfg.shareCode, uiConfig })
     return isOk(json)
   } catch {
     return false
@@ -210,8 +212,8 @@ export async function fetchShareProjectInfo(cfg: WidgetConfig, type: ProjectType
       ...mapAssistantBoundToolResources(d),
       spaceId: d.spaceId ?? d.space_id,
       token: typeof d.token === 'string' && d.token ? d.token : undefined,
-      // 非法/缺省不下发，避免未就绪环境被回退值强制刷成 blue
-      theme: presetTheme ? normalizeThemeId(presetTheme) : undefined,
+      // 非法/缺省不下发，避免未就绪环境被回退值强制刷成 blue；无 theme 字段的历史记录按背景色明暗兜底推断黑色系
+      theme: presetTheme ? normalizeThemeId(presetTheme) : inferThemeIdFromConfig(uiObj),
       // 自定义主题配置（背景/标题栏/字体/图表）；normalizeThemeConfig 校验剔除非法字段，无有效字段则 undefined
       themeConfig: normalizeThemeConfig(uiObj),
     }

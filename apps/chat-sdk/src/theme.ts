@@ -444,6 +444,15 @@ export function themeConfigToStyle(cfg?: DeepPartial<ThemeConfig> | null): CSSPr
   return style as CSSProperties
 }
 
+/**
+ * 历史 uiConfig 兜底推断预设：早期保存的记录只有五维值、无 theme 字段，读链路拿不到预设会回退蓝色系，
+ * 深底配置叠在浅色未建模变量（输入区/信息条/外壳）上残留浅色块；按背景色明暗推断黑色系，浅色记录保持回退默认。
+ */
+export function inferThemeIdFromConfig(raw: unknown): ThemeId | undefined {
+  const color = (raw as Record<string, any> | null)?.background?.color
+  return typeof color === 'string' && color.trim() && !isLightColor(color) ? 'dark' : undefined
+}
+
 /** 粗判颜色明暗（支持 #rrggbb 与 rgb/rgba）：气泡文字色自动取黑/白用 */
 function isLightColor(css: string): boolean {
   let r = 0

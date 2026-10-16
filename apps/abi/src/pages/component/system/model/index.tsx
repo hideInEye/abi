@@ -17,6 +17,7 @@ export function Component() {
   const spaceId = useAppSelector(getSpaceId)
 
   const [searchValue, setSearchValue] = useState('')
+  const [multimodalFilter, setMultimodalFilter] = useState<number | undefined>()
   const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null)
   const [activeProviderId, setActiveProviderId] = useState<number | null>(null)
   const [activeTab, setActiveTab] = useState<'0' | '1' | '2'>('0')
@@ -141,6 +142,7 @@ export function Component() {
         maxRetries: config.maxRetries,
         contextLength: config.contextLength || row.contextLength,
         isSupportThinking: row.isSupportThinking ?? 0,
+        isMultimodal: row.isMultimodal ?? 0,
       }
       handleEdit(formatRow)
     } catch (error) {
@@ -154,6 +156,14 @@ export function Component() {
     updateSearchParams({
       pageNum: 1,
       modelName: keyword ? keyword : undefined,
+    } as any)
+  }
+
+  const handleMultimodalFilterChange = (value: number | undefined) => {
+    setMultimodalFilter(value)
+    updateSearchParams({
+      pageNum: 1,
+      isMultimodal: value,
     } as any)
   }
 
@@ -202,7 +212,9 @@ export function Component() {
               models={displayModels}
               providers={providers}
               searchValue={searchValue}
+              multimodalFilter={multimodalFilter}
               onSearchValueChange={setSearchValue}
+              onMultimodalFilterChange={handleMultimodalFilterChange}
               onAdd={() => handleAdd()}
               onEdit={edit}
               onCopy={handleCopy}

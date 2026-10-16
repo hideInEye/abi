@@ -751,7 +751,7 @@ const ChatWidgetPanel = ({ shareCode, apiBase, mode = 'page', onClose, theme = D
     setPhase('ready')
   }, [])
 
-  // 分享页唯一入口：getProjectInfo/{type}?shareCode=（type 固定 workflow，见 SHARE_PROBE_TYPES），返回 appId 即进入加载
+  // 分享页唯一入口：getProjectInfo/{type}?shareCode=（type 固定 react，见 SHARE_PROBE_TYPES），返回 appId 即进入加载
   const initCheck = useCallback(async () => {
     setPhase('checking')
     for (const type of SHARE_PROBE_TYPES) {
@@ -1185,6 +1185,19 @@ const ChatWidgetPanel = ({ shareCode, apiBase, mode = 'page', onClose, theme = D
     })
   }
 
+  // 拖拽/缩放落定：把面板 left/top 由绝对 px 换算成视口百分比。百分比对 fixed 元素按视口解析，
+  // 浏览器缩放（Ctrl+滚轮改视口 CSS px 尺寸）时面板保持同一屏幕相对位置，不再随缩放漂移或跑出视口。
+  const persistPanelStyleAsViewportRatio = () => {
+    const panel = panelRef.current
+    if (!panel) return
+    const vw = window.innerWidth || 1
+    const vh = window.innerHeight || 1
+    const rect = panel.getBoundingClientRect()
+    panel.style.left = `${(rect.left / vw) * 100}%`
+    panel.style.top = `${(rect.top / vh) * 100}%`
+    onPanelStyleChange?.(panel.getAttribute('style') || '')
+  }
+
   // 按住头部拖拽面板：首次拖拽时把 CSS 定位切换为显式 left/top，之后跟随指针；放大态禁用
   const handleDragStart = (e: React.PointerEvent) => {
     // iframe 直嵌形态由宿主页面控制悬浮定位，面板铺满 iframe，禁用窗内拖拽
@@ -1212,7 +1225,7 @@ const ChatWidgetPanel = ({ shareCode, apiBase, mode = 'page', onClose, theme = D
     const onUp = () => {
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
-      onPanelStyleChange?.(panel.getAttribute('style') || '')
+      persistPanelStyleAsViewportRatio()
     }
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
@@ -1266,11 +1279,39 @@ const ChatWidgetPanel = ({ shareCode, apiBase, mode = 'page', onClose, theme = D
     const onUp = () => {
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
-      onPanelStyleChange?.(panel.getAttribute('style') || '')
+      persistPanelStyleAsViewportRatio()
     }
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
   }
+
+  // 缩放/窗口尺寸变化时把自定义定位的面板钳回视口（Ctrl+滚轮缩放会触发 resize）：仅处理拖拽/改过尺寸的百分比定位态，
+  // 默认 right/top 锚定、embed、放大态百分比布局本身随视口自适应，早退不动。
+  useEffect(() => {
+    if (mode === 'embed') return
+    const clampToViewport = () => {
+      const panel = panelRef.current
+      if (!panel || maximized) return
+      const style = panel.style
+      // left 非百分比 = 默认锚定态或拖拽进行中（px），不干预
+      if (!style.left.endsWith('%')) return
+      const vw = window.innerWidth
+      const vh = window.innerHeight
+      // 宽高夹到视口内（保留安全边距，口径同 handleResizeStart）
+      if (style.width.endsWith('px')) style.width = `${Math.max(0, Math.min(parseFloat(style.width), vw - VIEWPORT_MARGIN))}px`
+      if (style.height.endsWith('px')) style.height = `${Math.max(0, Math.min(parseFloat(style.height), vh - VIEWPORT_MARGIN))}px`
+      // 位置按已存百分比钳制，至少保留 80×48 可见（口径同 handleDragStart）；解析百分比而非用 rect 反算，避免多次 resize 累积漂移
+      const maxLeftPct = vw > 0 ? Math.max(0, ((vw - 80) / vw) * 100) : 0
+      const maxTopPct = vh > 0 ? Math.max(0, ((vh - 48) / vh) * 100) : 0
+      style.left = `${Math.min(Math.max(parseFloat(style.left) || 0, 0), maxLeftPct)}%`
+      style.top = `${Math.min(Math.max(parseFloat(style.top) || 0, 0), maxTopPct)}%`
+      onPanelStyleChange?.(panel.getAttribute('style') || '')
+    }
+    window.addEventListener('resize', clampToViewport)
+    clampToViewport()
+    return () => window.removeEventListener('resize', clampToViewport)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [maximized, mode])
 
   // 预设切换：仅本次会话生效，并清空自定义（回到该预设的干净基准）
   const handlePresetChange = (id: ThemeId) => {
@@ -1287,7 +1328,8 @@ const ChatWidgetPanel = ({ shareCode, apiBase, mode = 'page', onClose, theme = D
   // 保存到后端（与分享记录映射）：仅接口明确成功才提示成功；失败可重试
   const handleSaveTheme = async () => {
     setSavingTheme(true)
-    const ok = await saveShareTheme(cfg, fullThemeConfig)
+    // 当前生效预设一并持久化：刷新后读链路靠它还原预设变量表，仅五维自定义不足以复现观感
+    const ok = await saveShareTheme(cfg, fullThemeConfig, effectiveTheme)
     setSavingTheme(false)
     // 成功后自动关闭抽屉，失败保持打开便于重试
     if (ok) {
@@ -1826,7 +1868,7 @@ const ChatWidgetPanel = ({ shareCode, apiBase, mode = 'page', onClose, theme = D
                       boxShadow: '0 0.125rem 0.5rem rgba(15,23,42,0.04)',
                     }}
                   >
-                    {/* 信息条：分组 + 数据语义（同主对话 MessageList 信息条样式，分享场景不可点 schema） */}
+                    {/* 信息条：分组 + 数据语义一个一行（grid 两列对齐，同主对话信息条样式；分享场景不可点 schema） */}
                     {(m.semanticGroup || m.semanticName) && (
                       <div className="abi-cw-infobar">
                         <span className="abi-cw-infobar-label">分组：</span>
@@ -1834,7 +1876,7 @@ const ChatWidgetPanel = ({ shareCode, apiBase, mode = 'page', onClose, theme = D
                           <i className="abi-cw-infobar-dot" style={{ background: '#8b5cf6', boxShadow: '0 0 6px rgba(139,92,246,0.5)' }} />
                           {m.semanticGroup || '无'}
                         </span>
-                        <span className="abi-cw-infobar-label" style={{ marginLeft: '2em' }}>数据语义：</span>
+                        <span className="abi-cw-infobar-label">数据语义：</span>
                         {/* 带 schemaId 时可点：窗体自动放大，Schema 抽屉窗内右侧滑出 */}
                         <span
                           className={`abi-cw-infobar-chip abi-cw-infobar-chip-sem${m.semanticSchemaId != null ? ' clickable' : ''}`}

@@ -30,6 +30,7 @@ import type { ModelOption } from '../components/chat-header'
 import type { ReportHistoryRoundGroup } from '../report-mode/types'
 import { createGenerationGuard } from './generationGuard'
 import { isApiSuccess, parseStoredUserInfo, runApiSuccessFlow } from './conversationRequests'
+import { toImageListPayload, type ImageAttachment } from '../components/chat-input/imageAttachment'
 
 export interface ConversationProps {
   conv: any
@@ -996,6 +997,13 @@ export const useConversationController = (
         const { excel_file_id, excel_file_name, ...restExtra } = params.context.extra
         params.context.extra = restExtra
       }
+      // 图片附件：后端图片接口未就绪，image_list 为前端约定字段，对接时调整
+      const imageList = toImageListPayload(_meta?.images ?? [])
+      if (imageList.length) {
+        params.context.extra.image_list = imageList
+      } else {
+        delete params.context.extra.image_list
+      }
     }
     params.messages = question
 
@@ -1755,7 +1763,7 @@ export const useConversationController = (
     }
   }
 
-  const handleSend = (value: string, meta?: { groupName?: string; semanticName?: string; semanticSchemaId?: number | string; semanticGroupId?: number | string; selectedExcel?: any }) => {
+  const handleSend = (value: string, meta?: { groupName?: string; semanticName?: string; semanticSchemaId?: number | string; semanticGroupId?: number | string; selectedExcel?: any; images?: ImageAttachment[] }) => {
     if (!value.trim() || loading) return
     void handleCollect()
     // 新建会话时，Excel 信息通过 meta 透传（此时组件状态可能已被清空）

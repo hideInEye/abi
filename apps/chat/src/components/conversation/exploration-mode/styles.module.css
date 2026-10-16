@@ -1511,3 +1511,146 @@
 .compact .currentResultEmpty {
   min-height: 120px;
 }
+
+/* 工作室底部步骤控制条：浮起卡片与面板边缘留白，左右切换每一步结果屏 */
+.paneToolbar {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 12px;
+  margin: 0 16px 16px;
+  padding: 10px 14px;
+  border: 1px solid rgba(130, 140, 200, 0.16);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 6px 20px rgba(80, 90, 160, 0.1);
+  backdrop-filter: blur(8px);
+}
+
+/* 上一步/下一步按钮组：统一外框，参考播放控制条 */
+.paneStepNav {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid rgba(130, 140, 200, 0.18);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+/* 步骤条：轨道按屏数等分成若干段，填充到当前屏，点击某段跳到对应结果 */
+.paneStepTrack {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+}
+
+.paneStepSegment {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 6px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(130, 140, 200, 0.18);
+  cursor: pointer;
+  transition: background 0.25s var(--ease, ease), box-shadow 0.25s var(--ease, ease);
+}
+
+.paneStepSegment:hover {
+  background: rgba(91, 124, 247, 0.35);
+}
+
+.paneStepSegmentDone {
+  background: rgba(91, 124, 247, 0.5);
+}
+
+.paneStepSegmentDone:hover {
+  background: rgba(91, 124, 247, 0.62);
+}
+
+.paneStepSegmentCurrent {
+  background: var(--accent);
+  box-shadow: 0 0 6px rgba(91, 124, 247, 0.5);
+}
+
+.paneStepSegmentCurrent:hover {
+  background: var(--accent);
+}
+
+/* 进度头圆点：标记当前屏位置，随切换平滑滑动 */
+.paneStepThumb {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px rgba(91, 124, 247, 0.2);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  transition: left 0.25s var(--ease, ease);
+}
+
+.paneToolbarButton {
+  display: inline-flex;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.paneToolbarButton:hover:not(:disabled) {
+  color: var(--accent);
+  background: rgba(91, 124, 247, 0.1);
+}
+
+.paneToolbarButton:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.paneToolbarTitle {
+  min-width: 0;
+  flex: 0 1 auto;
+  max-width: 38%;
+  overflow: hidden;
+  color: var(--ink-2);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.paneToolbarIndicator {
+  flex-shrink: 0;
+  color: var(--ink-3);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.paneJumpLatest {
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: rgba(91, 124, 247, 0.1);
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.paneJumpLatest:hover {
+  background: rgba(91, 124, 247, 0.16);
+}

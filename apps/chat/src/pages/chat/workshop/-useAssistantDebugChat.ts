@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { interruptExploreItem, settleExploreItem } from '@/components/conversation/exploration-mode/exploreProcessTimeline'
 import { createApp } from '@/service/api/app'
 import { streamExplorePlan } from '@/service/api/conv'
 import {
@@ -87,7 +88,7 @@ export function useAssistantDebugChat({ appId, spaceId, schemaId, chatModelId, e
     abortRef.current?.abort()
     abortRef.current = null
     setLoading(false)
-    setItems((prev) => prev.map((item) => (item.status === 'running' ? { ...item, status: 'cancelled', finishReason: 'user_cancelled' } : item)))
+    setItems((prev) => prev.map((item) => item.status === 'running' ? settleExploreItem(item, 'cancelled', 'user_cancelled') : item))
   }, [])
 
   const handleSend = useCallback(async (question: string, options?: { skillSourceVersionIds?: string[]; mcpSourceVersionIds?: ExploreMcpSource[] }) => {
@@ -116,7 +117,9 @@ export function useAssistantDebugChat({ appId, spaceId, schemaId, chatModelId, e
 
     setItems((prev) => [...prev, item])
     setLoading(true)
-    abortRef.current = new AbortController()
+    const controller = new AbortController()
+    abortRef.current = controller
+    const isCurrent = () => abortRef.current === controller && !controller.signal.aborted
 
     const mcpFields = buildMcpSourceVersionFields(options?.mcpSourceVersionIds)
     const payload = {
@@ -142,49 +145,42 @@ export function useAssistantDebugChat({ appId, spaceId, schemaId, chatModelId, e
     try {
       await streamExplorePlan({
         data: payload,
-        signal: abortRef.current.signal,
+        signal: controller.signal,
         async onopen(response) {
           if (!response.ok) {
             throw new Error(`HTTP ${response.status}: 探索接口请求失败`)
           }
         },
         onmessage(event) {
-          if (!event.data || event.data.startsWith(':')) return
+          if (!isCurrent() || !event.data || event.data.startsWith(':')) return
           const parsed = parseExploreStreamEvent(event.data)
           if (!parsed) return
           updateItem(id, (current) => reduceExploreEvent(current, parsed))
           if (parsed.type === 'done' || parsed.type === 'failed') {
             setLoading(false)
+            controller.abort()
             abortRef.current = null
           }
         },
         onclose() {
+          if (!isCurrent()) return
+          updateItem(id, interruptExploreItem)
           setLoading(false)
           abortRef.current = null
         },
         onerror(err) {
-          if (abortRef.current?.signal.aborted) return
-          updateItem(id, (current) => ({
-            ...current,
-            status: 'failed',
-            error: {
-              message: err?.message || '探索任务执行失败',
-            },
-          }))
+          if (!isCurrent()) throw err
+          updateItem(id, (current) => settleExploreItem(current, 'failed', undefined, { message: err?.message || '探索任务执行失败' }))
           setLoading(false)
           abortRef.current = null
           throw err
         },
       })
     } catch (err: any) {
-      if (err?.name === 'AbortError') return
+      if (err?.name === 'AbortError' || !isCurrent()) return
       setLoading(false)
       abortRef.current = null
-      updateItem(id, (current) => ({
-        ...current,
-        status: current.status === 'failed' ? current.status : 'failed',
-        error: current.error || { message: err?.message || '探索任务执行失败' },
-      }))
+      updateItem(id, (current) => settleExploreItem(current, 'failed', undefined, current.error || { message: err?.message || '探索任务执行失败' }))
     }
   }, [appId, spaceId, schemaId, chatModelId, embedModelId, isDebug, loading, updateItem])
 

@@ -4,7 +4,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { fetchConvMaxRound, streamExplorePlan } from '../../../service/api/conv'
 import { isApiSuccess } from '../hooks/conversationRequests'
 
+import { interruptExploreItem, settleExploreItem } from './exploreProcessTimeline'
 import { parseExploreStreamEvent, reduceExploreEvent } from './exploreStreamReducer'
+import { toImageListPayload } from '../components/chat-input/imageAttachment'
 import type { ExploreItem, ExploreMcpSource, ExploreSendOptions } from './types'
 
 interface UseExploreConversationOptions {
@@ -69,6 +71,10 @@ export function useExploreConversation({ conv, spaceId, currentModelId, embedMod
     abortRef.current = null
     setItems([])
     setLoading(false)
+    return () => {
+      abortRef.current?.abort()
+      abortRef.current = null
+    }
   }, [convUid])
 
   const updateItem = useCallback((id: string, updater: (item: ExploreItem) => ExploreItem) => {
@@ -97,7 +103,7 @@ export function useExploreConversation({ conv, spaceId, currentModelId, embedMod
     abortRef.current?.abort()
     abortRef.current = null
     setLoading(false)
-    setItems((prev) => prev.map((item) => (item.status === 'running' ? { ...item, status: 'cancelled', finishReason: 'user_cancelled' } : item)))
+    setItems((prev) => prev.map((item) => item.status === 'running' ? settleExploreItem(item, 'cancelled', 'user_cancelled') : item))
   }, [])
 
   const handleSend = useCallback(async (question: string, schemaId: string | number, options?: ExploreSendOptions) => {
@@ -121,9 +127,13 @@ export function useExploreConversation({ conv, spaceId, currentModelId, embedMod
 
     setItems((prev) => [...prev, item])
     setLoading(true)
-    abortRef.current = new AbortController()
+    const controller = new AbortController()
+    abortRef.current = controller
+    const isCurrent = () => abortRef.current === controller && !controller.signal.aborted
 
     const mcpFields = buildMcpSourceVersionFields(options?.mcpSourceVersionIds)
+    // 图片附件：后端图片接口未就绪，image_list 为前端约定字段，对接时调整
+    const imageList = toImageListPayload(options?.images ?? [])
     const payload = {
       messages: question,
       app_id: conv.appId ?? conv.app_id ?? 0,
@@ -140,12 +150,13 @@ export function useExploreConversation({ conv, spaceId, currentModelId, embedMod
       sse_mcp_source_version_ids: mcpFields.sse,
       mcp_streamable_source_version_ids: mcpFields.streamable,
       skills_source_version_ids: normalizeIdList(options?.skillSourceVersionIds),
+      ...(imageList.length ? { image_list: imageList } : {}),
     }
 
     try {
       await streamExplorePlan({
         data: payload,
-        signal: abortRef.current.signal,
+        signal: controller.signal,
         authorization,
         async onopen(response) {
           if (!response.ok) {
@@ -153,43 +164,36 @@ export function useExploreConversation({ conv, spaceId, currentModelId, embedMod
           }
         },
         onmessage(event) {
-          if (!event.data || event.data.startsWith(':')) return
+          if (!isCurrent() || !event.data || event.data.startsWith(':')) return
           const parsed = parseExploreStreamEvent(event.data)
           if (!parsed) return
           updateItem(id, (current) => reduceExploreEvent(current, parsed))
           if (parsed.type === 'done' || parsed.type === 'failed') {
             setLoading(false)
+            controller.abort()
             abortRef.current = null
             void syncPersistedRoundIndex(id)
           }
         },
         onclose() {
+          if (!isCurrent()) return
+          updateItem(id, interruptExploreItem)
           setLoading(false)
           abortRef.current = null
         },
         onerror(err) {
-          if (abortRef.current?.signal.aborted) return
-          updateItem(id, (current) => ({
-            ...current,
-            status: 'failed',
-            error: {
-              message: err?.message || '探索任务执行失败',
-            },
-          }))
+          if (!isCurrent()) throw err
+          updateItem(id, (current) => settleExploreItem(current, 'failed', undefined, { message: err?.message || '探索任务执行失败' }))
           setLoading(false)
           abortRef.current = null
           throw err
         },
       })
     } catch (err: any) {
-      if (err?.name === 'AbortError') return
+      if (err?.name === 'AbortError' || !isCurrent()) return
       setLoading(false)
       abortRef.current = null
-      updateItem(id, (current) => ({
-        ...current,
-        status: current.status === 'failed' ? current.status : 'failed',
-        error: current.error || { message: err?.message || '探索任务执行失败' },
-      }))
+      updateItem(id, (current) => settleExploreItem(current, 'failed', undefined, current.error || { message: err?.message || '探索任务执行失败' }))
     }
   }, [conv, currentModelId, embedModelId, loading, spaceId, syncPersistedRoundIndex, updateItem, authorization])
 

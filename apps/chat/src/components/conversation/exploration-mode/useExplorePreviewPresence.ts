@@ -44,15 +44,9 @@ export function useExplorePreviewPresence(activeItem?: ExploreItem) {
     }
 
     clearScheduledTransition()
-    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 
     if (activeItem) {
       setRenderedItem(activeItem)
-
-      if (reduceMotion) {
-        setPhase('open')
-        return clearScheduledTransition
-      }
 
       // 内容更新时只替换数据；仅从关闭态进入时重新播放入场动画。
       if (phaseRef.current !== 'open') {
@@ -67,12 +61,6 @@ export function useExplorePreviewPresence(activeItem?: ExploreItem) {
     }
 
     if (!renderedItemRef.current) {
-      setPhase('closed')
-      return clearScheduledTransition
-    }
-
-    if (reduceMotion) {
-      setRenderedItem(undefined)
       setPhase('closed')
       return clearScheduledTransition
     }

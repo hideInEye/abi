@@ -1,17 +1,44 @@
-import { CheckCircleOutlined, CloseCircleOutlined, CompassOutlined, InboxOutlined } from '@ant-design/icons'
-import { Button, Empty } from 'antd'
-import React from 'react'
+import { CheckCircleOutlined, CloseCircleOutlined, CompassOutlined, FileTextOutlined, StepBackwardOutlined, StepForwardOutlined } from '@ant-design/icons'
+import { Button, Dropdown, Empty } from 'antd'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 
-import { isStructuredOutput } from './exploreExport'
+import { getToolLabel } from './v2/displayModel'
+
+import { EXPORT_MENU_ITEMS, downloadExploreExport, isStructuredOutput, type ExploreExportFormat } from './exploreExport'
 import ExploreRichText from './ExploreRichText'
 import type { ExploreItem, ExploreStep, ExploreStepOutput } from './types'
 import styles from './styles.module.css'
+
+export interface ExplorePreviewScreen {
+  key: string
+  kind: 'step' | 'final'
+  title: string
+  stepId?: string
+}
+
+/** 每个有结构化结果的步骤一屏，最终结论与摘要合并为最后一屏。 */
+export function buildPreviewScreens(item: ExploreItem): ExplorePreviewScreen[] {
+  const screens: ExplorePreviewScreen[] = item.steps
+    .filter((step) => step.outputs.some(isStructuredOutput))
+    .map((step) => ({ key: `step:${step.id}`, kind: 'step', stepId: step.id, title: getToolLabel(step) }))
+  if (item.finalContent || item.summary) screens.push({ key: 'final', kind: 'final', title: '最终结论' })
+  return screens
+}
+
+function resolveScreenIndex(stepId: string | undefined, screens: ExplorePreviewScreen[]): number | 'latest' {
+  const position = stepId ? screens.findIndex((screen) => screen.stepId === stepId) : -1
+  return position >= 0 ? position : 'latest'
+}
 
 interface ExplorePreviewPaneProps {
   item: ExploreItem
   onClose: () => void
   /** 分屏动画期间冻结的面板宽度（px）：使内部布局不随壳宽逐帧变化，动画结束后为 undefined 恢复自适应。 */
   frozenWidth?: number
+  /** 外部定位到的步骤；undefined 表示跟随最新屏。 */
+  activeStepId?: string
+  /** 工具栏切换屏时回传当前屏绑定的步骤，供左侧过程定位。 */
+  onScreenChange?: (stepId: string | undefined) => void
 }
 
 /** 参考产品图绘制的双栏收起图标；路径使用 currentColor 以复用按钮交互色。 */
@@ -20,13 +47,6 @@ export const CollapseIcon: React.FC = () => (
     <path d="M11.5 3.5v5h5M8.5 16.5v-5h-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 )
-
-// 暂不支持下载，屏蔽导出菜单（恢复时需同步恢复顶部 DownloadOutlined/Dropdown/MenuProps 与 exploreExport 相关导入）
-// const EXPORT_MENU_ITEMS: MenuProps['items'] = [
-//   { key: 'word', label: 'Word 文件' },
-//   { key: 'pdf', label: 'PDF 文件（打印另存）' },
-//   { key: 'html', label: 'HTML 文件' },
-// ]
 
 function getStatusTag(status: ExploreItem['status']) {
   switch (status) {
@@ -75,11 +95,23 @@ const StepResult: React.FC<{ step: ExploreStep }> = ({ step }) => {
   )
 }
 
-/** 探索结果全高工作室：展示分步骤执行数据、最终结论与执行摘要。 */
-const ExplorePreviewPane: React.FC<ExplorePreviewPaneProps> = ({ item, onClose, frozenWidth }) => {
+/** 探索结果全高工作室：按步骤分屏展示执行数据，工具栏左右切换并联动左侧过程定位。 */
+const ExplorePreviewPane: React.FC<ExplorePreviewPaneProps> = ({ item, onClose, frozenWidth, activeStepId, onScreenChange }) => {
   const statusTag = getStatusTag(item.status)
-  const resultSteps = item.steps.filter((step) => step.outputs.some(isStructuredOutput))
-  const hasResult = Boolean(item.finalContent) || resultSteps.length > 0 || Boolean(item.summary)
+  const screens = useMemo(() => buildPreviewScreens(item), [item])
+  const [index, setIndex] = useState<number | 'latest'>(() => resolveScreenIndex(activeStepId, screens))
+  useEffect(() => {
+    setIndex(resolveScreenIndex(activeStepId, screens))
+  }, [activeStepId, screens])
+  const current = Math.min(index === 'latest' ? screens.length - 1 : index, Math.max(0, screens.length - 1))
+  const screen = screens[current]
+  const currentStep = screen?.kind === 'step' ? item.steps.find((step) => step.id === screen.stepId) : undefined
+  const screenChangeRef = useRef(onScreenChange)
+  screenChangeRef.current = onScreenChange
+  useEffect(() => {
+    screenChangeRef.current?.(screens[current]?.stepId)
+  }, [current, screens])
+  const hasResult = screens.length > 0
   const running = item.status === 'running'
 
   return (
@@ -98,7 +130,6 @@ const ExplorePreviewPane: React.FC<ExplorePreviewPaneProps> = ({ item, onClose, 
           </div>
         </div>
         <div className={styles.paneHeaderActions}>
-          {/* 暂不支持下载，屏蔽下载按钮
           <Dropdown
             trigger={['click']}
             placement="bottomRight"
@@ -111,14 +142,13 @@ const ExplorePreviewPane: React.FC<ExplorePreviewPaneProps> = ({ item, onClose, 
             <Button
               type="text"
               className={styles.paneCloseButton}
-              icon={<DownloadOutlined />}
-              title="下载结果"
-              aria-label="下载结果"
+              icon={<FileTextOutlined />}
+              title="保存为文档"
+              aria-label="保存为文档"
               aria-haspopup="menu"
               disabled={!hasResult}
             />
           </Dropdown>
-          */}
           <Button
             type="text"
             className={styles.paneCloseButton}
@@ -135,18 +165,9 @@ const ExplorePreviewPane: React.FC<ExplorePreviewPaneProps> = ({ item, onClose, 
           <Empty className={styles.paneEmpty} image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无执行结果" />
         ) : (
           <>
-            {resultSteps.length > 0 && (
-              <div className={styles.paneSection}>
-                <div className={styles.paneSectionTitle}>
-                  <InboxOutlined /> 分步骤执行数据
-                </div>
-                {resultSteps.map((step) => (
-                  <StepResult key={step.id} step={step} />
-                ))}
-              </div>
-            )}
+            {currentStep && <StepResult step={currentStep} />}
 
-            {item.finalContent && (
+            {screen?.kind === 'final' && item.finalContent && (
               <div className={styles.paneSection}>
                 <div className={styles.paneSectionTitle}>
                   <CheckCircleOutlined /> 最终结论
@@ -157,7 +178,7 @@ const ExplorePreviewPane: React.FC<ExplorePreviewPaneProps> = ({ item, onClose, 
               </div>
             )}
 
-            {item.summary && (
+            {screen?.kind === 'final' && item.summary && (
               <div className={styles.paneSection}>
                 <div className={styles.paneSectionTitle}>执行摘要</div>
                 <div className={styles.summaryBlock}>
@@ -177,6 +198,44 @@ const ExplorePreviewPane: React.FC<ExplorePreviewPaneProps> = ({ item, onClose, 
           </div>
         )}
       </div>
+
+      {hasResult && (
+        <div className={styles.paneToolbar}>
+          <div className={styles.paneStepNav}>
+            <button type="button" className={styles.paneToolbarButton} aria-label="上一步" disabled={current <= 0}
+              onClick={() => setIndex(current - 1)}>
+              <StepBackwardOutlined />
+            </button>
+            <button type="button" className={styles.paneToolbarButton} aria-label="下一步" disabled={current >= screens.length - 1}
+              onClick={() => setIndex(current + 1 >= screens.length - 1 ? 'latest' : current + 1)}>
+              <StepForwardOutlined />
+            </button>
+          </div>
+          {/* 步骤条：轨道按屏数等分，填充到当前屏，圆点标记进度头，每段可点击直接跳到对应结果 */}
+          <div className={styles.paneStepTrack} role="group" aria-label="结果步骤进度">
+            {screens.map((entry, position) => (
+              <button
+                key={entry.key}
+                type="button"
+                className={`${styles.paneStepSegment} ${position < current ? styles.paneStepSegmentDone : ''} ${position === current ? styles.paneStepSegmentCurrent : ''}`}
+                aria-label={`第 ${position + 1} 屏，共 ${screens.length} 屏：${entry.title}`}
+                aria-current={position === current ? 'step' : undefined}
+                onClick={() => setIndex(position >= screens.length - 1 ? 'latest' : position)}
+              />
+            ))}
+            <span
+              className={styles.paneStepThumb}
+              style={{ left: `${((current + 1) / screens.length) * 100}%` }}
+              aria-hidden="true"
+            />
+          </div>
+          <span className={styles.paneToolbarTitle} title={screen?.title}>{screen?.title}</span>
+          {running && current < screens.length - 1 && (
+            <button type="button" className={styles.paneJumpLatest} onClick={() => setIndex('latest')}>跳到最新</button>
+          )}
+          <span className={styles.paneToolbarIndicator}>{current + 1} / {screens.length}</span>
+        </div>
+      )}
     </aside>
   )
 }

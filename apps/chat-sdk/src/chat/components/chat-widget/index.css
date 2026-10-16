@@ -672,10 +672,13 @@ button.abi-cw-header-switch {
   font-size: calc(12px * var(--cw-font-scale, 1)) !important;
 }
 
-/* 信息条：分组 + 数据语义（复刻主对话 MessageList 信息条内联样式；窄面板字号略收） */
+/* 信息条：分组 + 数据语义一个一行（两列 grid 使标签/chip 纵向对齐，窄面板不再错乱换行；字号略收） */
 .abi-cw-infobar {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr;
   align-items: center;
+  column-gap: 8px;
+  row-gap: 6px;
   padding: 8px 14px;
   margin-bottom: 8px;
   background: var(--cw-infobar-bg, rgba(255, 255, 255, 0.55));
@@ -684,7 +687,6 @@ button.abi-cw-header-switch {
   border: 1px solid var(--cw-border, rgba(130, 140, 200, 0.12));
   font-size: calc(12px * var(--cw-font-scale, 1));
   color: var(--cw-text-2, #546074);
-  flex-wrap: wrap;
 }
 
 .abi-cw-infobar-label {
@@ -696,6 +698,8 @@ button.abi-cw-header-switch {
 .abi-cw-infobar-chip {
   display: inline-flex;
   align-items: center;
+  /* grid 子项默认拉伸满列宽，chip 需按内容宽靠左 */
+  justify-self: start;
   gap: 6px;
   padding: 4px 12px;
   border-radius: 20px;
@@ -805,15 +809,15 @@ button.abi-cw-header-switch {
 .abi-cw-sem-trigger {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   height: 32px;
   max-width: 160px;
-  padding: 0 8px;
+  padding: 0 10px;
   border-radius: 8px;
   border: 1px solid var(--cw-header-border, rgba(130, 140, 200, 0.16));
   background: var(--cw-input-bg, rgba(255, 255, 255, 0.5));
   color: var(--cw-text-2, #8494ad);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   user-select: none;
@@ -846,8 +850,8 @@ button.abi-cw-header-switch {
 }
 
 .abi-cw-sem-trigger-arrow svg {
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
 }
 
 .abi-cw-sem-trigger-arrow.open {
@@ -866,22 +870,21 @@ button.abi-cw-header-switch {
   border-color: rgba(91, 124, 247, 0.3);
 }
 
-/* 语义下拉面板（组件内绝对定位浮层，非 portal；向上展开） */
+/* 语义下拉面板（组件内绝对定位浮层，非 portal；向上展开；观感对齐大屏 antd Popover：无边框 + antd 阴影） */
 .abi-cw-sem-popover {
   position: absolute;
   left: 0;
   bottom: calc(100% + 8px);
   z-index: 20;
   background: var(--cw-surface, #fff);
-  border: 1px solid var(--cw-border-2, #e8e8e8);
   border-radius: 8px;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08), 0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 9px 28px 8px rgba(0, 0, 0, 0.05);
   padding: 6px 8px;
 }
 
 .abi-cw-sem-tree {
   width: 260px;
-  max-height: 320px;
+  max-height: 360px;
   overflow-y: auto;
 }
 
