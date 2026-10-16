@@ -638,17 +638,6 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .ruleName,
-  .smartHelperItem,
-  .systemPagination *,
-  .semanticOverlayRoot * {
-    scroll-behavior: auto !important;
-    transition-duration: 0.01ms !important;
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-  }
-}
 .cardHeadTags {
   display: flex;
   flex: none;

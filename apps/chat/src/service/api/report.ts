@@ -38,6 +38,8 @@ export interface SubmitReportRequest extends ReportSourceVersionFields {
   embed_model_id?: number
   chat_model_id: number
   app_type?: string
+  /** 图片附件：后端图片接口未就绪，image_list 为前端约定字段，对接时调整 */
+  image_list?: Array<{ name: string; data: string }>
 }
 
 export interface SubmitReportResponse {

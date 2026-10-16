@@ -155,7 +155,7 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
         try {
           await updateAppApi({ appId: agent.id, appName: agent.name, status: '2' });
           message.success('已取消发布');
-          await syncShareAppStatus({ projectId: agent.id, type: 'workflow', spaceId: spaceId || undefined, appStatus: 2 });
+          await syncShareAppStatus({ projectId: agent.id, type: 'react', spaceId: spaceId || undefined, appStatus: 2 });
           fetchList();
           setShareRefreshToken(t => t + 1);
         } catch {

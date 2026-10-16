@@ -151,12 +151,6 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .reportStatusActive .reportStatusDot {
-    animation: none;
-  }
-}
-
 .answerMeta {
   flex-shrink: 0;
   color: var(--ink-3);
@@ -949,12 +943,6 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .htmlFrameEnter {
-    animation: none;
-  }
-}
-
 .previewEmpty {
   display: flex;
   min-height: 320px;
@@ -1027,18 +1015,5 @@
   .fileAssetIcon {
     width: 38px;
     height: 38px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .conversationPane,
-  .reportPaneWrap {
-    transition: none;
-  }
-
-  .todoStatusRunning,
-  .todoCollapsedActivityDot,
-  .thinkingTypewriterCursor {
-    animation: none;
   }
 }

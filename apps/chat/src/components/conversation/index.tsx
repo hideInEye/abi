@@ -14,6 +14,7 @@ import { LazyFeatureFallback, RetryableLazy } from '@/components/performance/Ret
 import { useConversationController, type ConversationProps } from './hooks/useConversationController'
 import { useExploreConversation } from './exploration-mode/useExploreConversation'
 import type { ExploreSendOptions } from './exploration-mode/types'
+import type { ImageAttachment } from './components/chat-input/imageAttachment'
 import type { ExploreCodeEditPayload } from './exploration-mode/ExploreCodeBlock'
 import { useExplorePreviewPresence } from './exploration-mode/useExplorePreviewPresence'
 import { useReportConversation } from './report-mode/useReportConversation'
@@ -28,9 +29,9 @@ const loadShareEmailSetting = () => import('./components/share-email-setting')
 
 export interface ConversationHandle {
   setConvContent: (content: any[]) => void
-  handleSend: (value: string, meta?: { groupName?: string; semanticName?: string; semanticSchemaId?: number | string; semanticGroupId?: number | string; selectedExcel?: { file_id: string | number; file_name: string } }) => void
+  handleSend: (value: string, meta?: { groupName?: string; semanticName?: string; semanticSchemaId?: number | string; semanticGroupId?: number | string; selectedExcel?: { file_id: string | number; file_name: string }; images?: ImageAttachment[] }) => void
   handleExploreSend: (value: string, schemaId: string | number, options?: ExploreSendOptions) => void
-  handleReportSend: (value: string, reportSources?: ReportSourceVersionFields) => void
+  handleReportSend: (value: string, reportSources?: ReportSourceVersionFields, images?: ImageAttachment[]) => void
   stopGenerating: () => void
   stopExploreGenerating: () => void
   stopReportGenerating: () => void
@@ -163,6 +164,8 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
     [confirmDelete, exploreController.removeItemsByRounds, reportController.removeReportsByRounds, reportDeleteRounds],
   )
   const [activeExploreId, setActiveExploreId] = useState<string>()
+  // 工作室当前结果屏绑定的步骤：工具栏切换时联动左侧过程定位高亮。
+  const [exploreStepId, setExploreStepId] = useState<string>()
   const activeExplore = React.useMemo(
     () => exploreItemsAll.find((item) => item.id === activeExploreId),
     [exploreItemsAll, activeExploreId],
@@ -195,8 +198,16 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
     reportController.closeReport()
     setCodeEditor(undefined)
     setActiveExploreId(exploreId)
+    setExploreStepId(undefined)
   }, [reportController])
-  const closeExplore = React.useCallback(() => setActiveExploreId(undefined), [])
+  const openExploreStep = React.useCallback((exploreId: string, stepId: string) => {
+    openExplore(exploreId)
+    setExploreStepId(stepId)
+  }, [openExplore])
+  const closeExplore = React.useCallback(() => {
+    setActiveExploreId(undefined)
+    setExploreStepId(undefined)
+  }, [])
   const openCodeEditor = React.useCallback((payload: ExploreCodeEditPayload) => {
     void loadExploreCodeEditorPane()
     reportController.closeReport()
@@ -238,8 +249,8 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
   }, [exploreController.items, openExplore])
 
   const handleReportSend = React.useCallback(
-    (value: string, reportSources?: ReportSourceVersionFields) => {
-      reportController.handleSend(value, reportSources)
+    (value: string, reportSources?: ReportSourceVersionFields, images?: ImageAttachment[]) => {
+      reportController.handleSend(value, reportSources, images)
 
       // 只在用户提交本轮报告问题时定位一次；后续流式事件不会再次驱动滚动。
       window.requestAnimationFrame(() => {
@@ -413,6 +424,8 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
             onToggleReportTask={reportController.toggleTaskExecution}
             onOpenReport={openReport}
             onOpenExplore={openExplore}
+            onOpenExploreStep={openExploreStep}
+            exploreLocateStepId={exploreStepId}
             onCloseExplore={closeExplore}
             onEditExploreCode={openCodeEditor}
             activeExploreId={activeExploreId}
@@ -441,7 +454,7 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
           >
             <RetryableLazy
               loader={loadExplorePreviewPane}
-              componentProps={{ item: explorePreview.renderedItem, onClose: closeExplore, frozenWidth: exploreFrozenWidth }}
+              componentProps={{ item: explorePreview.renderedItem, onClose: closeExplore, frozenWidth: exploreFrozenWidth, activeStepId: exploreStepId, onScreenChange: setExploreStepId }}
               fallback={<LazyFeatureFallback label="正在加载探索结果…" style={{ width: '100%', height: '100%', minHeight: 360 }} />}
             />
           </div>

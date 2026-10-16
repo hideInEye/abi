@@ -522,7 +522,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
       setHasSavedOnce(true)
       savedRef.current = true
       if (currentAppId != null) {
-        syncShareAppStatus({ projectId: currentAppId, type: 'workflow', spaceId: spaceId || undefined, appStatus: nextStatus === '2' ? 2 : 3 });
+        syncShareAppStatus({ projectId: currentAppId, type: 'react', spaceId: spaceId || undefined, appStatus: nextStatus === '2' ? 2 : 3 });
       }
       message.success(successText)
     } finally {
@@ -546,7 +546,7 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
         if (publishError) return
       }
       setStatus('1')
-      if (currentAppId != null) syncShareAppStatus({ projectId: currentAppId, type: 'workflow', spaceId: spaceId || undefined, appStatus: 1 });
+      if (currentAppId != null) syncShareAppStatus({ projectId: currentAppId, type: 'react', spaceId: spaceId || undefined, appStatus: 1 });
       message.success('已发布')
       savedRef.current = true
       onClose(true)

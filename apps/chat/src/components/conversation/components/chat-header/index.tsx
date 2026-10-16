@@ -18,6 +18,8 @@ export interface ModelOption {
   isDefault?: number
   /** 是否支持关闭思考（1 为支持，0 为不支持） */
   isSupportThinking?: number | string
+  /** 是否支持图片输入（多模态：1 为支持，0 为不支持） */
+  isMultimodal?: number | string
 }
 
 export interface ChatHeaderProps {

@@ -46,7 +46,7 @@ export function ShareAssistantDrawer({ apiKey, open, onClose }: ShareAssistantDr
     setLoading(true)
     try {
       const [shareRes, appRes] = await Promise.all([
-        fetchShareListByApiKeyApi({ apiKey: accessKey, type: 'workflow' }),
+        fetchShareListByApiKeyApi({ shareKey: accessKey, type: 'react' }),
         fetchAppListApi({ spaceId: currentSpaceId || undefined }),
       ])
       const sharePage = (shareRes as any)?.data ?? {}

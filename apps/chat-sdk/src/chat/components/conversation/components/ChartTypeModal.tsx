@@ -248,10 +248,11 @@ const ChartTypeModal: React.FC<Props> = ({ open, value, onOpenChange, onSelect, 
 
   const categoryRail = [{ key: 'all', label: '全部' }, ...CHART_CATEGORIES.map((c) => ({ key: c.key, label: c.label }))]
 
+  // 分享窄面板：宽度收敛 20rem，保证浮层完整落在面板内不被 overflow 裁剪
   const panel = (
     <div
       className="flex overflow-hidden rounded-xl"
-      style={{ width: '25rem', height: '28rem', background: 'var(--cw-surface, #fff)', color: 'var(--cw-text, #1f2733)' }}
+      style={{ width: '20rem', height: '28rem', background: 'var(--cw-surface, #fff)', color: 'var(--cw-text, #1f2733)' }}
     >
       {/* 一级：语义分类（图标栏） */}
       <OverlayScroll className="shrink-0 border-r" style={{ width: '4.5rem', borderColor: 'var(--cw-border, #f0f0f0)' }} contentClassName="py-2">

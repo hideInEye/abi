@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 
 import { AssistantIconBlock } from '@/components/AssistantIcon';
 import { useAppSelector } from '@/hooks/business/useStore';
-import { fetchProjectShareDetailApi, fetchProjectShareListApi } from '@/service/api/share';
+import { fetchProjectShareListApi, fetchShareApiKeyListApi } from '@/service/api/share';
 import { getSpaceId } from '@/store/slice/app';
 
 /** 分享记录行数据（字段做兼容映射，后端字段缺失时兜底展示） */
@@ -87,7 +87,7 @@ interface ShareRecordListProps {
 
 /**
  * 分享记录 tab（对接统一分享查询接口 /api/dashboard/api/v1/project/share/list，服务端分页）
- * type 由使用方指定：abi 我的助手=workflow
+ * type 由使用方指定：abi 我的助手=react
  */
 const ShareRecordList: React.FC<ShareRecordListProps> = ({ refreshToken = 0 }) => {
   const spaceId = useAppSelector(getSpaceId);
@@ -106,7 +106,7 @@ const ShareRecordList: React.FC<ShareRecordListProps> = ({ refreshToken = 0 }) =
     setLoading(true);
     try {
       const { data, error } = await fetchProjectShareListApi({
-        type: 'workflow',
+        type: 'react',
         spaceId: spaceId || undefined,
         current: page,
         size,
@@ -199,8 +199,9 @@ const ShareRecordList: React.FC<ShareRecordListProps> = ({ refreshToken = 0 }) =
     setAkList([]);
     setAkLoading(true);
     try {
-      const { data, error } = await fetchProjectShareDetailApi(r.shareCode);
-      setAkList(!error && data ? parseApiKeys((data as any).apiKeys ?? (data as any).accessKeys) : []);
+      const { data, error } = await fetchShareApiKeyListApi(r.shareCode);
+      const payload = !error && data ? (data as any) : null;
+      setAkList(parseApiKeys(Array.isArray(payload) ? payload : payload?.apiKeys ?? payload?.accessKeys ?? payload?.records ?? payload?.rows));
     } catch {
       setAkList([]);
     } finally {

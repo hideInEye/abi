@@ -207,11 +207,6 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .reportStatusActive .reportStatusDot {
-    animation: none;
-  }
-}
 
 .answerMeta {
   flex-shrink: 0;
@@ -1005,11 +1000,7 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .htmlFrameEnter {
-    animation: none;
-  }
-}
+
 
 .previewEmpty {
   display: flex;
@@ -1086,15 +1077,3 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .conversationPane,
-  .reportPaneWrap {
-    transition: none;
-  }
-
-  .todoStatusRunning,
-  .todoCollapsedActivityDot,
-  .thinkingTypewriterCursor {
-    animation: none;
-  }
-}

@@ -4,7 +4,13 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import ExploreRichText, { containsTable } from './ExploreRichText'
 import type { ExploreItem, ExploreStepOutput } from './types'
 
-export type ExploreExportFormat = 'word' | 'pdf' | 'html'
+export type ExploreExportFormat = 'word' | 'html'
+
+/** 保存为文档的格式菜单，key 与 downloadExploreExport 的 format 一一对应。 */
+export const EXPORT_MENU_ITEMS: { key: ExploreExportFormat; label: string }[] = [
+  { key: 'word', label: 'Word 文件' },
+  { key: 'html', label: 'HTML 文件' },
+]
 
 /** 右侧工作室只展示数据/文件等结构化输出，过滤技能执行过程文本。 */
 export function isStructuredOutput(output: ExploreStepOutput): boolean {
@@ -94,31 +100,12 @@ function triggerBlobDownload(content: string, fileName: string, mimeType: string
   URL.revokeObjectURL(url)
 }
 
-/** word/pdf/html 均前端本地生成；PDF 走浏览器打印（另存为 PDF），不依赖额外后端接口。 */
+/** word/html 均前端本地生成 Blob 下载，不依赖额外后端接口。 */
 export function downloadExploreExport(item: ExploreItem, format: ExploreExportFormat) {
   const html = buildExportDocument(item, format)
   if (format === 'html') {
     triggerBlobDownload(html, getExportFileName(item, 'html'), 'text/html;charset=utf-8')
     return
   }
-  if (format === 'word') {
-    triggerBlobDownload(html, getExportFileName(item, 'doc'), 'application/msword;charset=utf-8')
-    return
-  }
-  const iframe = document.createElement('iframe')
-  iframe.style.position = 'fixed'
-  iframe.style.right = '0'
-  iframe.style.bottom = '0'
-  iframe.style.width = '0'
-  iframe.style.height = '0'
-  iframe.style.border = '0'
-  iframe.srcdoc = html
-  iframe.onload = () => {
-    iframe.contentWindow?.focus()
-    iframe.contentWindow?.print()
-    setTimeout(() => {
-      if (iframe.parentNode) iframe.parentNode.removeChild(iframe)
-    }, 1000)
-  }
-  document.body.appendChild(iframe)
+  triggerBlobDownload(html, getExportFileName(item, 'doc'), 'application/msword;charset=utf-8')
 }

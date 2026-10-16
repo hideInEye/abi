@@ -299,3 +299,14 @@
   z-index: 9;
   border-bottom: 1px solid rgba(130, 140, 200, 0.1);
 }
+
+/* 预览表锁表头：放开 rc-table 自带横滚容器，整表横竖滚动都走外层 .assistant-table-scroll，th sticky 锁在其顶部（单表不错位） */
+.preview-sticky-table :global(.ant-table-content) {
+  overflow: visible !important;
+}
+
+.preview-sticky-table :global(.ant-table-thead > tr > th) {
+  position: sticky;
+  top: 0;
+  z-index: 3 !important;
+}

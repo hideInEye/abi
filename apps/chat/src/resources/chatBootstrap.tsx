@@ -9,23 +9,10 @@ import { getCurrentUser } from '@/utils/identity'
 
 import { getChatBootstrapKeys } from './chatBootstrapKeys'
 import type { ChatBootstrapIdentity } from './chatBootstrapKeys'
+import { normalizeModels } from './chatBootstrapModels'
+import type { BootstrapModels } from './chatBootstrapModels'
 import { RequestResource } from './requestResource'
 import type { RequestResourceSnapshot } from './requestResource'
-
-export interface BootstrapModelOption {
-  desc: string
-  id: string | number
-  isDefault?: number | string
-  isSupportThinking?: number | string
-  key: string
-  label: string
-}
-
-export interface BootstrapModels {
-  currentModel: BootstrapModelOption | null
-  embedModelId: string | number
-  options: BootstrapModelOption[]
-}
 
 interface LoadResourceOptions {
   force?: boolean
@@ -72,27 +59,6 @@ function normalizeConversations(response: any): any[] {
   return [...rows].sort((left, right) => {
     return new Date(right?.create_time || 0).getTime() - new Date(left?.create_time || 0).getTime()
   })
-}
-
-function normalizeModels(response: any): BootstrapModels {
-  const rows = response?.data?.data || response?.data || []
-  const list = Array.isArray(rows) ? rows : []
-  const embedModel = list.find((item: any) => item.modelKey === 'bge-large')
-  const options = list
-    .filter((item: any) => String(item.status) === '1' && String(item.modelType) === '1')
-    .map((item: any): BootstrapModelOption => ({
-      id: item.modelId ?? item.id ?? item.llmId ?? '',
-      key: item.modelKey || item.model_name || item.key || '',
-      label: item.modelName || item.model_name || item.llmModel || item.label || '',
-      desc: item.remark || item.description || item.desc || '',
-      isDefault: item.isDefault,
-      isSupportThinking: item.isSupportThinking,
-    }))
-  return {
-    options,
-    currentModel: options.find(option => option.isDefault === 1) || options[0] || null,
-    embedModelId: embedModel?.modelId ?? embedModel?.id ?? embedModel?.llmId ?? '',
-  }
 }
 
 function normalizeSemantic(response: any): any[] {

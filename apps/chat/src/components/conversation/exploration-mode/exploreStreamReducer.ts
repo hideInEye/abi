@@ -1,3 +1,4 @@
+import { reduceExploreProcess, settleExploreItem } from './exploreProcessTimeline'
 import type { ExploreItem, ExploreStep, ExploreStreamEvent, ExploreTask } from './types'
 
 const EXPLORE_EVENT_TYPES = new Set([
@@ -29,7 +30,7 @@ export function parseExploreStreamEvent(data: string): ExploreStreamEvent | unde
 function mapStepStatus(status?: string): ExploreStep['status'] {
   if (status === 'failed') return 'failed'
   if (status === 'cancelled') return 'cancelled'
-  if (status === 'done') return 'done'
+  if (!status || status === 'done' || status === 'completed') return 'done'
   return 'running'
 }
 
@@ -78,6 +79,14 @@ function upsertStep(item: ExploreItem, stepId: string, updater: (step: ExploreSt
 }
 
 export function reduceExploreEvent(item: ExploreItem, event: ExploreStreamEvent): ExploreItem {
+  if (item.status !== 'running' && event.type !== 'final' && event.type !== 'summary') return item
+  const next = reduceExploreSnapshot(item, event)
+  if (next === item) return item
+  const withProcess = { ...next, processTimeline: reduceExploreProcess(item, event) }
+  return withProcess.status === 'running' ? withProcess : settleExploreItem(withProcess, withProcess.status)
+}
+
+function reduceExploreSnapshot(item: ExploreItem, event: ExploreStreamEvent): ExploreItem {
   switch (event.type) {
     case 'plan.thought':
       return {
@@ -125,7 +134,6 @@ export function reduceExploreEvent(item: ExploreItem, event: ExploreStreamEvent)
         todoId: event.todo_id || step.todoId,
         title: event.title || step.title,
         detail: event.detail || step.detail,
-        status: 'running',
       }))
     case 'step.meta':
       return {
@@ -133,7 +141,7 @@ export function reduceExploreEvent(item: ExploreItem, event: ExploreStreamEvent)
           ...step,
           todoId: event.todo_id || step.todoId,
           title: event.title || step.title,
-          thought: event.thought ?? step.thought,
+          thought: event.thought || step.thought,
           actionIntention: event.action_intention ?? step.actionIntention,
           actionReason: event.action_reason ?? step.actionReason,
           action: event.action ?? step.action,

@@ -1,7 +1,7 @@
-import { ApiOutlined, BulbOutlined, CheckOutlined, CompassOutlined, DownOutlined, EllipsisOutlined, EyeOutlined, FileTextOutlined, FolderOutlined, MessageOutlined, PaperClipOutlined, PictureOutlined, PlusOutlined, RightOutlined, SearchOutlined, SendOutlined, StopOutlined, DatabaseOutlined, ToolOutlined } from '@ant-design/icons';
+import { ApiOutlined, BulbOutlined, CheckOutlined, CloseOutlined, CompassOutlined, DownOutlined, EllipsisOutlined, EyeOutlined, FileTextOutlined, FolderOutlined, FolderOpenOutlined, MessageOutlined, PaperClipOutlined, PictureOutlined, PlusOutlined, RightOutlined, SearchOutlined, SendOutlined, StopOutlined, DatabaseOutlined, ToolOutlined } from '@ant-design/icons';
 import { Dropdown, Input, message, Popover } from 'antd';
 import type { MenuProps } from 'antd';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import AudioRecorder from '../../../../components/AudioRecorder';
 import { LazyFeatureFallback, RetryableLazy } from '../../../../components/performance/RetryableLazy';
 import FileTag from '../../../../components/FileTag';
@@ -14,12 +14,16 @@ import { getSpaceId } from '../../../../utils/runtime';
 import type { ModelOption } from '../chat-header';
 import { buildReportSourceVersionFields } from './reportSourceSelection';
 import { hasSelectedConversationData } from './sendValidation';
-import { filterSemanticTree, matchKeyword } from './popupFilter';
+import { matchKeyword } from './popupFilter';
 import { buildMcpGroupQuery, isSuccessfulMcpResponse, loadCurrentMcpItems, shouldReloadMcpOnSpaceChange } from './mcpSpaceLoad';
 import type { ExploreMcpSource } from '../../exploration-mode/types';
+import { createImageAttachment, MAX_IMAGE_COUNT, pickImageFiles, pickImagesFromClipboard, supportsImageInput, type ImageAttachment } from './imageAttachment';
 
 const loadUploadDrawer = () => import('../../UploadDrawer');
 const loadSchemaFieldsModal = () => import('../../../conversation-analysis/SchemaFieldsModal');
+
+/** 当前模型不支持多模态（图片输入）时，上传/粘贴图片入口的提示文案 */
+const IMAGE_INPUT_BLOCKED_TIP = '当前模型不支持图片识别，请切换支持多模态的模型';
 
 export interface SemanticSelectedData {
   name: string
@@ -39,6 +43,8 @@ export interface ChatInputSendOptions {
   /** 仅探索模式提交使用，透传所选技能/MCP 版本 id（MCP 带协议与分组 namespaceId，发送侧按协议分流）。 */
   skillSourceVersionIds?: string[]
   mcpSourceVersionIds?: ExploreMcpSource[]
+  /** 本条消息携带的图片附件（前端 base64，随三模式请求写入；后端接口就绪后对接）。 */
+  images?: ImageAttachment[]
 }
 
 type ChatInputMode = {
@@ -63,6 +69,9 @@ export interface ChatInputProps {
   currentModel?: ModelOption | null;
   setSelectedExcel?: (file: any) => void;
   selectedExcel?: any;
+  /** 待发送图片附件（base64），由父级持有，三模式共享。 */
+  selectedImages?: ImageAttachment[];
+  setSelectedImages?: (images: ImageAttachment[]) => void;
   spaceId?: number;
   // 数据语义 props（统一节点树：type=group/schema，递归 children）
   semanticTree?: any[];
@@ -86,7 +95,7 @@ export interface ChatInputProps {
 }
 
 const ChatInput: React.FC<ChatInputProps> = React.memo(
-  ({ loading, onSend, onStop, deepThinkEnabled, setSelectedExcel, selectedExcel, conv, ensureConv, onToggleDeepThink, onToggleUploadFile,
+  ({ loading, onSend, onStop, deepThinkEnabled, setSelectedExcel, selectedExcel, selectedImages, setSelectedImages, conv, ensureConv, onToggleDeepThink, onToggleUploadFile,
     currentModel,
     spaceId,
       selectedModeKey, onModeChange,
@@ -99,13 +108,16 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
     // 模型存在且不支持关闭思考时，思考按钮为只读并强制点亮
     const thinkingReadOnly = !!currentModel && !isSupportCloseThinking;
     const thinkingActive = thinkingReadOnly || deepThinkEnabled;
+    // 模型存在且不支持多模态时，上传/粘贴图片入口只提示不入图
+    const imageInputBlocked = !!currentModel && !supportsImageInput(currentModel);
     const [value, setValue] = useState('');
     const isComposingRef = useRef(false);
     const [uploadFileVisible, setUploadFileVisible] = useState(false);
     const [semDropdownOpen, setSemDropdownOpen] = useState(false);
+    // 数据语义分组展开/收起（对齐大屏：点文件夹仅原地展开/收起，不可选中）
+    const [expandedSemGroups, setExpandedSemGroups] = useState<Set<string>>(new Set());
     const [morePopupOpen, setMorePopupOpen] = useState(false);
-    // ── 统一弹窗搜索关键词（数据语义 / 技能 / MCP）──
-    const [semSearch, setSemSearch] = useState('');
+    // ── 统一弹窗搜索关键词（技能 / MCP）──
     const [skillSearch, setSkillSearch] = useState('');
     const [mcpSearch, setMcpSearch] = useState('');
     const getModeConfig = useCallback((mode: ChatInputModeKey): ChatInputMode => {
@@ -346,7 +358,8 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
             }
           : { mode: selectedMode.key };
 
-      onSend(value, options);
+      const images = selectedImagesRef.current;
+      onSend(value, images.length ? { ...options, images } : options);
       setValue('');
     }, [assistantMcps, assistantSkills, buildExploreMcpSources, loading, mcpGroupItems, onSend, selectedData, selectedExcel, selectedMCPs, selectedMode.key, selectedSkills, skillList, value]);
 
@@ -394,10 +407,66 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
       onToggleUploadFile();
     }, [onToggleUploadFile]);
 
+    // ── 图片附件（选择 / 粘贴 / 预览 / 移除）──
+    const imageInputRef = useRef<HTMLInputElement>(null);
+    const selectedImagesRef = useRef<ImageAttachment[]>([]);
+    selectedImagesRef.current = selectedImages ?? [];
+
+    // 逐个转 base64 后合并；超出数量上限的部分忽略并提示。
+    const addImageFiles = useCallback(async (files: File[]) => {
+      if (!files.length) return;
+      const current = selectedImagesRef.current;
+      const room = MAX_IMAGE_COUNT - current.length;
+      if (room <= 0) {
+        message.error(`最多上传 ${MAX_IMAGE_COUNT} 张图片`);
+        return;
+      }
+      const created: ImageAttachment[] = [];
+      for (const file of files.slice(0, room)) {
+        try {
+          created.push(await createImageAttachment(file, current.length + created.length));
+        } catch (err) {
+          message.error(err instanceof Error ? err.message : '图片处理失败');
+        }
+      }
+      if (created.length) setSelectedImages?.([...current, ...created]);
+      if (files.length > room) message.warning(`最多上传 ${MAX_IMAGE_COUNT} 张图片，已忽略多余的 ${files.length - room} 张`);
+    }, [setSelectedImages]);
+
+    const handleImageInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+      void addImageFiles(pickImageFiles(e.target.files));
+      // 清空 value 以便再次选择同一文件仍能触发 onChange
+      e.target.value = '';
+    }, [addImageFiles]);
+
+    // 粘贴截图/图片文件时拦截默认行为并加入附件；粘贴纯文本不受影响。
+    const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      const files = pickImagesFromClipboard(e.clipboardData);
+      if (!files.length) return;
+      if (imageInputBlocked) {
+        message.warning(IMAGE_INPUT_BLOCKED_TIP);
+        return;
+      }
+      e.preventDefault();
+      void addImageFiles(files);
+    }, [addImageFiles, imageInputBlocked]);
+
+    const handleRemoveImage = useCallback((id: string) => {
+      setSelectedImages?.(selectedImagesRef.current.filter((image) => image.id !== id));
+    }, [setSelectedImages]);
+
     // ── Dropdown menus ──
+    const handleUploadImageClick = useCallback(() => {
+      if (imageInputBlocked) {
+        message.warning(IMAGE_INPUT_BLOCKED_TIP);
+        return;
+      }
+      imageInputRef.current?.click();
+    }, [imageInputBlocked]);
+
     const plusMenuItems: MenuProps['items'] = [
       { key: 'upload-file', icon: <PaperClipOutlined />, label: '上传文件', onClick: () => handleUploadBtnClick() },
-      { key: 'upload-image', icon: <PictureOutlined />, label: '上传图片', onClick: () => message.info('图片上传功能即将上线') },
+      { key: 'upload-image', icon: <PictureOutlined />, label: '上传图片', onClick: () => handleUploadImageClick() },
     ];
 
     const selectMode = (mode: ChatInputModeKey) => {
@@ -428,75 +497,68 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
       };
     });
 
-    /** 递归渲染语义节点：叶子点击选中；分组点击选中、hover 右侧弹出子层 */
-    const renderSemNode = (node: any): React.ReactNode => {
-      // 叶子：数据语义，点击选中并关闭下拉
+    const toggleSemGroup = (id: string) => {
+      setExpandedSemGroups((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id); else next.add(id);
+        return next;
+      });
+    };
+
+    /** 递归渲染语义节点（与大屏 AiChatPanel 同款：文件夹仅展开/收起、空分组灰色、仅叶子可选中） */
+    const renderSemNode = (node: any, depth: number): React.ReactNode => {
+      const indent = { paddingLeft: 8 + depth * 16 };
+      // 叶子：数据语义，唯一可选中的节点
       if (node.type === 'schema') {
         const isSel = selectedData?.schemaId != null && selectedData.schemaId === node.schemaId;
         return (
-          <div key={node.id} className={`uni-popup-item ${isSel ? 'selected' : ''}`} title={node.techName || node.name}
+          <div key={node.id} className={`sem-leaf ${isSel ? 'selected' : ''}`} style={indent} title={node.techName || node.name}
             onClick={() => { onSelectData?.({ name: node.name, schemaId: node.schemaId, groupName: node.groupName }); setSemDropdownOpen(false); }}
           >
-            <FileTextOutlined className="uni-icon" />
-            <span className="uni-name">{node.name}</span>
-            {isSel && <CheckOutlined className="uni-check" />}
+            <FileTextOutlined className="sem-leaf-icon" />
+            <span className="sem-leaf-name">{node.name}</span>
           </div>
         );
       }
-      // 分组：可选中（发送真实 group_id，与 semantic_id 互斥）；节点 id 形如 g_<真实分组id>，去掉 g_ 前缀即为真实分组 id（超长数字，保持字符串避免精度丢失）
+      // 分组：不可选中，按有无子节点分为可展开文件夹 / 灰色空分组
       const children = Array.isArray(node.children) ? node.children : [];
-      const groupId = String(node.id).replace(/^g_/, '');
-      const isSelGroup = selectedData?.groupId != null && String(selectedData.groupId) === groupId;
-      const selectGroup = () => onSelectData?.({ name: node.name, groupId, groupName: node.name });
-      // 空分组（无子节点）同样可选中，点击直接选中该分组
       if (children.length === 0) {
         return (
-          <div key={node.id} className={`uni-popup-item ${isSelGroup ? 'selected' : ''}`} onClick={selectGroup}>
-            <FolderOutlined className="uni-icon uni-icon--empty" />
-            <span className="uni-name">{node.name}</span>
-            {isSelGroup && <CheckOutlined className="uni-check" />}
+          <div key={node.id} className="sem-group-node is-empty" style={indent}>
+            <FolderOutlined className="sem-group-icon sem-group-icon--empty" />
+            <span className="sem-group-name">{node.name}</span>
           </div>
         );
       }
+      const nodeId = String(node.id);
+      const isExpanded = expandedSemGroups.has(nodeId);
       const childCount = typeof node.count === 'number' ? node.count : children.length;
       return (
-        <Popover
-          key={node.id}
-          content={<div className="uni-popup uni-popup--flyout"><div className="uni-popup-list">{children.map((child: any) => renderSemNode(child))}</div></div>}
-          trigger="hover"
-          placement="rightTop"
-          arrow={false}
-          overlayClassName="uni-popover"
-          getPopupContainer={(node) => (node.closest('.ant-popover') as HTMLElement) || document.body}
-        >
-          <div className={`uni-popup-item ${isSelGroup ? 'selected' : ''}`} onClick={selectGroup}>
-            <FolderOutlined className="uni-icon" />
-            <span className="uni-name">{node.name}</span>
-            {childCount > 0 && <span className="uni-count">{childCount}</span>}
-            <RightOutlined className="uni-arrow" />
+        <div key={node.id} className="sem-group">
+          <div className="sem-group-node" style={indent} onClick={() => toggleSemGroup(nodeId)}>
+            {isExpanded
+              ? <FolderOpenOutlined className="sem-group-icon" />
+              : <FolderOutlined className="sem-group-icon" />}
+            <span className="sem-group-name">{node.name}</span>
+            {childCount > 0 && <span className="sem-group-count">{childCount}</span>}
+            <span className={`sem-group-chevron ${isExpanded ? 'open' : ''}`}><RightOutlined /></span>
           </div>
-        </Popover>
+          {isExpanded && children.map((child: any) => renderSemNode(child, depth + 1))}
+        </div>
       );
     };
 
-    /** 数据语义 Popover 内容（统一黑色样式：顶部搜索 + 分组 hover 右飞层）；助手会话仅展示绑定叶子 */
+    /** 数据语义 Popover 内容（与大屏同款：分组文件夹 / 数据语义文件层级结构，无搜索）；助手会话仅展示绑定叶子 */
     const semTreeSource = assistantSemanticTree ?? semanticTree;
-    const filteredSemTree = useMemo(() => filterSemanticTree(semTreeSource, semSearch), [semTreeSource, semSearch]);
     const semanticPopoverContent = (
-      <div className="uni-popup">
-        <div className="uni-popup-search">
-          <SearchOutlined />
-          <input value={semSearch} onChange={(e) => setSemSearch(e.target.value)} placeholder="搜索数据语义" />
-        </div>
-        <div className="uni-popup-list">
-          {semLoading ? (
-            <div className="uni-popup-empty">加载中...</div>
-          ) : filteredSemTree.length === 0 ? (
-            <div className="uni-popup-empty">{semSearch.trim() ? '无匹配结果' : '暂无数据语义'}</div>
-          ) : (
-            filteredSemTree.map((node: any) => renderSemNode(node))
-          )}
-        </div>
+      <div className="sem-tree">
+        {semLoading ? (
+          <div className="sem-empty">加载中...</div>
+        ) : semTreeSource.length === 0 ? (
+          <div className="sem-empty">暂无数据语义</div>
+        ) : (
+          semTreeSource.map((node: any) => renderSemNode(node, 0))
+        )}
       </div>
     );
 
@@ -700,6 +762,7 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
             onKeyDown={handleKeyDown}
             onCompositionStart={handleCompositionStart}
             onCompositionEnd={handleCompositionEnd}
+            onPaste={handlePaste}
             autoSize={{ minRows: 1, maxRows: 4 }}
             style={{ border: 'none', boxShadow: 'none', padding: '0', resize: 'none', backgroundColor: 'transparent', cursor: loading ? 'not-allowed' : 'text', fontSize: 13, color: 'var(--ink)', lineHeight: 1.5, fontFamily: 'var(--font)' }}
             styles={{ textarea: { border: 'none', boxShadow: 'none', backgroundColor: 'transparent' } }}
@@ -725,6 +788,25 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
           </div>
         )}
 
+        {/* Selected images preview */}
+        {selectedImages && selectedImages.length > 0 && (
+          <div style={{ padding: '0 18px 6px', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {selectedImages.map((image) => (
+              <div key={image.id} style={{ position: 'relative', width: 56, height: 56, borderRadius: 'var(--r-xs)', overflow: 'hidden', border: '1px solid var(--border)', background: 'rgba(255,255,255,0.5)' }}>
+                <img src={image.dataUrl} alt={image.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                <button
+                  type="button"
+                  aria-label="移除图片"
+                  onClick={() => handleRemoveImage(image.id)}
+                  style={{ position: 'absolute', top: 2, right: 2, width: 16, height: 16, padding: 0, border: 'none', borderRadius: '50%', background: 'rgba(0,0,0,0.55)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <CloseOutlined style={{ fontSize: 9 }} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Toolbar */}
         <div style={{ display: 'flex', alignItems: 'center', padding: '6px 10px 10px', gap: 6 }}>
           {/* + (upload dropdown) */}
@@ -740,13 +822,13 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
             </button>
           </Dropdown>
 
-          {/* 数据选择 Popover */}
-          <Popover content={semanticPopoverContent} trigger="click" placement="topLeft" arrow={false} overlayClassName="uni-popover" open={semDropdownOpen}
-            onOpenChange={(open) => { setSemDropdownOpen(open); if (!open) setSemSearch(''); }}>
-            <button type="button" className={`input-label-btn ${semDropdownOpen ? 'active' : ''}`} title="选择数据">
+          {/* 数据语义选择 Popover（与大屏同款：分组树，仅叶子可选） */}
+          <Popover content={semanticPopoverContent} trigger="click" placement="topLeft" arrow={false} overlayClassName="sem-tree-popover" open={semDropdownOpen}
+            onOpenChange={setSemDropdownOpen}>
+            <button type="button" className={`input-label-btn ${semDropdownOpen ? 'active' : ''}`} title="选择数据语义">
               <DatabaseOutlined style={{ fontSize: 14 }} />
-              <span style={{ maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {selectedData?.name || '数据'}
+              <span style={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {selectedData?.name || '数据语义'}
               </span>
               <DownOutlined style={{ fontSize: 9, transition: 'transform 0.2s', transform: semDropdownOpen ? 'rotate(180deg)' : 'none' }} />
             </button>
@@ -804,6 +886,16 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
             {loading ? <StopOutlined style={{ fontSize: 16 }} /> : <SendOutlined style={{ fontSize: 16 }} />}
           </button>
         </div>
+
+        {/* 隐藏的图片选择 input，由「上传图片」菜单触发 */}
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          style={{ display: 'none' }}
+          onChange={handleImageInputChange}
+        />
 
         {uploadFileVisible && (
           <RetryableLazy

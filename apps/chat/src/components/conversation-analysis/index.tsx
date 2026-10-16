@@ -6,6 +6,7 @@ import type { ConversationProps } from '../conversation/hooks/useConversationCon
 import type { ChatHeaderProps, ModelOption } from '../conversation/components/chat-header'
 import NewChatWelcome from './NewChatWelcome'
 import type { ChatInputModeKey, ChatInputProps, ChatInputSendOptions, SemanticSelectedData } from '../conversation/components/chat-input'
+import type { ImageAttachment } from '../conversation/components/chat-input/imageAttachment'
 import { getSpaceId } from '../../utils/runtime'
 import type { ConverListProps } from './conver_list'
 import { hasSelectedConversationData } from '../conversation/components/chat-input/sendValidation'
@@ -162,6 +163,8 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
   const semanticTree = bootstrap.semantic.data ?? []
   const [selectedData, setSelectedData] = useState<SemanticSelectedData | null>(null)
   const [selectedExcel, setSelectedExcel] = useState<any>(null)
+  // 待发送图片附件（base64）：三模式共享，发送后清空。
+  const [selectedImages, setSelectedImages] = useState<ImageAttachment[]>([])
   const semLoading = bootstrap.semantic.status === 'loading'
 
   // ── 助手会话绑定资源（按 curConv.appId）：非空时输入框候选仅从其中取 ──
@@ -438,13 +441,15 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
       selectedExcel: selectedExcel?.file_id
         ? { file_id: selectedExcel.file_id, file_name: selectedExcel.file_name }
         : undefined,
+      // 图片附件随消息透传（三模式共用），由各发送链路写入请求体。
+      images: options?.images,
     }
 
     const sendByMode = () => {
       if (sendMode === 'report') {
         // 同一 Conversation 只统一展示；报告发送仍走独立异步任务接口。
         if (!conversationRef.current?.handleReportSend) return false
-        conversationRef.current.handleReportSend(value, options?.reportSources)
+        conversationRef.current.handleReportSend(value, options?.reportSources, options?.images)
         return true
       }
 
@@ -458,6 +463,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
           groupId: selectedData.groupId,
           skillSourceVersionIds: options?.skillSourceVersionIds,
           mcpSourceVersionIds: options?.mcpSourceVersionIds,
+          images: options?.images,
         })
         return true
       }
@@ -485,8 +491,10 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
 
     // 已有会话 → 按当前输入模式分流发送，两种消息保留在同一时间线。
     if (curConv) {
-      if (!sendByMode()) {
-        waitAndSend()
+      if (sendByMode()) {
+        setSelectedImages([])
+      } else {
+        waitAndSend(0, () => setSelectedImages([]))
       }
       return
     }
@@ -504,7 +512,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
       }
 
       // 等待目标模式组件 mount 后通过 ref 发送。
-      waitAndSend(0, () => setCreating(false))
+      waitAndSend(0, () => { setCreating(false); setSelectedImages([]) })
     } catch (err: any) {
       if (err?.name !== 'AbortError') {
         showMessage('error', err?.message || '创建会话失败')
@@ -640,9 +648,10 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
     setExternalInputValue(text)
   }, [])
 
-  // 切换会话/空间时清空已选 Excel（文件与 conv_uid 绑定）
+  // 切换会话/空间时清空已选 Excel 与图片（文件与 conv_uid 绑定）
   useEffect(() => {
     setSelectedExcel(null)
+    setSelectedImages([])
   }, [curConv?.conv_uid, currentSpaceId])
 
   return (
@@ -762,6 +771,8 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
                       onSelectData: setSelectedData,
                       selectedExcel,
                       setSelectedExcel,
+                      selectedImages,
+                      setSelectedImages,
                       semLoading: semLoading || (assistantId !== '0' && boundResourcesLoading),
                       externalValue: externalInputValue,
                       onExternalValueConsumed: () => setExternalInputValue(''),

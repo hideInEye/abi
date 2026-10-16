@@ -1,3 +1,5 @@
+import type { ImageAttachment } from '../components/chat-input/imageAttachment'
+
 export type ExploreStatus = 'running' | 'completed' | 'failed' | 'cancelled'
 
 export type ExploreTaskStatus = 'pending' | 'in_progress' | 'completed' | 'failed' | 'cancelled' | string
@@ -31,6 +33,19 @@ export interface ExploreStep {
   outputs: ExploreStepOutput[]
 }
 
+export interface ExploreThoughtNode {
+  key: string
+  kind: 'thought'
+  reasoning: string
+  round?: number
+  status: 'done' | 'running'
+  stepId?: string
+  text: string
+  todoId?: string
+}
+
+export type ExploreProcessNode = ExploreThoughtNode | { key: string; kind: 'step'; stepId: string }
+
 export interface ExploreItem {
   id: string
   question: string
@@ -56,6 +71,8 @@ export interface ExploreItem {
   planVersion?: number
   planSource?: string
   steps: ExploreStep[]
+  /** 仅保存各轮累计内容和步骤引用，顺序为首次到达顺序；旧历史可不携带。 */
+  processTimeline?: ExploreProcessNode[]
   finalContent?: string
   summary?: string
   finishReason?: string
@@ -90,4 +107,5 @@ export interface ExploreSendOptions {
   groupId?: string | number
   skillSourceVersionIds?: Array<string | number>
   mcpSourceVersionIds?: ExploreMcpSource[]
+  images?: ImageAttachment[]
 }
