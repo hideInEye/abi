@@ -27,7 +27,7 @@ export function ConversationGroups({ collapsed }: ConversationGroupsProps) {
   useEffect(() => {
     if (!collapsed) {
       loadGroups()
-      loadHistoryTopics({ silent: true })
+      loadHistoryTopics()
     }
   }, [collapsed, loadGroups, loadHistoryTopics])
 

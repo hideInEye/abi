@@ -17,7 +17,7 @@ function visit(node: ts.Node) {
   if (ts.isCallExpression(node) && node.expression.getText(file) === 'useEffect') {
     const body = node.arguments[0].getText(file)
     if (body.includes('subscribeCurrentUser')) callbacks.syncUser = body
-    if (body.includes('if (!bootstrapReady')) callbacks.initialLoad = body
+    if (body.includes('void loadConversations()')) callbacks.initialLoad = body
   }
   ts.forEachChild(node, visit)
 }
@@ -66,7 +66,7 @@ describe('Chat user context synchronization', () => {
   it('only starts automatic loads for an authenticated identity', () => {
     const load = vi.fn(() => Promise.resolve([]))
     const context = {
-      bootstrapReady: true, identity: { userName: '', spaceId: 8 },
+      identity: { userName: '', spaceId: 8 },
       loadConversations: load, loadGroups: load, loadModels: load, loadSemantic: load,
     }
     evaluate('initialLoad', context)

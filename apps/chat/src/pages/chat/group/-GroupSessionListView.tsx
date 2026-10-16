@@ -14,7 +14,7 @@ import {
 } from '@/service/api/app'
 import type { SessionGroup } from '@/service/api/app'
 import { fetchIsFavorite, fetchOperateNew } from '@/service/api/abi-system'
-import { useChatBootstrap } from '@/resources/chatBootstrap'
+import { useChatBootstrap, useChatConversations, useChatGroups } from '@/resources/chatBootstrap'
 import { getSpaceId } from '@/utils/runtime'
 
 interface GroupSessionListViewProps {
@@ -29,6 +29,8 @@ const GroupSessionListView: React.FC<GroupSessionListViewProps> = ({
   onGroupDeleted,
 }) => {
   const bootstrap = useChatBootstrap()
+  const conversations = useChatConversations()
+  const groupSnapshot = useChatGroups()
   const [keyword, setKeyword] = useState('')
 
   const [editVisible, setEditVisible] = useState(false)
@@ -43,8 +45,8 @@ const GroupSessionListView: React.FC<GroupSessionListViewProps> = ({
   // 收藏状态：记录已收藏的对话 chatId，用于菜单文案「收藏对话/取消收藏」
   const [favoriteChatIds, setFavoriteChatIds] = useState<Set<string>>(new Set())
 
-  const groups = bootstrap.groups.data ?? []
-  const allSessions = bootstrap.conversations.data ?? []
+  const groups = groupSnapshot.data ?? []
+  const allSessions = conversations.data ?? []
   const group = groups.find(
     (item: SessionGroup) => String(item.groupId) === String(groupId),
   ) ?? null
@@ -52,11 +54,11 @@ const GroupSessionListView: React.FC<GroupSessionListViewProps> = ({
     (app: any) => String(app.groupId ?? app.group_id) === String(groupId),
   )
   const loading = (
-    (bootstrap.groups.status === 'idle' || bootstrap.groups.status === 'loading') && !bootstrap.groups.data
+    (groupSnapshot.status === 'idle' || groupSnapshot.status === 'loading') && !groupSnapshot.data
   ) || (
-    (bootstrap.conversations.status === 'idle' || bootstrap.conversations.status === 'loading') && !bootstrap.conversations.data
+    (conversations.status === 'idle' || conversations.status === 'loading') && !conversations.data
   )
-  const loadError = bootstrap.groups.status === 'error' || bootstrap.conversations.status === 'error'
+  const loadError = groupSnapshot.status === 'error' || conversations.status === 'error'
 
   const loadData = useCallback(async (force = false) => {
     try {

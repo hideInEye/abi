@@ -33,6 +33,12 @@
 - 运行期间两个应用的空间选择器同步共享空间 ID 和名称；Chat 使用既有 `space-change` 事件更新数据上下文。
 - 实现入口：`packages/auth/src/sessionSync.ts`、`apps/abi/src/bootstrap/sessionSync.ts`、`apps/chat/src/bootstrap/sessionSync.ts`；空间初始化位于两个应用各自的 `src/bootstrap/sessionSpace.ts`。
 
+## Chat 工作台加载与数据订阅
+
+- `pages/chat/route.tsx` 中侧栏及空间选择器的懒加载边界在工作台内保持挂载，不使用新建/历史对话路由变化控制首屏就绪状态，也不设置固定等待时间；定时任务等可选功能仍按需加载。
+- `resources/chatBootstrap.tsx` 的 Context 仅提供身份、资源 key 和稳定操作。对话、分组、模型、语义数据分别通过 `useChatConversations`、`useChatGroups`、`useChatModels`、`useChatSemantic` 订阅现有 RequestResource；只需要操作的消费者不订阅数据快照。
+- 最近对话仅在当前身份尚无数据且处于 idle/loading 时显示局部加载状态。已有数据（包括成功的空列表）刷新时保留内容，失败时不清空。资源缓存、在途去重、身份隔离及取消/过期响应保护沿用既有实现。
+
 ## 微前端集成约束
 
 - 当前拓扑：ABI 是宿主，Dashboard 是 qiankun 子应用；Chat 的 `registerAiBotMicroApp()` 是兼容空函数，实际通过 `/chat-ui/` 独立运行。

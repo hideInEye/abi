@@ -11,7 +11,6 @@ import { BrandHeader } from '@/components/layout/BrandHeader'
 import { CreateConversationButton } from '@/components/layout/CreateConversationButton'
 import { SidebarCollapseProvider } from '@/components/layout/SidebarCollapseContext'
 import { LazyFeatureFallback, RetryableLazy } from '@/components/performance/RetryableLazy'
-import { useAfterFirstPaint } from '@/components/performance/useAfterFirstPaint'
 import { ChatBootstrapProvider } from '@/resources/chatBootstrap'
 import { getCurrentUserName, subscribeCurrentUser } from '@/utils/identity'
 
@@ -65,7 +64,6 @@ function ChatWorkbenchLayoutContent() {
   // 技能商店 / 应用工坊已改为独立路由，激活态直接由 pathname 派生
   const showSkillStore = pathname.startsWith(SKILL_STORE_ROUTE)
   const showWorkshop = pathname.startsWith(WORKSHOP_ROUTE)
-  const chromeReady = useAfterFirstPaint(pathname === '/chat/task/new' ? 1200 : 0)
 
   const userName = useSyncExternalStore(subscribeCurrentUser, getCurrentUserName)
   const pageTitle = useMemo(() => {
@@ -144,21 +142,18 @@ function ChatWorkbenchLayoutContent() {
               onCreated={handleCreateNewChat}
             />
 
-            {chromeReady ? (
-              <RetryableLazy
-                loader={loadWorkbenchSidebarPanels}
-                componentProps={{
-                  activeKey: showSkillStore ? SKILL_STORE_MENU_KEY : showWorkshop ? 'workshop' : undefined,
-                  collapsed,
-                  onItemClick: handleNavItemClick,
-                  suppressHistoryActive: showSkillStore || showWorkshop,
-                  userName,
-                }}
-                fallback={<SidebarPanelsFallback collapsed={collapsed} userName={userName} />}
-              />
-            ) : (
-              <SidebarPanelsFallback collapsed={collapsed} userName={userName} />
-            )}
+            {/* 懒加载边界常驻，切换新建/历史对话时保留侧栏组件及其展开、滚动状态。 */}
+            <RetryableLazy
+              loader={loadWorkbenchSidebarPanels}
+              componentProps={{
+                activeKey: showSkillStore ? SKILL_STORE_MENU_KEY : showWorkshop ? 'workshop' : undefined,
+                collapsed,
+                onItemClick: handleNavItemClick,
+                suppressHistoryActive: showSkillStore || showWorkshop,
+                userName,
+              }}
+              fallback={<SidebarPanelsFallback collapsed={collapsed} userName={userName} />}
+            />
           </div>
         </div>
       </aside>
@@ -176,15 +171,11 @@ function ChatWorkbenchLayoutContent() {
               <ClockCircleOutlined />
               定时任务
             </button>
-            {chromeReady ? (
-              <RetryableLazy
-                loader={loadSpaceSelector}
-                componentProps={{ collapsed: false }}
-                fallback={<div aria-busy="true" className="space-switcher-wrap"><div className="space-switcher-glass h-9 w-32 animate-pulse" /></div>}
-              />
-            ) : (
-              <div aria-busy="true" className="space-switcher-wrap"><div className="space-switcher-glass h-9 w-32 animate-pulse" /></div>
-            )}
+            <RetryableLazy
+              loader={loadSpaceSelector}
+              componentProps={{ collapsed: false }}
+              fallback={<div aria-busy="true" className="space-switcher-wrap"><div className="space-switcher-glass h-9 w-32 animate-pulse" /></div>}
+            />
             {scheduleOpen && (
               <RetryableLazy
                 loader={loadScheduleTaskDrawer}

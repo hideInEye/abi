@@ -2,13 +2,12 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, u
 import type { ReactNode } from 'react'
 
 import { CHAT_MODE } from '@/constant'
-import { useAfterFirstPaint } from '@/components/performance/useAfterFirstPaint'
 import type { SessionGroup } from '@/service/api/app'
 import { getSpaceId } from '@/utils/runtime'
 import { getCurrentUser, subscribeCurrentUser } from '@/utils/identity'
 
 import { getChatBootstrapKeys } from './chatBootstrapKeys'
-import type { ChatBootstrapIdentity } from './chatBootstrapKeys'
+import type { ChatBootstrapIdentity, ChatBootstrapKeys } from './chatBootstrapKeys'
 import { RequestResource } from './requestResource'
 import type { RequestResourceSnapshot } from './requestResource'
 
@@ -32,17 +31,14 @@ interface LoadResourceOptions {
 }
 
 interface ChatBootstrapValue {
-  conversations: RequestResourceSnapshot<any[]>
-  groups: RequestResourceSnapshot<SessionGroup[]>
   identity: ChatBootstrapIdentity
+  keys: ChatBootstrapKeys
   invalidateConversations: () => void
   invalidateGroups: () => void
   loadConversations: (options?: LoadResourceOptions) => Promise<any[]>
   loadGroups: (options?: LoadResourceOptions) => Promise<SessionGroup[]>
   loadModels: (options?: LoadResourceOptions) => Promise<BootstrapModels>
   loadSemantic: (options?: LoadResourceOptions) => Promise<any[]>
-  models: RequestResourceSnapshot<BootstrapModels>
-  semantic: RequestResourceSnapshot<any[]>
   updateConversations: (updater: (current: any[]) => any[]) => void
   updateGroups: (updater: (current: SessionGroup[]) => SessionGroup[]) => void
 }
@@ -119,16 +115,6 @@ function abortIdentity(identity: ChatBootstrapIdentity): void {
 export function ChatBootstrapProvider({ children }: { children: ReactNode }) {
   const [identity, setIdentity] = useState<ChatBootstrapIdentity>(() => readIdentity())
   const keys = useMemo(() => getChatBootstrapKeys(identity), [identity])
-  const deferInitialLoads = useMemo(
-    () => /^#\/chat\/task\/new(?:[/?]|$)/.test(window.location.hash),
-    [],
-  )
-  const bootstrapReady = useAfterFirstPaint(deferInitialLoads ? 1200 : 0)
-
-  const conversations = useSnapshot(conversationsResource, keys.conversations)
-  const groups = useSnapshot(groupsResource, keys.groups)
-  const models = useSnapshot(modelsResource, keys.models)
-  const semantic = useSnapshot(semanticResource, keys.semantic)
 
   const loadConversations = useCallback((options: LoadResourceOptions = {}) => {
     if (!identity.userName) return Promise.resolve([])
@@ -198,12 +184,12 @@ export function ChatBootstrapProvider({ children }: { children: ReactNode }) {
   }, [keys.groups])
 
   useEffect(() => {
-    if (!bootstrapReady || !identity.userName) return
+    if (!identity.userName) return
     void loadConversations().catch(() => {})
     void loadGroups().catch(() => {})
     void loadModels().catch(() => {})
     void loadSemantic().catch(() => {})
-  }, [bootstrapReady, identity.userName, loadConversations, loadGroups, loadModels, loadSemantic])
+  }, [identity.userName, loadConversations, loadGroups, loadModels, loadSemantic])
 
   useEffect(() => subscribeCurrentUser(() => {
     setIdentity(current => {
@@ -230,32 +216,27 @@ export function ChatBootstrapProvider({ children }: { children: ReactNode }) {
   // 身份变化时终止旧账号或旧空间的在途请求，避免继续消耗资源或更新过期缓存。
   useEffect(() => () => abortIdentity(identity), [identity])
 
+  // Context 只承载身份和稳定操作，资源加载状态由消费者独立订阅，避免刷新列表连带更新整个工作台。
   const value = useMemo<ChatBootstrapValue>(() => ({
-    conversations,
-    groups,
     identity,
+    keys,
     invalidateConversations,
     invalidateGroups,
     loadConversations,
     loadGroups,
     loadModels,
     loadSemantic,
-    models,
-    semantic,
     updateConversations,
     updateGroups,
   }), [
-    conversations,
-    groups,
     identity,
+    keys,
     invalidateConversations,
     invalidateGroups,
     loadConversations,
     loadGroups,
     loadModels,
     loadSemantic,
-    models,
-    semantic,
     updateConversations,
     updateGroups,
   ])
@@ -267,4 +248,24 @@ export function useChatBootstrap(): ChatBootstrapValue {
   const value = useContext(ChatBootstrapContext)
   if (!value) throw new Error('useChatBootstrap 必须在 ChatBootstrapProvider 内使用')
   return value
+}
+
+export function useChatConversations(): RequestResourceSnapshot<any[]> {
+  const { keys } = useChatBootstrap()
+  return useSnapshot(conversationsResource, keys.conversations)
+}
+
+export function useChatGroups(): RequestResourceSnapshot<SessionGroup[]> {
+  const { keys } = useChatBootstrap()
+  return useSnapshot(groupsResource, keys.groups)
+}
+
+export function useChatModels(): RequestResourceSnapshot<BootstrapModels> {
+  const { keys } = useChatBootstrap()
+  return useSnapshot(modelsResource, keys.models)
+}
+
+export function useChatSemantic(): RequestResourceSnapshot<any[]> {
+  const { keys } = useChatBootstrap()
+  return useSnapshot(semanticResource, keys.semantic)
 }
