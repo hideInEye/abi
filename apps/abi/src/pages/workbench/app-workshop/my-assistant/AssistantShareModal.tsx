@@ -32,7 +32,7 @@ const THEME_OPTIONS: { value: ShareTheme; label: string; bg: string; bar: string
 /**
  * 助手分享弹窗
  * UI 参考「我的大屏」分享弹窗（访问密码保护 / 链接有效期 / 生成链接 / 复制链接）。
- * 对接统一分享接口 /api/dashboard/api/v1/project/share（abi 助手 type=workflow）。
+ * 对接统一分享接口 /api/dashboard/api/v1/project/share（abi 助手 type=react）。
  */
 const AssistantShareModal: React.FC<Props> = ({ agent, open, onClose, onShared, defaultApiKeys }) => {
   const spaceId = useAppSelector(getSpaceId)
@@ -76,9 +76,9 @@ const AssistantShareModal: React.FC<Props> = ({ agent, open, onClose, onShared, 
       const { data, error } = await shareProjectApi({
         projectId: agent.id,
         spaceId: spaceId || 0,
-        type: 'workflow',
-        theme,
-        ...(apiKeys.length ? { apiKeys } : {}),
+        type: 'react',
+        // 每个 API Key 一组配置，主题 UI 配置随组下发（JSON 字符串）
+        configs: apiKeys.map((apiKey) => ({ uiConfig: JSON.stringify({ theme }), apiKey })),
         ...(expirationDays !== undefined ? { expirationDays } : {}),
         ...(expirationDateStr ? { expirationDate: expirationDateStr } : {}),
       })

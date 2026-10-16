@@ -33,13 +33,6 @@ const ThemeSchemaSwitch: FC<Props> = memo(({ showTooltip = true, tooltipPlacemen
   const tooltipContent = showTooltip ? t('icon.themeSchema') : '';
 
   const toggleDark: ButtonProps['onClick'] = event => {
-    const isAppearanceTransition = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-    if (!isAppearanceTransition) {
-      dispatch(toggleThemeScheme());
-      return;
-    }
-
     const transition = document.startViewTransition(async () => {
       dark = dispatch(toggleThemeScheme()) as boolean;
     });

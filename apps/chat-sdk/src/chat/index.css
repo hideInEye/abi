@@ -1980,12 +1980,6 @@ button {
     visibility 0s linear 0.6s;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .report-composer-presence,
-  .report-composer-hidden {
-    transition: none;
-  }
-}
 
 /* ── Model Switcher ── */
 .model-switcher-btn {
@@ -3519,11 +3513,4 @@ code, pre {
 @keyframes typingBounce {
   0%, 60%, 100% { transform: translateY(0); opacity: 0.4 }
   30% { transform: translateY(-4px); opacity: 1 }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
-  }
 }

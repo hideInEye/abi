@@ -19,14 +19,14 @@ export interface OperLogSearchState {
   dateRange: [DateRangeItem, DateRangeItem] | null;
 }
 
-// 顶部关键词同时下发 title 与 businessType，由后端对系统模块、操作类型任一模糊命中即返回；高级筛选值优先
+// 关键词走后端 searchValue 做系统模块/操作类型 OR 模糊匹配；businessType 为后端 Integer 字典值，不可塞中文
 export function buildOperLogSearchParams(state: OperLogSearchState) {
-  const keyword = state.keyword.trim();
   return {
     pageNum: 1,
     operName: '',
-    title: state.title.trim() || keyword,
-    businessType: state.businessType ?? keyword,
+    searchValue: state.keyword.trim(),
+    title: state.title.trim(),
+    businessType: state.businessType ?? '',
     operIp: state.operIp.trim(),
     status: state.status ?? '',
     ...timeParams(state.dateRange)
@@ -36,6 +36,7 @@ export function buildOperLogSearchParams(state: OperLogSearchState) {
 export const EMPTY_OPER_LOG_SEARCH_PARAMS = {
   pageNum: 1,
   operName: '',
+  searchValue: '',
   title: '',
   businessType: '',
   operIp: '',

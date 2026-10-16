@@ -359,6 +359,18 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
                     >
                       <ASwitch checkedChildren="支持" unCheckedChildren="不支持" />
                     </AForm.Item>
+
+                    {/* 是否支持多模态 (isMultimodal：0=不支持，1=支持) */}
+                    <AForm.Item
+                      label={<span style={{ fontWeight: 500, color: '#3e5068' }}>是否支持多模态</span>}
+                      name="isMultimodal"
+                      initialValue={0}
+                      valuePropName="checked"
+                      getValueFromEvent={(checked: boolean) => (checked ? 1 : 0)}
+                      getValueProps={(value: number | string) => ({ checked: value === 1 || value === '1' })}
+                    >
+                      <ASwitch checkedChildren="支持" unCheckedChildren="不支持" />
+                    </AForm.Item>
                   </div>
 
                   {/* 描述 */}

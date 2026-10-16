@@ -24,7 +24,7 @@ import { calculateVirtualMessageWindow, getDeferredMessageStyle } from './messag
 
 const loadViewMessage = () => import('../ViewEle')
 const loadReportMessageRow = () => import('../report-mode/ReportMessageRow')
-const loadExploreMessageRow = () => import('../exploration-mode/ExploreMessageRow')
+const loadExploreMessageRow = () => import('../exploration-mode/v2/ExploreMessageRow')
 const loadSchemaFieldsModal = () => import('../../conversation-analysis/SchemaFieldsModal')
 
 // 从消息内容（view 的 chart-view 或内嵌 JSON）中解析数据分组/语义元信息，
@@ -101,6 +101,10 @@ type MessageListProps = {
   onOpenReport?: (reportId: string) => void
   /** 打开探索结果工作室侧栏。 */
   onOpenExplore?: (exploreId: string) => void
+  /** 探索消息内点击步骤结果入口：打开工作室并定位到该步骤屏。 */
+  onOpenExploreStep?: (exploreId: string, stepId: string) => void
+  /** 工作室当前屏绑定的步骤 id，用于消息内定位高亮。 */
+  exploreLocateStepId?: string
   /** 关闭探索结果工作室侧栏。 */
   onCloseExplore?: () => void
   /** 探索代码块点击编辑时打开右侧代码编辑面板。 */
@@ -153,6 +157,8 @@ const MessageList = ({
   onToggleReportTask,
   onOpenReport,
   onOpenExplore,
+  onOpenExploreStep,
+  exploreLocateStepId,
   onCloseExplore,
   onEditExploreCode,
   activeExploreId,
@@ -362,8 +368,11 @@ const MessageList = ({
           loader={loadExploreMessageRow}
           componentProps={{
             item: exploration,
+            scrollContainerRef: containerRef,
+            locateStepId: exploreLocateStepId,
             active: activeExploreId === exploration.id,
             onOpen: () => onOpenExplore?.(exploration.id),
+            onOpenStep: onOpenExploreStep ? (stepId: string) => onOpenExploreStep(exploration.id, stepId) : undefined,
             onClose: onCloseExplore,
             onEditCode: onEditExploreCode,
             onDelete: deleteRoundIndex !== undefined && onEnterDeleteMode

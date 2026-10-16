@@ -1,5 +1,5 @@
 /**
- * 图表数据处理与 ECharts option 构建（主对话 ViewEle 与分享悬浮框 chat-widget 共用）
+ * 图表数据处理与 ECharts option 构建（主对话 ViewEle 使用）
  * 自 ViewEle 内联逻辑原样抽出，行为保持一致；样式参数（字体/配色）可覆盖，默认取 ViewEle 初始值。
  */
 import type { EChartsOption } from 'echarts'

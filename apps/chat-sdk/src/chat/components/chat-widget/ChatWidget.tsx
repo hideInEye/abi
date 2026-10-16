@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { ConfigProvider, Popover, Table, Typography, message as antdMessage, theme as antdTheme } from 'antd'
-import { ApiOutlined, CheckOutlined, EyeOutlined, RightOutlined, SearchOutlined, ToolOutlined } from '@ant-design/icons'
+import { ConfigProvider, Dropdown, Popover, Table, Typography, theme as antdTheme } from 'antd'
+import { ApiOutlined, CheckOutlined, DownOutlined, EyeOutlined, RightOutlined, SearchOutlined, ToolOutlined } from '@ant-design/icons'
 import zhCN from 'antd/es/locale/zh_CN'
 import { format as formatSql } from 'sql-formatter'
 // @ts-ignore - react-syntax-highlighter 类型定义问题
@@ -44,33 +44,41 @@ import { buildReportSourceVersionFields } from '../conversation/components/chat-
 import { parseViewChart, type WidgetChart, WidgetMessage } from './history'
 import { nextUserScrolled } from './scrollFollow'
 import {
-  checkSharePassword,
   ensureSession,
-  fetchAssistantInfo,
   fetchChartDataBySql,
   fetchHistory,
   fetchMaxRound,
   fetchSemanticDetail,
+  fetchSessionList,
+  fetchShareProjectInfo,
+  fetchShareListByApiKey,
   fetchViewContextByRound,
+  deleteSession,
+  updateSession,
   parseAiRaw,
   saveShareTheme,
   sendChatStream,
+  SHARE_PROBE_TYPES,
   submitFeedback,
-  type ProjectType,
+  type ShareProjectInfo,
   type WidgetAssistantInfo,
   type WidgetSemanticNode,
   type WidgetSemanticSelection,
   type WidgetSession,
+  type WidgetSessionItem,
+  type WidgetShareItem,
 } from './service'
+import { setShareApiKey } from '../../service/request/share-api-key'
 import type { AssistantBoundMcp, AssistantBoundSkill } from '../../pages/chat/workshop/assistantResources'
 import { ChartThemeContext, useChartTheme } from './ChartThemeContext'
 import { useTweenedChartStyle } from './useTweenedChartStyle'
 import ThemeCustomizer from './ThemeCustomizer'
+import HistoryDrawer from './HistoryDrawer'
+import ShareKeyGate from './ShareKeyGate'
 import {
   chartStyleFromConfig,
   DEFAULT_THEME,
   mergeThemeOverride,
-  normalizeThemeConfig,
   resolveFullConfig,
   resolveThemeStyle,
   themeConfigToStyle,
@@ -78,6 +86,7 @@ import {
   type ThemeConfig,
   type ThemeId,
 } from '../../../theme'
+import { showWidgetToast, WidgetToastHost } from './widgetToast'
 import './index.css'
 
 export interface ChatWidgetProps {
@@ -87,12 +96,6 @@ export interface ChatWidgetProps {
   apiBase: string
   /** page：分享路由页整页面板；float：第三方嵌入右侧悬浮面板；embed：iframe 直嵌（铺满 iframe，宿主自行控制悬浮定位与尺寸，禁拖拽/缩放/放大） */
   mode?: 'page' | 'float' | 'embed'
-  /** 外层（分享页）已完成校验并拿到 appId 时传入，跳过 widget 内部校验/密码表单 */
-  verifiedAppId?: string
-  /** 外层校验时后端返回的项目类型（自主助手=react / 工作流助手=workflow），随 verifiedAppId 透传 */
-  verifiedType?: ProjectType
-  /** 外层分享校验通过后后端下发的临时 token，后续接口随 Authorization 携带 */
-  verifiedToken?: string
   /** float 形态下的关闭回调 */
   onClose?: () => void
   /** 预设主题风格：blue（默认现状）/ light（白色系）/ dark（黑色系），由分享配置下发 */
@@ -101,9 +104,27 @@ export interface ChatWidgetProps {
   showThemeSwitch?: boolean
   /** 宿主注入的初始自定义配置（优先级最低：预设基准 < 宿主注入 < 接口下发 < 访客本地） */
   initialThemeConfig?: DeepPartial<ThemeConfig>
+  /** 第三方在平台创建的 API-Key（apiKey），分享页所有请求随 x-api-key 头携带 */
+  apiKey?: string
+  /** 与 apiKey 配对的 secretKey，分享页所有请求随 secrectKey 头携带 */
+  secretKey?: string
 }
 
-type Phase = 'checking' | 'password' | 'loading' | 'ready' | 'error'
+/** 面板内部 props：在公共 props 之上注入助手切换列表与切换回调（由外层 ChatWidget 提供） */
+interface ChatWidgetPanelProps extends ChatWidgetProps {
+  /** 同一 API-Key 下的分享助手列表；长度 >1 时头部标题变为可切换下拉 */
+  assistants?: WidgetShareItem[]
+  /** 切换到另一个助手（外层通过改 key 重挂载面板完成状态重置） */
+  onSwitchAssistant?: (shareCode: string) => void
+  /** 重挂载后面板要恢复的 inline 样式（拖拽/缩放后的位置与大小），由外层跨挂载持有 */
+  initialPanelStyle?: string
+  /** 拖拽/缩放结束时上报当前 inline 样式，供外层持久化，切换助手重挂载后恢复 */
+  onPanelStyleChange?: (style: string) => void
+  /** 宿主未注入密钥时由使用者手填（写入外层 manualKey，只存内存不落盘） */
+  onManualKey?: (apiKey: string, secretKey: string) => void
+}
+
+type Phase = 'checking' | 'loading' | 'ready' | 'error'
 
 /** 输入工具栏对话模式（标签同主对话，三模式各自对接发送协议与渲染） */
 type WidgetChatMode = 'interact' | 'report' | 'explore'
@@ -138,6 +159,24 @@ const WIDGET_CHART_TYPES: Array<{ value: string; label: string }> = [
 
 const isValidChartType = (t: unknown): boolean =>
   typeof t === 'string' && WIDGET_CHART_TYPES.some((i) => i.value === t)
+
+/** 历史 AI 消息结构化解析（剥离思考段/尾部 JSON）；view 消息挂来的图表按白名单校正类型（初始化与切换会话共用） */
+const enrichHistoryMessages = (history: WidgetMessage[]): WidgetMessage[] =>
+  history.map((m) => {
+    if (m.role !== 'ai') return m
+    const { thinking, text } = parseAiRaw(m.content)
+    const chart = m.chart && !isValidChartType(m.chart.type) ? { ...m.chart, type: 'response_bar_chart' } : m.chart
+    // ai 内容无正文字段时回退 view 消息 desc（同主对话 ViewEle 正文口径）；信息条取 view 的 semantic_*
+    return {
+      ...m,
+      thinking: thinking || undefined,
+      content: text || chart?.desc || '',
+      chart,
+      semanticGroup: chart?.semanticGroup,
+      semanticName: chart?.semanticName,
+      semanticSchemaId: chart?.semanticSchemaId,
+    }
+  })
 
 /** 流内/查数 JSON 的语义元信息 → 消息信息条字段（同主对话 extractSemanticMeta 口径）；schemaId 供 chip 点击开 Schema 抽屉 */
 const semanticMetaOf = (json: any): Pick<WidgetMessage, 'semanticGroup' | 'semanticName' | 'semanticSchemaId'> => ({
@@ -219,6 +258,31 @@ const IconCustomize = (
     <line x1="1" y1="14" x2="7" y2="14" />
     <line x1="9" y1="8" x2="15" y2="8" />
     <line x1="17" y1="16" x2="23" y2="16" />
+  </svg>
+)
+
+/* 头部“更多”入口图标（竖向三点） */
+const IconMore = (
+  <svg viewBox="0 0 24 24" fill="currentColor">
+    <circle cx="12" cy="5" r="2" />
+    <circle cx="12" cy="12" r="2" />
+    <circle cx="12" cy="19" r="2" />
+  </svg>
+)
+
+/* 更多菜单“历史对话”图标（时钟） */
+const IconHistory = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="9" />
+    <polyline points="12 7 12 12 15 14" />
+  </svg>
+)
+
+/* 更多菜单“关闭页面”图标（叉） */
+const IconClose = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
   </svg>
 )
 
@@ -314,7 +378,7 @@ const ChartCard = ({ chart, onTypeChange }: { chart: WidgetChart; onTypeChange: 
   // 导出：PNG 走客户端截图；csv/excel 在分享免登录场景无后端导出接口，用已有数据本地生成
   const handleExport = async (key: string) => {
     if (!hasData) {
-      antdMessage.warning('暂无数据可导出')
+      showWidgetToast('warning', '暂无数据可导出')
       return
     }
     try {
@@ -332,12 +396,12 @@ const ChartCard = ({ chart, onTypeChange }: { chart: WidgetChart; onTypeChange: 
         return
       }
       if (!['table', 'chart'].includes(activeType)) {
-        antdMessage.warning('请切换到表格或图表再点击进行下载图片')
+        showWidgetToast('warning', '请切换到表格或图表再点击进行下载图片')
         return
       }
       await handleImageExport(activeType as 'table' | 'chart', activeType === 'table' ? tableRef : echartRef, chart.title || '数据')
     } catch (error: any) {
-      antdMessage.error(error?.message || '文件导出失败，请重试')
+      showWidgetToast('error', error?.message || '文件导出失败，请重试')
     }
   }
 
@@ -537,59 +601,51 @@ const ChartCard = ({ chart, onTypeChange }: { chart: WidgetChart; onTypeChange: 
   )
 }
 
-/** 头部预设主题的记忆键（蓝/白/黑，跨刷新保留访客选择） */
-const THEME_STORAGE_KEY = 'abi-assistant-theme'
-/** 访客自定义主题配置的记忆键（背景/标题栏/字体/图表四维 JSON） */
-const THEME_CONFIG_STORAGE_KEY = 'abi-assistant-theme-config'
-
-/** 从 localStorage 读回自定义配置并校验（脏数据/异常一律 null） */
-function loadStoredThemeConfig(): DeepPartial<ThemeConfig> | null {
-  try {
-    const raw = localStorage.getItem(THEME_CONFIG_STORAGE_KEY)
-    return raw ? normalizeThemeConfig(JSON.parse(raw)) ?? null : null
-  } catch {
-    return null
-  }
-}
-
 /** 助手分享对话悬浮框：无 store 依赖的纯组件，分享页与第三方嵌入共用；渲染层复用主对话组件 */
-const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verifiedType, verifiedToken, onClose, theme = DEFAULT_THEME, showThemeSwitch = false, initialThemeConfig }: ChatWidgetProps) => {
-  // 分享校验通过后的临时 token（外层传入或 widget 内部密码校验后写入），后续接口随 Authorization 携带
-  const [shareToken, setShareToken] = useState(verifiedToken || '')
+const ChatWidgetPanel = ({ shareCode, apiBase, mode = 'page', onClose, theme = DEFAULT_THEME, showThemeSwitch = false, initialThemeConfig, apiKey, secretKey, assistants, onSwitchAssistant, initialPanelStyle, onPanelStyleChange, onManualKey }: ChatWidgetPanelProps) => {
+  // 分享入口接口下发的临时 token，后续接口随 Authorization 携带
+  const [shareToken, setShareToken] = useState('')
   // 分享记录存储的预设主题：接口下发后覆盖接入标签属性（后端未下发时保持属性/默认值）
   const [apiTheme, setApiTheme] = useState<ThemeId | null>(null)
   // 分享记录存储的自定义主题配置（后端下发，与 Token 映射）；未下发为 null
   const [apiThemeConfig, setApiThemeConfig] = useState<DeepPartial<ThemeConfig> | null>(null)
-  // 访客在浮窗自定义的配置：优先级最高，初始从 localStorage 恢复
-  const [customConfig, setCustomConfig] = useState<DeepPartial<ThemeConfig> | null>(loadStoredThemeConfig)
-  // 访客手动选择的预设：优先级最高，初始从 localStorage 恢复
-  const [userTheme, setUserTheme] = useState<ThemeId | null>(() => {
-    try {
-      const saved = localStorage.getItem(THEME_STORAGE_KEY)
-      return saved === 'dark' || saved === 'blue' || saved === 'light' ? saved : null
-    } catch {
-      return null
-    }
-  })
+  // 访客在浮窗自定义的配置：仅本次会话生效（不落 localStorage），点「保存」经 saveShareTheme 持久化到后端
+  const [customConfig, setCustomConfig] = useState<DeepPartial<ThemeConfig> | null>(null)
+  // 访客切过预设后，本次会话丢弃接口下发的旧自定义：旧配置是上一基准的四维值，
+  // 不丢弃会经 themeConfigToStyle 把 --cw-header-bg/--cw-body-bg 等建模变量钉死，预设切换只剩未建模变量在变
+  const [apiConfigDropped, setApiConfigDropped] = useState(false)
+  // 访客手动选择的预设：仅本次会话生效，跨刷新以后端下发/接入属性为准
+  const [userTheme, setUserTheme] = useState<ThemeId | null>(null)
   const effectiveTheme = userTheme ?? apiTheme ?? theme
   // 外观自定义抽屉开合与保存中态
   const [customizerOpen, setCustomizerOpen] = useState(false)
   const [savingTheme, setSavingTheme] = useState(false)
-  // 生效配置：预设基准 + 宿主注入 + 接口下发 + 访客本地（后者覆盖前者）；CSS 仅叠 override 保 blue 零风险，图表取完整值
-  const themeOverride = useMemo(() => mergeThemeOverride(initialThemeConfig, apiThemeConfig, customConfig), [initialThemeConfig, apiThemeConfig, customConfig])
+  // 历史对话抽屉：开合态与会话列表（打开时拉列表，点列表项切换会话）
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [historySessions, setHistorySessions] = useState<WidgetSessionItem[]>([])
+  const [historyLoading, setHistoryLoading] = useState(false)
+  // 头部更多下拉开合（自定义面板内点击项后手动关闭）
+  const [moreOpen, setMoreOpen] = useState(false)
+  // 头部助手切换下拉开合（同 moreOpen 手动关闭）
+  const [switchOpen, setSwitchOpen] = useState(false)
+  // 生效配置：预设基准 + 宿主注入 + 接口下发 + 访客本次会话自定义（后者覆盖前者）；CSS 仅叠 override 保 blue 零风险，图表取完整值
+  const themeOverride = useMemo(
+    () => mergeThemeOverride(initialThemeConfig, apiConfigDropped ? null : apiThemeConfig, customConfig),
+    [initialThemeConfig, apiThemeConfig, apiConfigDropped, customConfig]
+  )
   const fullThemeConfig = useMemo(() => resolveFullConfig(effectiveTheme, themeOverride), [effectiveTheme, themeOverride])
   const chartTheme = useMemo(() => ({ ...chartStyleFromConfig(fullThemeConfig), dark: effectiveTheme === 'dark' }), [fullThemeConfig, effectiveTheme])
   const rootStyle = useMemo(() => ({ ...resolveThemeStyle(effectiveTheme), ...themeConfigToStyle(themeOverride) }), [effectiveTheme, themeOverride])
   const cfg = useMemo(() => ({ shareCode, apiBase, token: shareToken || undefined }), [shareCode, apiBase, shareToken])
 
-  const [phase, setPhase] = useState<Phase>(verifiedAppId ? 'loading' : 'checking')
-  const [appId, setAppId] = useState(verifiedAppId || '')
+  const [phase, setPhase] = useState<Phase>('checking')
+  // 密钥填入弹窗开合：宿主未注入密钥时打开（面板照常渲染），填入提交后关闭并开始初始化
+  const keyGateOpen = !apiKey || !secretKey
+  const [appId, setAppId] = useState('')
   const [info, setInfo] = useState<WidgetAssistantInfo | null>(null)
   const [messages, setMessages] = useState<WidgetMessage[]>([])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
-  const [password, setPassword] = useState('')
-  const [passwordError, setPasswordError] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
   // 点赞点踩请求中的消息索引（防连点重复提交；-1 表示空闲）
   const [fbBusyIndex, setFbBusyIndex] = useState(-1)
@@ -630,6 +686,11 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
   const panelCssTextRef = useRef('')
   const didInit = useRef(false)
 
+  // 切换助手改 key 重挂载会丢 inline 定位，用外层快照在绘制前恢复位置/大小（放大是临时态，不在此恢复）
+  useLayoutEffect(() => {
+    if (initialPanelStyle && panelRef.current) panelRef.current.setAttribute('style', initialPanelStyle)
+  }, [initialPanelStyle])
+
   // 分享 token 以 Bearer 头注入探索/报告 service（依赖注入，不写 localStorage、不影响主对话登录态）
   const shareAuth = shareToken ? `Bearer ${shareToken}` : null
   // 探索/报告 hook 在渲染期读取的 conv：由 convSession 构造（字段名对齐主对话 conv）
@@ -664,84 +725,60 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
     authorization: shareAuth,
   })
 
-  // 加载助手信息 + 会话 + 历史（type 为统一接口 getProjectInfo/{type}/{id} 的类型段）
-  const load = useCallback(
-    async (id: string, type: ProjectType = 'react', tokenOverride?: string) => {
-      // 校验刚返回的 token 尚未写入 state，本轮接口直接用覆盖配置携带凭证
-      const effectiveCfg = tokenOverride ? { ...cfg, token: tokenOverride } : cfg
-      setAppId(id)
-      setPhase('loading')
-      const assistantInfo = await fetchAssistantInfo(effectiveCfg, id, type)
-      setInfo(assistantInfo)
-      // 数据语义随助手详情（getProjectInfo）一并下发；后端未加字段时为空列表，下拉显示“暂无数据语义”
-      setSemanticTree(assistantInfo?.semantics ?? [])
-      // 默认选中第一个数据语义（同主对话 findFirstSchemaLeaf：深度优先首个叶子）；已选中不覆盖
-      const findFirstSchemaLeaf = (nodes: WidgetSemanticNode[]): WidgetSemanticNode | undefined => {
-        for (const n of nodes) {
-          if (n.type === 'schema') return n
-          const hit = findFirstSchemaLeaf(Array.isArray(n.children) ? n.children : [])
-          if (hit) return hit
-        }
-        return undefined
+  // 入口成功后加载助手信息（随入口接口 getProjectInfo/{type}?shareCode= 一并下发）；不再预建会话，见下方说明
+  const load = useCallback(async (shareInfo: ShareProjectInfo) => {
+    setAppId(shareInfo.appId)
+    setPhase('loading')
+    setInfo(shareInfo)
+    // 数据语义随助手详情（getProjectInfo）一并下发；后端未加字段时为空列表，下拉显示“暂无数据语义”
+    setSemanticTree(shareInfo.semantics ?? [])
+    // 默认选中第一个数据语义（同主对话 findFirstSchemaLeaf：深度优先首个叶子）；已选中不覆盖
+    const findFirstSchemaLeaf = (nodes: WidgetSemanticNode[]): WidgetSemanticNode | undefined => {
+      for (const n of nodes) {
+        if (n.type === 'schema') return n
+        const hit = findFirstSchemaLeaf(Array.isArray(n.children) ? n.children : [])
+        if (hit) return hit
       }
-      const firstLeaf = findFirstSchemaLeaf(assistantInfo?.semantics ?? [])
-      if (firstLeaf) setSelectedSemantic((prev) => prev ?? { name: firstLeaf.name, schemaId: firstLeaf.schemaId, groupName: firstLeaf.groupName })
-      const session = await ensureSession(effectiveCfg, id, assistantInfo?.spaceId)
-      sessionRef.current = session
-      // 镜像到 state：探索/报告 hook 在渲染期读取 conv（sessionRef 不触发重渲染）
-      setConvSession(session)
-      if (session) {
-        const history = await fetchHistory(effectiveCfg, session.convUid)
-        // 历史 AI 消息同实时一样结构化解析（剥离思考段/尾部 JSON）；view 消息挂来的图表按白名单校正类型
-        // 图表数据仅取 view 消息自带结果行（同主对话历史链路不重查 sql）
-        const enriched = history.map((m) => {
-          if (m.role !== 'ai') return m
-          const { thinking, text } = parseAiRaw(m.content)
-          const chart = m.chart && !isValidChartType(m.chart.type) ? { ...m.chart, type: 'response_bar_chart' } : m.chart
-          // ai 内容无正文字段时回退 view 消息 desc（同主对话 ViewEle 正文口径）；信息条取 view 的 semantic_*
-          return {
-            ...m,
-            thinking: thinking || undefined,
-            content: text || chart?.desc || '',
-            chart,
-            semanticGroup: chart?.semanticGroup,
-            semanticName: chart?.semanticName,
-            semanticSchemaId: chart?.semanticSchemaId,
-          }
-        })
-        setMessages(enriched)
-      }
-      setPhase('ready')
-    },
-    [cfg],
-  )
+      return undefined
+    }
+    const firstLeaf = findFirstSchemaLeaf(shareInfo.semantics ?? [])
+    if (firstLeaf) setSelectedSemantic((prev) => prev ?? { name: firstLeaf.name, schemaId: firstLeaf.schemaId, groupName: firstLeaf.groupName })
+    // 初始化不预建会话：新会话没有历史可恢复，预建会导致每次打开悬浮窗都多一条空会话；
+    // 交互模式首条消息发送时创建，探索/报告在切入对应模式时补建（均走 ensureSessionNow）
+    sessionRef.current = null
+    setConvSession(null)
+    setMessages([])
+    setPhase('ready')
+  }, [])
 
-  // 进入先探测分享是否需要密码（密码传空串）
+  // 分享页唯一入口：getProjectInfo/{type}?shareCode=（type 固定 react，见 SHARE_PROBE_TYPES），返回 appId 即进入加载
   const initCheck = useCallback(async () => {
     setPhase('checking')
-    const res = await checkSharePassword(cfg, '').catch(() => null)
-    if (!res || !res.appId) {
-      setErrorMsg('获取分享信息失败')
-      setPhase('error')
+    for (const type of SHARE_PROBE_TYPES) {
+      const res = await fetchShareProjectInfo(cfg, type)
+      if (!res) continue
+      if (res.token) setShareToken(res.token)
+      if (res.theme) setApiTheme(res.theme)
+      if (res.themeConfig) setApiThemeConfig(res.themeConfig)
+      await load(res)
       return
     }
-    if (res.passwordFlag) {
-      setPhase('password')
-      return
-    }
-    if (res.token) setShareToken(res.token)
-    if (res.theme) setApiTheme(res.theme)
-    if (res.themeConfig) setApiThemeConfig(res.themeConfig)
-    await load(res.appId, res.type, res.token)
+    setErrorMsg('获取分享信息失败')
+    setPhase('error')
   }, [cfg, load])
 
+  // 第三方注入的 API-Key 写入请求上下文：须在入口请求（initCheck）之前完成，
+  // 保证分享页首个接口起所有请求都带 x-api-key / secrectKey 头
   useEffect(() => {
-    // 守卫：StrictMode 重挂载不重复初始化（避免重复建会话）
-    if (didInit.current) return
+    setShareApiKey(apiKey, secretKey)
+  }, [apiKey, secretKey])
+
+  useEffect(() => {
+    // 守卫：StrictMode 重挂载不重复初始化（避免重复建会话）；密钥未就位时先弹填入弹窗，不做初始化请求
+    if (didInit.current || keyGateOpen) return
     didInit.current = true
-    if (verifiedAppId) void load(verifiedAppId, verifiedType)
-    else void initCheck()
-  }, [verifiedAppId, verifiedType, load, initCheck])
+    void initCheck()
+  }, [initCheck, keyGateOpen])
 
   // 卸载时中断进行中的流式请求，避免向已卸载组件写状态
   useEffect(() => () => abortRef.current?.abort(), [])
@@ -801,23 +838,6 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
     ro.observe(panel)
     return () => ro.disconnect()
   }, [])
-
-  const handlePasswordSubmit = async () => {
-    if (!password) {
-      setPasswordError('请输入密码')
-      return
-    }
-    const res = await checkSharePassword(cfg, password).catch(() => null)
-    if (res?.result && res.appId) {
-      setPasswordError('')
-      if (res.token) setShareToken(res.token)
-      if (res.theme) setApiTheme(res.theme)
-      if (res.themeConfig) setApiThemeConfig(res.themeConfig)
-      await load(res.appId, res.type, res.token)
-    } else {
-      setPasswordError('密码错误')
-    }
-  }
 
   // 增量合并消息字段：省略 index = 最后一条 AI（流式进行中）；指定 index = 历史消息回填（新消息只追加末尾，索引稳定）
   const patchMsg = (patch: Partial<WidgetMessage>, index?: number) => {
@@ -917,18 +937,23 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
     if (ok) patchMsg({ feedback: next }, index)
   }
 
+  // 确保存在会话，没有则创建：交互发送前、探索/报告切入时、删除当前会话后共用
+  const ensureSessionNow = async (): Promise<WidgetSession | null> => {
+    if (sessionRef.current) return sessionRef.current
+    const session = await ensureSession(cfg, appId, info?.spaceId)
+    if (!session) return null
+    sessionRef.current = session
+    setConvSession(session)
+    return session
+  }
+
   const handleSend = async (explicitText?: string) => {
     const text = (explicitText ?? input).trim()
     if (!text || sending || phase !== 'ready') return
-    let session = sessionRef.current
+    const session = sessionRef.current ?? (await ensureSessionNow())
     if (!session) {
-      session = await ensureSession(cfg, appId, info?.spaceId)
-      if (!session) {
-        setErrorMsg('创建会话失败，请稍后重试')
-        return
-      }
-      sessionRef.current = session
-      setConvSession(session)
+      setErrorMsg('创建会话失败，请稍后重试')
+      return
     }
     setInput('')
     setSending(true)
@@ -1060,11 +1085,11 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
       if (exploreController.loading) return
       const schemaId = selectedSemantic?.schemaId
       if (schemaId == null || schemaId === '') {
-        antdMessage.warning('请先选择数据语义')
+        showWidgetToast('warning', '请先选择数据语义')
         return
       }
       if (!convSession) {
-        antdMessage.error('会话未就绪，请稍后重试')
+        showWidgetToast('error', '会话未就绪，请稍后重试')
         return
       }
       setInput('')
@@ -1080,7 +1105,7 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
     if (chatMode === 'report') {
       if (reportController.loading) return
       if (!convSession) {
-        antdMessage.error('会话未就绪，请稍后重试')
+        showWidgetToast('error', '会话未就绪，请稍后重试')
         return
       }
       setInput('')
@@ -1160,6 +1185,19 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
     })
   }
 
+  // 拖拽/缩放落定：把面板 left/top 由绝对 px 换算成视口百分比。百分比对 fixed 元素按视口解析，
+  // 浏览器缩放（Ctrl+滚轮改视口 CSS px 尺寸）时面板保持同一屏幕相对位置，不再随缩放漂移或跑出视口。
+  const persistPanelStyleAsViewportRatio = () => {
+    const panel = panelRef.current
+    if (!panel) return
+    const vw = window.innerWidth || 1
+    const vh = window.innerHeight || 1
+    const rect = panel.getBoundingClientRect()
+    panel.style.left = `${(rect.left / vw) * 100}%`
+    panel.style.top = `${(rect.top / vh) * 100}%`
+    onPanelStyleChange?.(panel.getAttribute('style') || '')
+  }
+
   // 按住头部拖拽面板：首次拖拽时把 CSS 定位切换为显式 left/top，之后跟随指针；放大态禁用
   const handleDragStart = (e: React.PointerEvent) => {
     // iframe 直嵌形态由宿主页面控制悬浮定位，面板铺满 iframe，禁用窗内拖拽
@@ -1175,6 +1213,9 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
     panel.style.transform = 'none'
     panel.style.right = 'auto'
     panel.style.bottom = 'auto'
+    // 立刻把 left/top 钉在当前 rect：清掉 right 锚点后 fixed 元素会回退到静态位置（贴左），不钉住会首帧闪跳
+    panel.style.left = `${rect.left}px`
+    panel.style.top = `${rect.top}px`
     const onMove = (ev: PointerEvent) => {
       const left = Math.min(Math.max(rect.left + ev.clientX - startX, 0), window.innerWidth - 80)
       const top = Math.min(Math.max(rect.top + ev.clientY - startY, 0), window.innerHeight - 48)
@@ -1184,6 +1225,7 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
     const onUp = () => {
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
+      persistPanelStyleAsViewportRatio()
     }
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
@@ -1237,67 +1279,71 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
     const onUp = () => {
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
+      persistPanelStyleAsViewportRatio()
     }
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
   }
 
-  // 自定义抽屉打开时临时加宽面板：抽屉占位 340px，给左侧留出预览区，避免取色时看不到实时效果
+  // 缩放/窗口尺寸变化时把自定义定位的面板钳回视口（Ctrl+滚轮缩放会触发 resize）：仅处理拖拽/改过尺寸的百分比定位态，
+  // 默认 right/top 锚定、embed、放大态百分比布局本身随视口自适应，早退不动。
   useEffect(() => {
-    const el = panelRef.current
-    if (!el) return
-    const shouldWiden = customizerOpen && mode !== 'embed' && !maximized
-    if (shouldWiden) {
-      if (el.getBoundingClientRect().width < 760) {
-        el.dataset.cwPrevWidth = el.style.width
-        el.style.width = '760px'
-      }
-    } else if (el.dataset.cwPrevWidth !== undefined) {
-      el.style.width = el.dataset.cwPrevWidth
-      delete el.dataset.cwPrevWidth
+    if (mode === 'embed') return
+    const clampToViewport = () => {
+      const panel = panelRef.current
+      if (!panel || maximized) return
+      const style = panel.style
+      // left 非百分比 = 默认锚定态或拖拽进行中（px），不干预
+      if (!style.left.endsWith('%')) return
+      const vw = window.innerWidth
+      const vh = window.innerHeight
+      // 宽高夹到视口内（保留安全边距，口径同 handleResizeStart）
+      if (style.width.endsWith('px')) style.width = `${Math.max(0, Math.min(parseFloat(style.width), vw - VIEWPORT_MARGIN))}px`
+      if (style.height.endsWith('px')) style.height = `${Math.max(0, Math.min(parseFloat(style.height), vh - VIEWPORT_MARGIN))}px`
+      // 位置按已存百分比钳制，至少保留 80×48 可见（口径同 handleDragStart）；解析百分比而非用 rect 反算，避免多次 resize 累积漂移
+      const maxLeftPct = vw > 0 ? Math.max(0, ((vw - 80) / vw) * 100) : 0
+      const maxTopPct = vh > 0 ? Math.max(0, ((vh - 48) / vh) * 100) : 0
+      style.left = `${Math.min(Math.max(parseFloat(style.left) || 0, 0), maxLeftPct)}%`
+      style.top = `${Math.min(Math.max(parseFloat(style.top) || 0, 0), maxTopPct)}%`
+      onPanelStyleChange?.(panel.getAttribute('style') || '')
     }
-  }, [customizerOpen, mode, maximized])
+    window.addEventListener('resize', clampToViewport)
+    clampToViewport()
+    return () => window.removeEventListener('resize', clampToViewport)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [maximized, mode])
 
-  // 预设切换：记忆到 localStorage 并清空本地自定义（回到该预设的干净基准）
+  // 预设切换：仅本次会话生效，并清空自定义（回到该预设的干净基准）
   const handlePresetChange = (id: ThemeId) => {
     setUserTheme(id)
     setCustomConfig(null)
-    try {
-      localStorage.setItem(THEME_STORAGE_KEY, id)
-      localStorage.removeItem(THEME_CONFIG_STORAGE_KEY)
-    } catch {
-      // localStorage 不可用时仅本次会话生效
-    }
+    setApiConfigDropped(true)
   }
 
-  // 自定义面板实时改动：更新本地配置并记忆（即时预览，跨刷新保留）
+  // 自定义面板实时改动：即时预览，跨刷新以「保存」后的后端配置为准
   const handleThemeConfigChange = (next: ThemeConfig) => {
     setCustomConfig(next)
-    try {
-      localStorage.setItem(THEME_CONFIG_STORAGE_KEY, JSON.stringify(next))
-    } catch {
-      // localStorage 不可用时仅本次会话生效
-    }
   }
 
-  // 保存到后端（与分享 Token 映射）：仅接口明确成功才提示成功；失败保留可重试，本地配置已在改动时落地
+  // 保存到后端（与分享记录映射）：仅接口明确成功才提示成功；失败可重试
   const handleSaveTheme = async () => {
     setSavingTheme(true)
-    const ok = await saveShareTheme(cfg, fullThemeConfig)
+    // 当前生效预设一并持久化：刷新后读链路靠它还原预设变量表，仅五维自定义不足以复现观感
+    const ok = await saveShareTheme(cfg, fullThemeConfig, effectiveTheme)
     setSavingTheme(false)
-    if (ok) antdMessage.success('主题已保存')
-    else antdMessage.error('云端保存失败，已保留在本地，可重试')
+    // 成功后自动关闭抽屉，失败保持打开便于重试
+    if (ok) {
+      setCustomizerOpen(false)
+      showWidgetToast('success', '主题已保存')
+    } else showWidgetToast('error', '云端保存失败，请重试')
   }
 
-  // 恢复默认：清空本地自定义，回到预设 + 接口下发基准
+  // 恢复默认：清空本次会话的预设选择与自定义，回到接口下发/接入属性基准
   const handleResetTheme = () => {
     setCustomConfig(null)
-    try {
-      localStorage.removeItem(THEME_CONFIG_STORAGE_KEY)
-    } catch {
-      // localStorage 不可用时忽略
-    }
-    antdMessage.success('已恢复默认外观')
+    setUserTheme(null)
+    setApiConfigDropped(false)
+    showWidgetToast('success', '已恢复默认外观')
   }
 
   // 放大：快照当前 inline 样式后按视口百分比留边铺展（不占满全屏，保留圆角）；还原：恢复快照（保留拖拽/resize 自定义的位置尺寸）
@@ -1322,6 +1368,77 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
     panel.style.maxHeight = 'none'
     panel.style.transform = 'none'
     setMaximized(true)
+  }
+
+  // 拉历史会话列表（抽屉打开时静默刷新；接口失败展示空态不阻断）
+  const loadHistorySessions = useCallback(async () => {
+    if (!appId) return
+    setHistoryLoading(true)
+    const list = await fetchSessionList(cfg, appId, info?.spaceId)
+    setHistorySessions(list)
+    setHistoryLoading(false)
+  }, [appId, cfg, info?.spaceId])
+
+  // 点击历史对话：切换到该会话（中断当前流、清空时间线、重拉历史；探索/报告 hook 随 conv 变化自行清空）
+  const handleSwitchSession = async (item: WidgetSessionItem) => {
+    setHistoryOpen(false)
+    if (item.sessionId === sessionRef.current?.sessionId) return
+    abortRef.current?.abort()
+    abortRef.current = null
+    setSending(false)
+    const session: WidgetSession = { sessionId: item.sessionId, convUid: item.convUid, dbName: item.dbName }
+    sessionRef.current = session
+    setConvSession(session)
+    setMessages([])
+    setActiveExploreId(undefined)
+    userScrolledRef.current = false
+    lastBodyScrollTopRef.current = 0
+    const history = await fetchHistory(cfg, session.convUid)
+    // 守卫：await 期间用户又切了会话，丢弃过期结果
+    if (sessionRef.current?.sessionId !== session.sessionId) return
+    setMessages(enrichHistoryMessages(history))
+  }
+
+  // 重命名会话：成功仅原地改标题不重拉列表（后端随改名刷新 update_time，重拉会按更新时间倒序把该行误顶到最前）；失败返回 false 保留抽屉行内编辑态
+  const handleRenameSession = async (item: WidgetSessionItem, title: string) => {
+    const ok = await updateSession(cfg, { sessionId: item.sessionId, title, spaceId: info?.spaceId })
+    if (ok) setHistorySessions((prev) => prev.map((it) => (it.sessionId === item.sessionId ? { ...it, title } : it)))
+    else showWidgetToast('error', '重命名失败')
+    return ok
+  }
+
+  // 置顶/取消置顶：sortOrder>0 表示置顶，新置顶取当前最大值+1（同主对话侧栏口径）；title 后端必填，随原标题回传
+  const handleToggleTopSession = async (item: WidgetSessionItem) => {
+    const maxSort = historySessions.reduce((m, s) => Math.max(m, s.sortOrder ?? 0), 0)
+    const ok = await updateSession(cfg, {
+      sessionId: item.sessionId,
+      title: item.title,
+      sortOrder: (item.sortOrder ?? 0) > 0 ? 0 : maxSort + 1,
+      spaceId: info?.spaceId,
+    })
+    if (ok) void loadHistorySessions()
+    else showWidgetToast('error', '操作失败')
+  }
+
+  // 删除会话：成功后刷新列表；删的是当前会话则清空回开场态，延迟到首条消息发送时再创建新会话（避免删完列表立刻多一条空会话）
+  const handleDeleteSession = async (item: WidgetSessionItem) => {
+    const ok = await deleteSession(cfg, { sessionId: item.sessionId, convUid: item.convUid })
+    if (!ok) {
+      showWidgetToast('error', '删除失败')
+      return
+    }
+    void loadHistorySessions()
+    if (item.sessionId === sessionRef.current?.sessionId) {
+      abortRef.current?.abort()
+      abortRef.current = null
+      setSending(false)
+      setMessages([])
+      setActiveExploreId(undefined)
+      sessionRef.current = null
+      setConvSession(null)
+      // 探索/报告的发送链路在渲染期读会话（hook 闭包），无法延迟创建，只能立即补建；交互模式等首条消息再建
+      if (chatMode !== 'interact') void ensureSessionNow()
+    }
   }
 
   // 点击信息条语义 chip：窗体自动放大，Schema 详情抽屉在面板内右侧滑出（同主对话 openSchemaModal 链路）
@@ -1490,7 +1607,7 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
           setTbPopover(null)
           const schemaId = selectedSemantic?.schemaId
           if (schemaId != null) openSchemaDrawer(schemaId, selectedSemantic?.name || '')
-          else antdMessage.info('请先在左侧选择数据语义')
+          else showWidgetToast('info', '请先在左侧选择数据语义')
         }}
       >
         <EyeOutlined className="uni-icon" />
@@ -1531,11 +1648,23 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
 
   const welcomeDesc = info?.prologue || info?.description || '请输入问题，开始对话'
   const recList = info?.recQuestions ?? []
+  // 同一 API-Key 下绑定多个助手时，头部标题变为可切换下拉
+  const canSwitchAssistant = (assistants?.length ?? 0) > 1 && Boolean(onSwitchAssistant)
+  // 重名助手（后端多个分享同名）在下拉里附 shareCode 尾注以便区分
+  const duplicateAssistantNames = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const a of assistants ?? []) counts.set(a.name, (counts.get(a.name) ?? 0) + 1)
+    return new Set([...counts.entries()].filter(([, n]) => n > 1).map(([name]) => name))
+  }, [assistants])
+  // 头部标题：入口接口回填前（切换重挂载的 checking 期）用切换列表里同 shareCode 的名兜底，避免闪空标题
+  const headerTitle = info?.name || assistants?.find((a) => a.shareCode === shareCode)?.name || ''
 
   return (
     <ChartThemeContext.Provider value={chartTheme}>
     <div className={`abi-cw-root ${mode === 'float' ? 'abi-cw-float' : mode === 'embed' ? 'abi-cw-embed' : 'abi-cw-page'}`} data-cw-theme={effectiveTheme} style={rootStyle}>
       <div className="abi-cw-panel" ref={panelRef}>
+        {/* 窗内通知条：接口成败/操作提示在面板内呈现，不被悬浮窗自身遮挡 */}
+        <WidgetToastHost />
         {/* 四边拖拽改大小把手（放大态隐藏；embed 直嵌形态由宿主控制尺寸，隐藏把手） */}
         {!maximized && mode !== 'embed' && (
           <>
@@ -1547,20 +1676,45 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
         )}
         <div className="abi-cw-header" onPointerDown={handleDragStart}>
           <div className="abi-cw-header-logo">A</div>
-          <span className="abi-cw-header-name" title={info?.name || '助手'}>
-            AI {info?.name ? `· ${info.name}` : '智能问答'}
-          </span>
-          {showThemeSwitch && (
-            <button
-              type="button"
-              className="abi-cw-action-btn"
-              onClick={() => setCustomizerOpen(true)}
-              aria-label="外观自定义"
-              title="外观自定义"
-            >
-              {IconCustomize}
-            </button>
-          )}
+          <div className="abi-cw-header-title">
+            {canSwitchAssistant ? (
+              <Dropdown
+                trigger={['click']}
+                placement="bottomLeft"
+                open={switchOpen}
+                onOpenChange={setSwitchOpen}
+                getPopupContainer={() => panelRef.current as HTMLElement}
+                overlayClassName="abi-cw-menu"
+                dropdownRender={() => (
+                  <div className="abi-cw-menu-panel abi-cw-switch-panel">
+                    {assistants!.map((a) => (
+                      <button
+                        key={a.shareCode}
+                        type="button"
+                        className={`abi-cw-menu-item${a.shareCode === shareCode ? ' abi-cw-menu-item-active' : ''}`}
+                        onClick={() => {
+                          setSwitchOpen(false)
+                          if (a.shareCode !== shareCode) onSwitchAssistant?.(a.shareCode)
+                        }}
+                      >
+                        <span className="abi-cw-switch-name">{a.name || '未命名助手'}</span>
+                        {duplicateAssistantNames.has(a.name) && <span className="abi-cw-switch-code">{a.shareCode}</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              >
+                <button type="button" className="abi-cw-header-name abi-cw-header-switch" title={headerTitle || '助手'}>
+                  <span className="abi-cw-switch-label">{headerTitle ? `AI · ${headerTitle}` : 'AI'}</span>
+                  <DownOutlined className="abi-cw-switch-caret" />
+                </button>
+              </Dropdown>
+            ) : (
+              <span className="abi-cw-header-name" title={headerTitle || '助手'}>
+                {headerTitle ? `AI · ${headerTitle}` : 'AI'}
+              </span>
+            )}
+          </div>
           {mode !== 'embed' && (
             <button
               type="button"
@@ -1572,14 +1726,61 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
               {maximized ? IconCompress : IconExpand}
             </button>
           )}
-          {mode === 'float' && onClose && (
-            <button type="button" className="abi-cw-action-btn" onClick={onClose} aria-label="关闭">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
+          {/* 更多菜单：历史对话/主题设置/关闭页面（自定义面板，不收 antd Menu 内部结构约束） */}
+          <Dropdown
+            trigger={['click']}
+            placement="bottomRight"
+            open={moreOpen}
+            onOpenChange={setMoreOpen}
+            getPopupContainer={() => panelRef.current as HTMLElement}
+            overlayClassName="abi-cw-menu"
+            dropdownRender={() => (
+              <div className="abi-cw-menu-panel">
+                <button
+                  type="button"
+                  className="abi-cw-menu-item"
+                  onClick={() => {
+                    setMoreOpen(false)
+                    setHistoryOpen(true)
+                    void loadHistorySessions()
+                  }}
+                >
+                  {IconHistory}
+                  <span>历史对话</span>
+                </button>
+                {showThemeSwitch && (
+                  <button
+                    type="button"
+                    className="abi-cw-menu-item"
+                    onClick={() => {
+                      setMoreOpen(false)
+                      setCustomizerOpen(true)
+                    }}
+                  >
+                    {IconCustomize}
+                    <span>主题设置</span>
+                  </button>
+                )}
+                {mode === 'float' && onClose && (
+                  <button
+                    type="button"
+                    className="abi-cw-menu-item"
+                    onClick={() => {
+                      setMoreOpen(false)
+                      onClose()
+                    }}
+                  >
+                    {IconClose}
+                    <span>关闭页面</span>
+                  </button>
+                )}
+              </div>
+            )}
+          >
+            <button type="button" className="abi-cw-action-btn" aria-label="更多" title="更多">
+              {IconMore}
             </button>
-          )}
+          </Dropdown>
         </div>
 
         <div className="abi-cw-body" ref={bodyRef} onScroll={handleBodyScroll}>
@@ -1594,25 +1795,6 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
               <button type="button" className="abi-cw-btn-primary" onClick={() => void initCheck()}>
                 重试
               </button>
-            </div>
-          ) : phase === 'password' ? (
-            <div className="abi-cw-status">
-              <div className="abi-cw-password">
-                <span className="abi-cw-password-title">该分享需要密码访问</span>
-                <input
-                  type="password"
-                  placeholder="请输入访问密码"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') void handlePasswordSubmit()
-                  }}
-                />
-                <span className="abi-cw-password-error">{passwordError}</span>
-                <button type="button" className="abi-cw-btn-primary" onClick={() => void handlePasswordSubmit()}>
-                  确认
-                </button>
-              </div>
             </div>
           ) : timeline.length === 0 ? (
             /* 开场白直接复用主对话 OpeningsEle（含 3 个一批 + 换一批） */
@@ -1686,7 +1868,7 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
                       boxShadow: '0 0.125rem 0.5rem rgba(15,23,42,0.04)',
                     }}
                   >
-                    {/* 信息条：分组 + 数据语义（同主对话 MessageList 信息条样式，分享场景不可点 schema） */}
+                    {/* 信息条：分组 + 数据语义一个一行（grid 两列对齐，同主对话信息条样式；分享场景不可点 schema） */}
                     {(m.semanticGroup || m.semanticName) && (
                       <div className="abi-cw-infobar">
                         <span className="abi-cw-infobar-label">分组：</span>
@@ -1694,7 +1876,7 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
                           <i className="abi-cw-infobar-dot" style={{ background: '#8b5cf6', boxShadow: '0 0 6px rgba(139,92,246,0.5)' }} />
                           {m.semanticGroup || '无'}
                         </span>
-                        <span className="abi-cw-infobar-label" style={{ marginLeft: '2em' }}>数据语义：</span>
+                        <span className="abi-cw-infobar-label">数据语义：</span>
                         {/* 带 schemaId 时可点：窗体自动放大，Schema 抽屉窗内右侧滑出 */}
                         <span
                           className={`abi-cw-infobar-chip abi-cw-infobar-chip-sem${m.semanticSchemaId != null ? ' clickable' : ''}`}
@@ -1842,7 +2024,9 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
                         onClick={() => {
                           setChatMode(mo.key)
                           setTbPopover(null)
-                          antdMessage.info(`已切换到${mo.label}模式`)
+                          // 探索/报告发送链路在渲染期读会话，切入时空会话态（如刚删完当前会话）需兜底补建
+                          if (mo.key !== 'interact' && !sessionRef.current) void ensureSessionNow()
+                          showWidgetToast('info', `已切换到${mo.label}模式`)
                         }}
                       >
                         <span className="abi-cw-tb-mode-icon">{WIDGET_MODE_ICONS[mo.key]}</span>
@@ -1892,7 +2076,13 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
                   className={`abi-cw-tb-btn${tbPopover === 'tools' ? ' active' : ''}`}
                   title="更多工具"
                 >
-                  工具
+                  <span className="abi-cw-tb-btn-icon">
+                    <svg viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                      <circle cx="5" cy="12" r="2" />
+                      <circle cx="12" cy="12" r="2" />
+                      <circle cx="19" cy="12" r="2" />
+                    </svg>
+                  </span>
                   {(selectedSkills.size > 0 || selectedMcps.size > 0) && (
                     <span className="abi-cw-tb-badge">{selectedSkills.size + selectedMcps.size}</span>
                   )}
@@ -1946,7 +2136,21 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
           getContainer={() => panelRef.current as HTMLElement}
         />
 
-        {/* 外观自定义抽屉：挂载到面板内，实时预览背景/标题栏/字体/图表 */}
+        {/* 历史对话抽屉：挂载到面板内左侧滑出（最近对话列表，点击切换会话） */}
+        <HistoryDrawer
+          open={historyOpen}
+          loading={historyLoading}
+          sessions={historySessions}
+          activeSessionId={convSession?.sessionId}
+          getContainer={() => panelRef.current as HTMLElement}
+          onSelect={(item) => void handleSwitchSession(item)}
+          onRename={handleRenameSession}
+          onToggleTop={(item) => void handleToggleTopSession(item)}
+          onDelete={(item) => void handleDeleteSession(item)}
+          onClose={() => setHistoryOpen(false)}
+        />
+
+        {/* 外观自定义弹窗：挂载到面板内（abi 数据源编辑弹窗同款形态：右侧滑出、带遮罩） */}
         <ThemeCustomizer
           open={customizerOpen}
           value={fullThemeConfig}
@@ -1959,9 +2163,67 @@ const ChatWidget = ({ shareCode, apiBase, mode = 'page', verifiedAppId, verified
           onReset={handleResetTheme}
           onClose={() => setCustomizerOpen(false)}
         />
+
+        {/* 密钥填入弹窗：挂载到面板内（宿主未注入 API Key 时弹出，填入提交后关闭并初始化） */}
+        <ShareKeyGate
+          open={keyGateOpen}
+          onSubmit={(ak, sk) => onManualKey?.(ak, sk)}
+          getContainer={() => panelRef.current as HTMLElement}
+        />
       </div>
     </div>
     </ChartThemeContext.Provider>
+  )
+}
+
+/**
+ * 外层：持有当前 shareCode 与同 API-Key 助手列表；切换助手时改 key 重挂载面板，
+ * 使 token/会话/消息等状态整体重置，避免手工清理遗漏。
+ */
+const ChatWidget = (props: ChatWidgetProps) => {
+  const [currentShareCode, setCurrentShareCode] = useState(props.shareCode)
+  const [assistants, setAssistants] = useState<WidgetShareItem[]>([])
+  // 面板位置/大小快照：跨切换助手重挂载存活，重挂载后由面板恢复，避免回到初始右上角
+  const panelStyleRef = useRef('')
+  // 密钥来源：标签属性注入优先；未注入时由使用者进入手填，只存内存不落盘，故每次进入都要重填
+  const [manualKey, setManualKey] = useState<{ apiKey: string; secretKey: string } | null>(null)
+  const effApiKey = props.apiKey || manualKey?.apiKey || ''
+  const effSecretKey = props.secretKey || manualKey?.secretKey || ''
+
+  // 宿主外部改 shareCode 时跟随重置
+  useEffect(() => {
+    setCurrentShareCode(props.shareCode)
+  }, [props.shareCode])
+
+  // 拉取同 API-Key 绑定分享列表（密钥头由 share-api-key 上下文提供），供头部切换；无密钥时不发，填入后再拉
+  useEffect(() => {
+    if (!effApiKey || !effSecretKey) return
+    setShareApiKey(effApiKey, effSecretKey)
+    let alive = true
+    void fetchShareListByApiKey({ shareCode: props.shareCode, apiBase: props.apiBase }).then((list) => {
+      if (alive) setAssistants(list)
+    })
+    return () => {
+      alive = false
+    }
+  }, [props.shareCode, props.apiBase, effApiKey, effSecretKey])
+
+  // 密钥就位后面板随 props 流拿到并初始化（首请求即带头）；未注入时面板内弹密钥填入弹窗
+  return (
+    <ChatWidgetPanel
+      key={currentShareCode}
+      {...props}
+      apiKey={effApiKey}
+      secretKey={effSecretKey}
+      shareCode={currentShareCode}
+      assistants={assistants}
+      onSwitchAssistant={setCurrentShareCode}
+      onManualKey={(ak, sk) => setManualKey({ apiKey: ak, secretKey: sk })}
+      initialPanelStyle={panelStyleRef.current}
+      onPanelStyleChange={(css) => {
+        panelStyleRef.current = css
+      }}
+    />
   )
 }
 

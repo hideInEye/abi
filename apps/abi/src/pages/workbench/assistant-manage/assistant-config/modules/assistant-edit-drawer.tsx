@@ -65,9 +65,8 @@ type SectionKey = 'model' | 'opening' | 'questions' | 'semantic' | 'mcp' | 'skil
 
 const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId: propsGroupId, readOnly = false, onClose }) => {
   const spaceId = useAppSelector(getSpaceId)
-  // 新建保存成功后记录后端返回的 appId：抽屉就地转为编辑态，后续保存走更新、右侧调试对话可用
-  const [savedAppId, setSavedAppId] = useState<string | number | undefined>(undefined)
-  const currentAppId = savedAppId ?? agent?.id
+  // 当前助手 id：仅编辑态有值；新建保存成功后即关闭抽屉回列表，不在抽屉内就地转编辑态
+  const currentAppId = agent?.id
   const isEdit = !!currentAppId
   const [name, setName] = useState<string>('')
   const [editingName, setEditingName] = useState(false)
@@ -367,7 +366,6 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
   useEffect(() => {
     if (visible && agent?.id) {
       // 编辑已有助手：加载期间先锁定右侧测试，待详情加载完成后再解锁（见下方 loadingDetail effect）
-      setSavedAppId(undefined)
       setHasSavedOnce(false)
       setSavedFingerprint('')
       savedRef.current = false
@@ -378,7 +376,6 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
       loadDetail()
     } else if (visible && !agent?.id) {
       // 新增模式：重置表单，未保存前锁定右侧测试输入框
-      setSavedAppId(undefined)
       setHasSavedOnce(false)
       setSavedFingerprint('')
       savedRef.current = false
@@ -510,21 +507,22 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
     try {
       const payload = buildPayload(nextStatus)
       // apiRequest 为扁平请求，失败时不会抛错而是返回 { error }，需显式判断
-      const { data, error } = isEdit ? await updateAppApi(payload) : await addAppApi(payload)
+      const { error } = isEdit ? await updateAppApi(payload) : await addAppApi(payload)
       // 失败时全局错误处理已提示后端具体信息（如“应用名称不能为空”），保留抽屉不关闭
       if (error) return
-      // 新建保存成功：记录后端返回的 appId，就地转为编辑态（后续保存走更新、右侧调试对话可用）
+      // 新建：保存成功后关闭抽屉回列表（onClose(true) 触发父组件刷新），不在抽屉内就地停留
       if (!isEdit) {
-        const newAppId = (data as any)?.appId ?? (data as any)?.app_id ?? (data as any)?.id ?? (typeof data === 'number' || typeof data === 'string' ? data : undefined)
-        if (newAppId != null && newAppId !== '') setSavedAppId(newAppId)
+        message.success(successText)
+        onClose(true)
+        return
       }
+      // 编辑：保存后就地停留在当前界面，刷新已保存基线、解锁右侧测试，并标记本次已保存（关闭时据此刷新列表）
       setStatus(nextStatus)
-      // 保存后就地停留在当前界面：刷新已保存基线、解锁右侧测试，并标记本次已保存（关闭时据此刷新列表）
       setSavedFingerprint(formFingerprint)
       setHasSavedOnce(true)
       savedRef.current = true
       if (currentAppId != null) {
-        syncShareAppStatus({ projectId: currentAppId, type: 'workflow', spaceId: spaceId || undefined, appStatus: nextStatus === '2' ? 2 : 3 });
+        syncShareAppStatus({ projectId: currentAppId, type: 'react', spaceId: spaceId || undefined, appStatus: nextStatus === '2' ? 2 : 3 });
       }
       message.success(successText)
     } finally {
@@ -540,20 +538,15 @@ const AssistantEditDrawer: React.FC<Props> = ({ visible = false, agent, groupId:
     try {
       const payload = buildPayload('1')
       // apiRequest 为扁平请求，失败时返回 { error } 而不抛错，需显式判断
-      const { data, error } = isEdit ? await updateAppApi(payload) : await addAppApi(payload)
+      const { error } = isEdit ? await updateAppApi(payload) : await addAppApi(payload)
       if (error) return
-      // 新建直接发布：记录后端返回的 appId，保证 syncShareAppStatus 与后续操作拿到正确 id
-      if (!isEdit) {
-        const newAppId = (data as any)?.appId ?? (data as any)?.app_id ?? (data as any)?.id ?? (typeof data === 'number' || typeof data === 'string' ? data : undefined)
-        if (newAppId != null && newAppId !== '') setSavedAppId(newAppId)
-      }
       // 保存成功后，对已加载的最新版本调用 version/publish 上线（versionId 由 loadDetail 回填）
       if (versionId != null && String(versionId) !== '') {
         const { error: publishError } = await publishVersionApi({ versionId })
         if (publishError) return
       }
       setStatus('1')
-      if (currentAppId != null) syncShareAppStatus({ projectId: currentAppId, type: 'workflow', spaceId: spaceId || undefined, appStatus: 1 });
+      if (currentAppId != null) syncShareAppStatus({ projectId: currentAppId, type: 'react', spaceId: spaceId || undefined, appStatus: 1 });
       message.success('已发布')
       savedRef.current = true
       onClose(true)

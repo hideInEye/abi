@@ -44,15 +44,9 @@ export function useReportPreviewPresence(activeReport?: ReportItem) {
     }
 
     clearScheduledTransition()
-    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 
     if (activeReport) {
       setRenderedReport(activeReport)
-
-      if (reduceMotion) {
-        setPhase('open')
-        return clearScheduledTransition
-      }
 
       // 报告内容更新时只替换数据；仅从关闭态进入时重新播放入场动画。
       if (phaseRef.current !== 'open') {
@@ -67,12 +61,6 @@ export function useReportPreviewPresence(activeReport?: ReportItem) {
     }
 
     if (!renderedReportRef.current) {
-      setPhase('closed')
-      return clearScheduledTransition
-    }
-
-    if (reduceMotion) {
-      setRenderedReport(undefined)
       setPhase('closed')
       return clearScheduledTransition
     }

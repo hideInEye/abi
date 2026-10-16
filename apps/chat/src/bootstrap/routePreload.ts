@@ -1,16 +1,12 @@
 type InitialChatRoute =
-  | 'assistant-share'
   | 'chat-group'
   | 'chat-skill'
   | 'chat-task'
   | 'chat-workshop'
-  | 'dashboard-share'
   | null
 
 export function resolveInitialChatRoute(hash: string): InitialChatRoute {
   const path = hash.replace(/^#/, '').split(/[?]/, 1)[0]
-  if (path.startsWith('/assistant-share-page/')) return 'assistant-share'
-  if (path.startsWith('/dashboard_share_page/')) return 'dashboard-share'
   if (path.startsWith('/chat/group/')) return 'chat-group'
   if (path.startsWith('/chat/skill')) return 'chat-skill'
   if (path.startsWith('/chat/workshop')) return 'chat-workshop'
@@ -43,10 +39,6 @@ export function preloadInitialChatRoute(hash: string): Promise<unknown[]> {
     loaders.push(() => import('../pages/chat/skill/index.tsx?tsr-split=component'))
   } else if (route === 'chat-workshop') {
     loaders.push(() => import('../pages/chat/workshop/index.tsx?tsr-split=component'))
-  } else if (route === 'assistant-share') {
-    loaders.push(() => import('../pages/assistant-share-page/$shareCode.tsx?tsr-split=component'))
-  } else if (route === 'dashboard-share') {
-    loaders.push(() => import('../pages/dashboard_share_page/$shareCode.tsx?tsr-split=component'))
   }
 
   return Promise.all(loaders.map(loader => loader()))

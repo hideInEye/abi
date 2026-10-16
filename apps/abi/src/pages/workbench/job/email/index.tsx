@@ -19,6 +19,7 @@ export function Component() {
   const spaceId = useAppSelector(getSpaceId);
   const [dateRange, setDateRange] = useState<any>(null);
   const [displayGroupFilter, setDisplayGroupFilter] = useState<string | undefined>(undefined);
+  const [jumpValue, setJumpValue] = useState('');
   // 列选项：用于列选择器
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>([
     { key: 'jobName', label: '任务名称', visible: true },
@@ -32,7 +33,7 @@ export function Component() {
   const handleColumnToggle = (key: string, visible: boolean) => {
     setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c));
   };
-  const { data, run, searchProps, tableProps } = useTable({
+  const { data, run, searchParams, searchProps, tableProps } = useTable({
     apiFn: fetchEmailList as any,
     apiParams: {
       pageNum: 1,
@@ -191,7 +192,7 @@ export function Component() {
     const { query } = route;
     if (query?.jobName) {
       const { form } = searchProps;
-      form.setFieldsValue({
+      (form.setFieldsValue as any)({
         jobName: query.jobName,
       });
       run();
@@ -237,8 +238,9 @@ export function Component() {
 
   // 前端按发送时间过滤 + 前端分页（useTable 返回全量数据）
   const pag = tableProps.pagination as any;
-  const currentPage = pag?.current || 1;
-  const pageSizeVal = pag?.pageSize || 12;
+  // pagination.current 读的是 searchParams.current.current，与 onChange 写入的 pageNum 不对应，故直接从 searchParams 取当前页
+  const currentPage = searchParams.current?.pageNum || 1;
+  const pageSizeVal = searchParams.current?.pageSize || 12;
   const filteredData = useMemo(() => {
     const byTime = filterByCreateTime((data as any[]) || [], dateRange, 'sendTime');
     if (!displayGroupFilter) return byTime;
@@ -394,6 +396,23 @@ export function Component() {
                   <button className="page-btn" disabled={current === 1} onClick={() => onChange?.(current - 1, pageSizeVal)}><LeftOutlined /></button>
                   {pages.map(p => p < 0 ? <span key={p} className="page-item page-ellipsis">...</span> : <span key={p} className={`page-item${p === current ? ' page-active' : ''}`} onClick={() => onChange?.(p, pageSizeVal)}>{p}</span>)}
                   <button className="page-btn" disabled={current >= totalPages} onClick={() => onChange?.(current + 1, pageSizeVal)}><RightOutlined /></button>
+                  <span className="quick-jumper">
+                    前往
+                    <AInput
+                      className="jump-input"
+                      style={{ width: 48, textAlign: 'center' }}
+                      value={jumpValue}
+                      onChange={(e) => setJumpValue(e.target.value)}
+                      onPressEnter={() => {
+                        const page = parseInt(jumpValue, 10);
+                        if (!isNaN(page) && page >= 1 && page <= totalPages) {
+                          onChange?.(page, pageSizeVal);
+                          setJumpValue('');
+                        }
+                      }}
+                    />
+                    页
+                  </span>
                 </div>
               </>
             );

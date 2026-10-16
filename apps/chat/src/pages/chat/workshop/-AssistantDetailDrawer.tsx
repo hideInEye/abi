@@ -18,7 +18,7 @@ import type { FC } from 'react'
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 
 import { AssistantIconBlock } from '@/components/AssistantIcon'
-import ExploreMessageRow from '@/components/conversation/exploration-mode/ExploreMessageRow'
+import ExploreMessageRow from '@/components/conversation/exploration-mode/v2/ExploreMessageRow'
 import { LazyFeatureFallback, RetryableLazy } from '@/components/performance/RetryableLazy'
 import { fetchModelList } from '@/service/api/abi-system'
 import { fetchAssistantDetail } from '@/service/api/assistant'
@@ -99,6 +99,8 @@ const AssistantDetailDrawer: FC<Props> = ({ open, onClose, appId, fallback }) =>
   const [chatInput, setChatInput] = useState('')
   // 当前展开的探索项 id（内容随流式更新，故只存 id 再从实时列表取）
   const [previewId, setPreviewId] = useState<string | null>(null)
+  // 工作室当前结果屏绑定的步骤，与主聊天一致支持切换定位
+  const [previewStepId, setPreviewStepId] = useState<string>()
   // 数据语义可多选，但探索接口只收单个 schema_id：取第一个已选语义
   const firstSchemaId = useMemo(() => {
     const first = Array.from(selectedSemanticIds)[0]
@@ -616,10 +618,22 @@ const AssistantDetailDrawer: FC<Props> = ({ open, onClose, appId, fallback }) =>
                     <ExploreMessageRow
                       key={it.id}
                       item={it}
+                      scrollContainerRef={debugScrollRef}
+                      locateStepId={previewStepId}
+                      onClose={() => {
+                        setPreviewId(null)
+                        setPreviewStepId(undefined)
+                      }}
                       active={previewId === it.id}
                       onOpen={() => {
                         void loadExplorePreviewPane()
                         setPreviewId(it.id)
+                        setPreviewStepId(undefined)
+                      }}
+                      onOpenStep={(stepId) => {
+                        void loadExplorePreviewPane()
+                        setPreviewId(it.id)
+                        setPreviewStepId(stepId)
                       }}
                     />
                   ))}
@@ -699,7 +713,7 @@ const AssistantDetailDrawer: FC<Props> = ({ open, onClose, appId, fallback }) =>
         {previewItem && (
           <RetryableLazy
             loader={loadExplorePreviewPane}
-            componentProps={{ item: previewItem, onClose: () => setPreviewId(null) }}
+            componentProps={{ item: previewItem, onClose: () => { setPreviewId(null); setPreviewStepId(undefined) }, activeStepId: previewStepId, onScreenChange: setPreviewStepId }}
             fallback={<LazyFeatureFallback label="正在加载探索结果…" style={{ width: '100%', height: '100%', minHeight: 360 }} />}
           />
         )}

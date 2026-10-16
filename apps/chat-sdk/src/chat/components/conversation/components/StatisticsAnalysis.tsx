@@ -1,8 +1,9 @@
 import React, {useState} from 'react';
 import { ModulesMap } from '@/constant/chat';
 import { getModulesByChatMode } from '@/utils';
-import { message, Tooltip, Dropdown } from 'antd';
+import { Tooltip, Dropdown } from 'antd';
 import type { MenuProps } from 'antd';
+import { showWidgetToast } from '../../chat-widget/widgetToast';
 import {
   LikeOutlined,
   DislikeOutlined,
@@ -124,7 +125,7 @@ const StatisticsAnalysis: React.FC<Props> = ({
   // 处理点赞
   const handleLike = () => {
     if (!canOperate()) {
-      message.error('暂不可操作');
+      showWidgetToast('error', '暂不可操作');
     }
     if (!hasLiked()) {
       handleVote('0'); // 点赞
@@ -134,7 +135,7 @@ const StatisticsAnalysis: React.FC<Props> = ({
   // 处理点踩
   const handleDislike = () => {
     if (!canOperate()) {
-      message.error('暂不可操作');
+      showWidgetToast('error', '暂不可操作');
     }
     if (!hasDisliked()) {
       handleVote('1');
@@ -144,7 +145,7 @@ const StatisticsAnalysis: React.FC<Props> = ({
   // 复制功能
   const handleCopy = async (format: 'markdown' | 'plaintext') => {
     if (!content) {
-      message.warning('暂无可复制的内容');
+      showWidgetToast('warning', '暂无可复制的内容');
       return;
     }
 
@@ -168,10 +169,10 @@ const StatisticsAnalysis: React.FC<Props> = ({
       }
 
       await navigator.clipboard.writeText(textToCopy);
-      message.success(format === 'markdown' ? '已复制为 Markdown' : '已复制为纯文本');
+      showWidgetToast('success', format === 'markdown' ? '已复制为 Markdown' : '已复制为纯文本');
     } catch (error) {
       console.error('复制失败:', error);
-      message.error('复制失败,请重试');
+      showWidgetToast('error', '复制失败,请重试');
     }
   };
 

@@ -144,7 +144,7 @@ export function deleteAssistant(data: { appId: number | string }) {
 }
 
 /**
- * 统一分享接口（助手与大屏共用，type 区分：chat端助手分享=react，abi助手=workflow，数据大屏=dashboard）。
+ * 统一分享接口（助手与大屏共用，type 区分：自主助手(chat/abi)=react，工作流助手=workflow(暂未开发)，数据大屏=dashboard）。
  * 网关完整路径对齐大屏：VITE_BASE_API('/api') + '/dashboard/api/v1/project/share'，
  * 与大屏 FetchUtil 的 VITE_API_TARGET('/api') + '/dashboard/api/v1/project/share' 一致。
  */
@@ -165,16 +165,6 @@ export function shareAssistant(data: {
     url: `${SHARE_BASE_URL}/share`,
     method: 'post',
     data: { type: 'react', ...data },
-    baseURL: window.APP_CONFIG?.VITE_BASE_API,
-  });
-}
-
-/** 7. 校验分享密码 / 获取分享信息（与大屏同接口；sharePassword 传空串即探测是否需要密码） */
-export function checkAssistantShare(data: { shareCode: string; sharePassword: string }) {
-  return request({
-    url: `${SHARE_BASE_URL}/checkSharePassword`,
-    method: 'post',
-    data,
     baseURL: window.APP_CONFIG?.VITE_BASE_API,
   });
 }

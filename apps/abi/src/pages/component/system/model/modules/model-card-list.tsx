@@ -6,7 +6,7 @@ import { useAppSelector } from '@/hooks/business/useStore'
 import { getSpaceId } from '@/store/slice/app'
 import { ViewControls } from '@/components/ViewControls'
 import type { ColumnOption } from '@/components/ViewControls'
-import { DeferredRangePicker, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar'
+import { DeferredRangePicker, DeferredSelect, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar'
 import { filterByCreateTime } from '@/utils/date'
 import './model-card-list.css'
 
@@ -20,6 +20,7 @@ interface ModelItem {
   modelSource?: string
   status: string
   isSupportThinking?: number | string
+  isMultimodal?: number | string
   remark?: string
   isDefault?: number
   [key: string]: any
@@ -45,6 +46,9 @@ interface Props {
   onBatchDelete: (ids: number[]) => void
   onSetDefault: (id: number) => void
   onAnalysis: (context: MetadataAnalysisContext) => void
+  /** 是否支持多模态筛选值（undefined 为全部，服务端过滤） */
+  multimodalFilter?: number
+  onMultimodalFilterChange?: (val: number | undefined) => void
 }
 
 const modelTypeTagColorMap: Record<string, import('antd/es/tag').TagProps['color']> = {
@@ -65,6 +69,8 @@ const ModelCardList: FC<Props> = ({
   onBatchDelete,
   onSetDefault,
   onAnalysis,
+  multimodalFilter,
+  onMultimodalFilterChange,
 }) => {
   const { t } = useTranslation()
   const spaceId = useAppSelector(getSpaceId)
@@ -97,6 +103,7 @@ const ModelCardList: FC<Props> = ({
     { key: 'modelSource', label: '模型来源', visible: true },
     { key: 'status', label: '状态', visible: true },
     { key: 'isSupportThinking', label: '是否支持关闭思考', visible: true },
+    { key: 'isMultimodal', label: '是否支持多模态', visible: true },
   ])
   const handleColumnToggle = (key: string, visible: boolean) => {
     setColumnOptions(prev => prev.map(c => c.key === key ? { ...c, visible } : c))
@@ -110,7 +117,7 @@ const ModelCardList: FC<Props> = ({
   useEffect(() => {
     setCurrentPage(1)
     setSelectedRowKeys([])
-  }, [searchValue, dateRange])
+  }, [searchValue, dateRange, multimodalFilter])
 
   const totalCount = filteredModels.length
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
@@ -194,6 +201,17 @@ const ModelCardList: FC<Props> = ({
         return <ATag color={support ? 'green' : 'default'} bordered style={{ margin: 0 }}>{support ? '支持' : '不支持'}</ATag>
       },
       title: '是否支持关闭思考',
+    },
+    {
+      align: 'center' as const,
+      dataIndex: 'isMultimodal',
+      key: 'isMultimodal',
+      minWidth: 130,
+      render: (v: number | string) => {
+        const support = v === 1 || v === '1'
+        return <ATag color={support ? 'green' : 'default'} bordered style={{ margin: 0 }}>{support ? '支持' : '不支持'}</ATag>
+      },
+      title: '是否支持多模态',
     },
     {
       align: 'center' as const,
@@ -291,20 +309,36 @@ const ModelCardList: FC<Props> = ({
           searchPlaceholder="搜索模型名称或基础模型"
           searchValue={searchValue}
           onQuery={() => onSearchValueChange(searchValue)}
-          onReset={() => { onSearchValueChange(''); setDateRange(null); }}
+          onReset={() => { onSearchValueChange(''); setDateRange(null); onMultimodalFilterChange?.(undefined) }}
           onSearchChange={onSearchValueChange}
           filters={
-            <SearchFilterField label="时间范围">
-              <DeferredRangePicker
-                allowClear
-                className="abi-field-input"
-                format="YYYY-MM-DD"
-                getPopupContainer={getFilterPopupContainer}
-                placeholder={['开始时间', '结束时间']}
-                value={dateRange}
-                onChange={(dates) => setDateRange(dates as [any, any] | null)}
-              />
-            </SearchFilterField>
+            <>
+              <SearchFilterField label="时间范围">
+                <DeferredRangePicker
+                  allowClear
+                  className="abi-field-input"
+                  format="YYYY-MM-DD"
+                  getPopupContainer={getFilterPopupContainer}
+                  placeholder={['开始时间', '结束时间']}
+                  value={dateRange}
+                  onChange={(dates) => setDateRange(dates as [any, any] | null)}
+                />
+              </SearchFilterField>
+              <SearchFilterField label="是否支持多模态">
+                <DeferredSelect
+                  allowClear
+                  className="abi-field-input"
+                  getPopupContainer={getFilterPopupContainer}
+                  options={[
+                    { label: '支持', value: 1 },
+                    { label: '不支持', value: 0 },
+                  ]}
+                  placeholder="请选择"
+                  value={multimodalFilter}
+                  onChange={(val: number | undefined) => onMultimodalFilterChange?.(val)}
+                />
+              </SearchFilterField>
+            </>
           }
         />
       </section>
@@ -442,6 +476,12 @@ const ModelCardList: FC<Props> = ({
                             <div className="row">
                               <span className="lbl">是否支持关闭思考</span>
                               <span className="val">{item.isSupportThinking === 1 || item.isSupportThinking === '1' ? '支持' : '不支持'}</span>
+                            </div>
+                          )}
+                          {visibleKeys.has('isMultimodal') && (
+                            <div className="row">
+                              <span className="lbl">是否支持多模态</span>
+                              <span className="val">{item.isMultimodal === 1 || item.isMultimodal === '1' ? '支持' : '不支持'}</span>
                             </div>
                           )}
                         </div>

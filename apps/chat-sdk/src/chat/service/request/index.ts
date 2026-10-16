@@ -1,10 +1,11 @@
 import axios from "axios";
-import { message } from "antd";
 import { isBackendCodeIn } from "@sa/axios";
 
 import { getAuthorization, handleLoginExpired } from "@/utils/auth";
+import { showWidgetToast } from "@/components/chat-widget/widgetToast";
 
 import { shouldHandleLoginExpiredForRequest } from "./auth-policy";
+import { shareApiKeyHeaders } from "./share-api-key";
 
 const service = axios.create({
   baseURL: '/',  // 使用相对路径，让请求通过代理转发
@@ -28,7 +29,7 @@ function showBackendError(msg?: string) {
   if (text === lastErrorMsg && now - lastErrorTime < 2000) return;
   lastErrorMsg = text;
   lastErrorTime = now;
-  message.error(text);
+  showWidgetToast('error', text);
 }
 
 // 判断是否为后端业务错误码（成功码约定为 200；401 由 token 过期逻辑单独处理）
@@ -68,6 +69,8 @@ service.interceptors.request.use(
       } else {
         delete config.headers['Authorization'];
       }
+      // 分享页第三方注入的 API-Key 头（未配置时为空对象，登录态不受影响）
+      Object.assign(config.headers, shareApiKeyHeaders());
     }
 
     return config;

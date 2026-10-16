@@ -119,7 +119,7 @@ export async function fetchDataCollectionList(data?: any) {
   const res: any = await apiRequest<Api.DataPreparation.DatasourceListType>({
     data,
     method: 'post',
-    url: '/api/abi-data/api/v1/dataset/qyeryDataSetList'
+    url: '/api/abi-data/api/v1/dataset/queryDataSetList'
   });
   if (!isFlatRequestSuccess(res)) {
     return res;

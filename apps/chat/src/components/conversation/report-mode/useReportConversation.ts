@@ -10,6 +10,7 @@ import { canRevealReport, completeReportThinkingTypewriter, shouldAnimateReportP
 import { getNewlyCompletedReportTaskKey, getReportRecoveryAction, shouldNotifyReportCompleted, splitReportTaskRecordsByHistory } from './reportRecovery'
 import { createInitialReportStreamState, parseReportStreamEvent, reduceReportStreamEntry } from './reportStreamReducer'
 import { getReportTaskSortOrder, reportTaskStorage } from './reportTaskStorage'
+import { toImageListPayload, type ImageAttachment } from '../components/chat-input/imageAttachment'
 import type { ReportHistoryRoundGroup, ReportItem, ReportTaskRecord } from './types'
 
 interface UseReportConversationOptions {
@@ -303,7 +304,7 @@ export function useReportConversation({ conv, spaceId, schemaId, currentModelId,
   )
 
   const handleSend = useCallback(
-    (rawQuestion: string, reportSources?: ReportSourceVersionFields) => {
+    (rawQuestion: string, reportSources?: ReportSourceVersionFields, images?: ImageAttachment[]) => {
       const question = rawQuestion.trim()
       if (!question) return
 
@@ -342,6 +343,8 @@ export function useReportConversation({ conv, spaceId, schemaId, currentModelId,
       const appType = conv?.app_type ?? conv?.appType
       // 数据语义分组（group_id）与数据语义叶子（schema_id）互斥：选中分组时只发 group_id 并清空 schema_id。
       const hasGroupSelected = groupId != null && groupId !== ''
+      // 图片附件：后端图片接口未就绪，image_list 为前端约定字段，对接时调整
+      const imageList = toImageListPayload(images ?? [])
       const requestData: SubmitReportRequest = {
         messages: question,
         app_id: toFiniteNumber(conv?.appId ?? conv?.app_id),
@@ -358,6 +361,7 @@ export function useReportConversation({ conv, spaceId, schemaId, currentModelId,
         ...(reportSources ?? EMPTY_REPORT_SOURCE_VERSION_FIELDS),
         ...(embedId !== undefined ? { embed_model_id: embedId } : {}),
         ...(appType !== undefined && appType !== null && appType !== '' ? { app_type: String(appType) } : {}),
+        ...(imageList.length ? { image_list: imageList } : {}),
       }
 
       void submitReportTask(requestData, controller.signal, authorization)

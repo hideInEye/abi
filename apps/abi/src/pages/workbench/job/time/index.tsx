@@ -9,6 +9,7 @@ import { useRouter } from '~/packages/simple-router/src/hooks/useRouter';
 import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
 import { SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
+import { getSpaceId } from '@/store/slice/app';
 
 import JobFormModal from './modules/job-form-modal';
 import type { JobFormOperateType } from './modules/job-form-modal';
@@ -16,7 +17,9 @@ import type { JobFormOperateType } from './modules/job-form-modal';
 export function Component() {
   const { t } = useTranslation();
   const router = useRouter();
+  const spaceId = useAppSelector(getSpaceId);
   const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
+  const [jumpValue, setJumpValue] = useState('');
   const [jobGroupOptions, setJobGroupOptions] = useState<{ label: string; value: number | string }[]>([]);
   const [checkedRowKeys, setCheckedRowKeys] = useState<React.Key[]>([]);
   const [formModal, setFormModal] = useState<{ initial?: any; open: boolean; operateType: JobFormOperateType }>({ open: false, operateType: 'add' });
@@ -44,8 +47,9 @@ export function Component() {
     apiParams: useMemo(() => ({
       pageNum: 1,
       pageSize: 12,
+      spaceId,
       triggerStatus: '-1',
-    }), []),
+    }), [spaceId]),
     transformer: (res: any) => {
       const { records, total } = resolveJobPageResult(res);
       const pageNum = searchParams.current.pageNum || 1;
@@ -433,8 +437,9 @@ export function Component() {
           <div className="data-source-pagination">
             {(() => {
               const pag = tableProps.pagination as any;
-              const current = pag?.current || 1;
-              const pageSizeVal = pag?.pageSize || 12;
+              // pagination.current 读的是 searchParams.current.current，与 onChange 写入的 pageNum 不对应，故直接从 searchParams 取当前页
+              const current = searchParams.current?.pageNum || 1;
+              const pageSizeVal = searchParams.current?.pageSize || 12;
               const totalVal = pag?.total || 0;
               const totalPages = Math.max(1, Math.ceil(totalVal / pageSizeVal));
               const onChange = pag?.onChange;
@@ -457,6 +462,23 @@ export function Component() {
                     <button className="page-btn" disabled={current === 1} onClick={() => onChange?.(current - 1, pageSizeVal)}><LeftOutlined /></button>
                     {pages.map(p => p < 0 ? <span key={p} className="page-item page-ellipsis">...</span> : <span key={p} className={`page-item${p === current ? ' page-active' : ''}`} onClick={() => onChange?.(p, pageSizeVal)}>{p}</span>)}
                     <button className="page-btn" disabled={current >= totalPages} onClick={() => onChange?.(current + 1, pageSizeVal)}><RightOutlined /></button>
+                    <span className="quick-jumper">
+                      前往
+                      <AInput
+                        className="jump-input"
+                        style={{ width: 48, textAlign: 'center' }}
+                        value={jumpValue}
+                        onChange={(e) => setJumpValue(e.target.value)}
+                        onPressEnter={() => {
+                          const page = parseInt(jumpValue, 10);
+                          if (!isNaN(page) && page >= 1 && page <= totalPages) {
+                            onChange?.(page, pageSizeVal);
+                            setJumpValue('');
+                          }
+                        }}
+                      />
+                      页
+                    </span>
                   </div>
                 </>
               );

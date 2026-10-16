@@ -290,7 +290,7 @@ export function Component() {
       return;
     }
     message.success(checked ? '已发布' : '已取消发布');
-    syncShareAppStatus({ projectId: id, type: 'workflow', spaceId: spaceId || undefined, appStatus: checked ? 1 : 2 });
+    syncShareAppStatus({ projectId: id, type: 'react', spaceId: spaceId || undefined, appStatus: checked ? 1 : 2 });
   };
 
   const handleDelete = async (id: AgentCard['id']) => {
@@ -299,7 +299,7 @@ export function Component() {
     if (error) return;
     setAgents(prev => prev.filter(it => it.id !== id));
     message.success('已删除');
-    syncShareAppStatus({ projectId: id, type: 'workflow', spaceId: spaceId || undefined, appStatus: 0 });
+    syncShareAppStatus({ projectId: id, type: 'react', spaceId: spaceId || undefined, appStatus: 0 });
   };
 
   // Batch delete
@@ -316,7 +316,7 @@ export function Component() {
       setCheckedRowKeys(prev => prev.filter(key => !deletedKeys.includes(key)));
       setSelectedRows(prev => prev.filter(row => !deletedKeys.includes(row.id)));
       message.success(`成功删除 ${deletedKeys.length} 个助手`);
-      deletedKeys.forEach(id => syncShareAppStatus({ projectId: id as number | string, type: 'workflow', spaceId: spaceId || undefined, appStatus: 0 }));
+      deletedKeys.forEach(id => syncShareAppStatus({ projectId: id as number | string, type: 'react', spaceId: spaceId || undefined, appStatus: 0 }));
     }
     // 存在删除失败时以服务端为准刷新列表，避免本地状态与服务端不一致（失败原因已由全局错误提示弹出）
     if (failCount > 0) fetchList();

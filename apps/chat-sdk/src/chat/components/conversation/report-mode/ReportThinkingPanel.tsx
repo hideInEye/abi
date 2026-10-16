@@ -13,10 +13,6 @@ interface ReportThinkingPanelProps {
 const THINKING_TYPEWRITER_INTERVAL_MS = 30
 const THINKING_TYPEWRITER_MAX_TICKS = 180
 
-function shouldReduceMotion() {
-  return typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-}
-
 /**
  * 后端会一次性返回完整 step.plan，这里只负责把首次实时正文模拟为逐步输入。
  * completedEntryIdRef 保证组件重渲染、展开或收起时不会重复播放同一条正文。
@@ -35,13 +31,6 @@ function useThinkingTypewriter(content: string, entryId: string | undefined, ena
 
     if (completedEntryIdRef.current === entryId) {
       setDisplayedContent(content)
-      return undefined
-    }
-
-    if (shouldReduceMotion()) {
-      completedEntryIdRef.current = entryId
-      setDisplayedContent(content)
-      onCompleteRef.current?.()
       return undefined
     }
 

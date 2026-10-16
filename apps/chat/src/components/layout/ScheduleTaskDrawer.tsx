@@ -19,6 +19,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { ScheduleTaskForm } from '@/components/layout/ScheduleTaskForm'
 import { deleteJobInfo, fetchJobGroupList, fetchJobInfoList, startJob, stopJob, triggerJob } from '@/service/api/job'
 import { formatJobScheduleText, JOB_SCENE_OPTIONS } from '@/utils/job-schedule'
+import { getSpaceId } from '@/utils/runtime'
 
 const statusOptions = [
   { value: '', label: '全部状态' },
@@ -109,7 +110,7 @@ export function ScheduleTaskDrawer({ open, onClose }: ScheduleTaskDrawerProps) {
     setLoading(true)
     try {
       const triggerStatus = filters.status === 'running' ? '1' : filters.status === 'stopped' ? '0' : '-1'
-      const res: any = await fetchJobInfoList({ jobGroup, name: filters.name, pageNum: page, pageSize: PAGE_SIZE, triggerStatus })
+      const res: any = await fetchJobInfoList({ jobGroup, name: filters.name, pageNum: page, pageSize: PAGE_SIZE, spaceId: getSpaceId(), triggerStatus })
       const rows = Array.isArray(res?.data?.data) ? res.data.data : []
       setRawList((prev) => (page === 1 ? rows : [...prev, ...rows]))
       setListTotal(Number(res?.data?.total) || 0)
@@ -125,10 +126,11 @@ export function ScheduleTaskDrawer({ open, onClose }: ScheduleTaskDrawerProps) {
   const loadStats = async () => {
     if (jobGroup === undefined) return
     try {
+      const spaceId = getSpaceId()
       const [allRes, runningRes, stoppedRes] = await Promise.all([
-        fetchJobInfoList({ jobGroup, name: filters.name, pageNum: 1, pageSize: 1, triggerStatus: '-1' }),
-        fetchJobInfoList({ jobGroup, name: filters.name, pageNum: 1, pageSize: 1, triggerStatus: '1' }),
-        fetchJobInfoList({ jobGroup, name: filters.name, pageNum: 1, pageSize: 1, triggerStatus: '0' }),
+        fetchJobInfoList({ jobGroup, name: filters.name, pageNum: 1, pageSize: 1, spaceId, triggerStatus: '-1' }),
+        fetchJobInfoList({ jobGroup, name: filters.name, pageNum: 1, pageSize: 1, spaceId, triggerStatus: '1' }),
+        fetchJobInfoList({ jobGroup, name: filters.name, pageNum: 1, pageSize: 1, spaceId, triggerStatus: '0' }),
       ])
       const totalOf = (res: any) => Number(res?.data?.total) || 0
       setStats({ total: totalOf(allRes), running: totalOf(runningRes), paused: 0, stopped: totalOf(stoppedRes) })
