@@ -16,6 +16,7 @@ const request = {
   conv_id: 'conversation-1',
   session_id: 'session-1',
   user_id: 9,
+  user_name: 'account_a',
   chat_model_id: 18,
   sse_mcp_source_version_ids: [{ 'mcp-sse-version': 'mcp-sse-group' }],
   mcp_streamable_source_version_ids: ['mcp-streamable-version'],

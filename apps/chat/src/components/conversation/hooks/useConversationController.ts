@@ -29,7 +29,7 @@ import type { chatHeaderRefMethod } from '../../../types'
 import type { ModelOption } from '../components/chat-header'
 import type { ReportHistoryRoundGroup } from '../report-mode/types'
 import { createGenerationGuard } from './generationGuard'
-import { isApiSuccess, parseStoredUserInfo, runApiSuccessFlow } from './conversationRequests'
+import { getConversationUserName, isApiSuccess, parseStoredUserInfo, runApiSuccessFlow } from './conversationRequests'
 
 export interface ConversationProps {
   conv: any
@@ -756,6 +756,7 @@ export const useConversationController = (
       space_id: currentConv.space_id,
       app_id: currentConv.appId || 0,
       user_id: userId,
+      user_name: getConversationUserName(),
       chat_mode: 'chat_with_db_execute',
       embed_model_id: props.embedModelId || 0,
       last_question: currentConv.last_question || null,
@@ -971,6 +972,8 @@ export const useConversationController = (
     const hasExcel = !!activeExcel?.file_id
     // 每次发送时注入最新的 deepThink 状态、数据语义元信息及 Excel 文件信息
     if (params.context) {
+      // 账号同步不一定重建会话，发送时重新取用户名，避免沿用初始化参数中的旧账号。
+      params.context.user_name = getConversationUserName()
       params.context.chat_mode = hasExcel ? 'chat_excel' : 'chat_with_db_execute'
     }
     if (params.context?.extra) {

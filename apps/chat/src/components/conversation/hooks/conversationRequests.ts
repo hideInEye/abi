@@ -12,6 +12,16 @@ export function parseStoredUserInfo(value: string | null): StoredUserInfo {
   }
 }
 
+export function getConversationUserName(): string {
+  // user_name 使用登录账号 userName，而非展示昵称；与原有 user_id 分开传递。
+  try {
+    const userInfo = parseStoredUserInfo(localStorage.getItem('SOY-REACT_userInfo'))
+    return typeof userInfo.userName === 'string' ? userInfo.userName : ''
+  } catch {
+    return ''
+  }
+}
+
 export function isApiSuccess(response: unknown): boolean {
   if (typeof response !== 'object' || response === null) return false
   const result = response as Record<string, unknown>
