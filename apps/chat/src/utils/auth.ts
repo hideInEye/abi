@@ -20,5 +20,17 @@ const adapter = createBrowserAuthAdapter({
 
 export const authManager = adapter.authManager;
 export const getAuthorization = adapter.getAuthorization;
-export const handleLoginExpired = adapter.handleLoginExpired;
 export const readAuthToken = adapter.readAuthToken;
+
+export function handleLoginExpired(noticeMessage?: string) {
+  const hasHostHandler = typeof window.onTokenExpired === 'function';
+
+  return authManager.handleUnauthorized({
+    message: noticeMessage,
+    // 显式回到 ABI 首页，避免保留 Chat 地址或落回角色默认的 Chat 首页。
+    preserveRedirect: true,
+    redirectPath: '/home',
+    redirectDelay: hasHostHandler ? 0 : undefined,
+    showNotice: !hasHostHandler
+  });
+}

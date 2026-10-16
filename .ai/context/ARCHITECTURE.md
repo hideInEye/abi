@@ -28,7 +28,7 @@
 
 - ABI 与同源 Chat 通过共享 token 和 `authSessionVersion`（用户信息及初始空间就绪后发布）同步账号；业务页面监听 storage，并在 focus / visibilitychange 时补查。接收方不得再次清理凭据，避免删除其他窗口刚完成的新登录。
 - 跨端观察器仅同步新登录就绪后的用户信息；token 删除、登录标记删除、缓存清空及随后 focus / visibilitychange 不联动另一端退出、不清空其内存用户状态、不发出用户变更通知或跳转。新登录同步不执行整页重载、共享缓存清理或 ABI 主题重置。ABI 用户展示订阅 auth store，Chat 订阅用户变更通知。两端仍共享凭据，后续真实 401 按原鉴权流程处理，不代表独立会话。
-- Chat 主动退出成功后进入带 `/home` 回跳目标的 ABI 登录页，重新登录后进入 ABI 首页。
+- Chat 主动退出成功或登录失效时，进入带 `/home` 回跳目标的 ABI 登录页，重新登录后进入 ABI 首页；不保留触发失效的 Chat 地址。宿主提供 `onTokenExpired` 时仍交由宿主处理，不改变 ABI 其他页面的登录回跳逻辑。
 - ABI、Chat 新启动及登录恢复在业务挂载/跳转前读取空间列表，默认选择接口第一项，同时更新空间 ID 与名称；明确携带 `spaceId` 的 Chat 业务链接仍解析指定空间。请求失败或账号中途改变时，不用历史缓存继续进入业务。
 - 运行期间两个应用的空间选择器同步共享空间 ID 和名称；Chat 使用既有 `space-change` 事件更新数据上下文。
 - 实现入口：`packages/auth/src/sessionSync.ts`、`apps/abi/src/bootstrap/sessionSync.ts`、`apps/chat/src/bootstrap/sessionSync.ts`；空间初始化位于两个应用各自的 `src/bootstrap/sessionSpace.ts`。
