@@ -5,6 +5,7 @@ import loginBg from '@/assets/imgs/login/loginbg.png'
 import loginHero from '@/assets/imgs/login/loginbot.png'
 import loginLogo from '@/assets/imgs/login/logo.png'
 import Captcha from '@/components/captcha-code'
+import { initializeSessionSpace } from '@/bootstrap/sessionSpace'
 import type { CaptchaRef } from '@/components/captcha-code'
 import { useAppDispatch } from '@/hooks/business/useStore'
 import { useLogin } from '@/hooks/common/login'
@@ -12,7 +13,7 @@ import { useRouterPush } from '@/hooks/common/routerPush'
 import { checkAuthStatus } from '@/router/guard/authGuard'
 import { store } from '@/store'
 import { syncAuthFromStorage } from '@/store/slice/auth'
-import { initAuthRoute } from '@/store/slice/route'
+import { initAuthRoute, resetRouteStore } from '@/store/slice/route'
 import { resetLoginExpiredState } from '@/utils/auth'
 import { localStg } from '@/utils/storage'
 
@@ -85,17 +86,26 @@ export function Component() {
       isSessionActive: () =>
         hasActiveLoginSession(checkAuthStatus(), localStg.get('token'), localStg.get('userInfo')),
       restoreSession: async () => {
+        const token = localStg.get('token')
+        resetLoginExpiredState()
         dispatch(syncAuthFromStorage())
+        await dispatch(resetRouteStore())
+        await initializeSessionSpace()
         await dispatch(initAuthRoute())
 
-        if (!store.getState().route.isInitAuthRoute) return false
+        // 恢复期间可能发生再次登录，不能用旧账号或尚未就绪的权限路由执行跳转。
+        if (localStg.get('token') !== token || !store.getState().route.isInitAuthRoute) return false
 
-        resetLoginExpiredState()
+        window.dispatchEvent(new Event('auth-session-ready'))
         return Boolean(await redirectFromLoginRef.current())
       },
     })
     const runSessionCheck = () => {
-      checkLoginSession().catch(() => undefined)
+      const version = localStg.get('authSessionVersion')
+      checkLoginSession().then(() => {
+        // 恢复检查会阻止并发执行，期间出现新的登录完成标记时需补查，避免漏掉账号切换。
+        if (localStg.get('authSessionVersion') !== version) runSessionCheck()
+      }).catch(() => undefined)
     }
     const handleStorageChange = (event: StorageEvent) => {
       if (!isLoginSessionReadyStorageKey(event.key)) return

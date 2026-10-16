@@ -74,6 +74,7 @@ export function syncBootParamsFromUrl() {
 
     setStorageItemSafely(SPACE_ID_STORAGE_KEY, spaceId)
     setStorageItemSafely(CHAT_ID_STORAGE_KEY, chatId)
+    return { spaceId, chatId }
   } catch {
     // 忽略 URL 解析异常，保留现有本地状态。
   }

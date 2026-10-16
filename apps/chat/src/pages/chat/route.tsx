@@ -1,7 +1,7 @@
 import { ClockCircleOutlined } from '@ant-design/icons'
 import { Outlet, createFileRoute, useNavigate, useRouterState } from '@tanstack/react-router'
-import React, { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
-
+import { Fragment, useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import React from 'react'
 import {
   SKILL_STORE_MENU_KEY,
   SIDER_COLLAPSED_WIDTH,
@@ -13,7 +13,7 @@ import { SidebarCollapseProvider } from '@/components/layout/SidebarCollapseCont
 import { LazyFeatureFallback, RetryableLazy } from '@/components/performance/RetryableLazy'
 import { useAfterFirstPaint } from '@/components/performance/useAfterFirstPaint'
 import { ChatBootstrapProvider } from '@/resources/chatBootstrap'
-import { getCurrentUserName } from '@/utils/identity'
+import { getCurrentUserName, subscribeCurrentUser } from '@/utils/identity'
 
 /** 技能商店 / 应用工坊 独立路由地址 */
 const SKILL_STORE_ROUTE = '/chat/skill'
@@ -67,7 +67,7 @@ function ChatWorkbenchLayoutContent() {
   const showWorkshop = pathname.startsWith(WORKSHOP_ROUTE)
   const chromeReady = useAfterFirstPaint(pathname === '/chat/task/new' ? 1200 : 0)
 
-  const userName = useMemo(() => getCurrentUserName(), [])
+  const userName = useSyncExternalStore(subscribeCurrentUser, getCurrentUserName)
   const pageTitle = useMemo(() => {
     if (showSkillStore) return 'ABI - 技能商店'
     if (showWorkshop) return 'ABI - 应用工坊'

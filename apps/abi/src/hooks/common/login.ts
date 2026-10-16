@@ -1,5 +1,6 @@
 import { useLoading } from '@sa/hooks';
 import { useTranslation } from 'react-i18next';
+import { initializeSessionSpace } from '@/bootstrap/sessionSpace';
 
 import { getUerName, login } from '@/store/slice/auth';
 import { initAuthRoute, resetRouteStore } from '@/store/slice/route';
@@ -33,8 +34,11 @@ export function useLogin() {
       const userName = dispatch(getUerName());
 
       if (userName) {
-        localStg.set('authSessionVersion', Date.now());
         resetLoginExpiredState();
+        await initializeSessionSpace();
+        // 用户资料和默认空间均就绪后才通知其他页面，避免新账号读取到旧空间。
+        localStg.set('authSessionVersion', Date.now());
+        window.dispatchEvent(new Event('auth-session-ready'));
         await dispatch(initAuthRoute());
 
         // 等待路由初始化完成后再跳转
@@ -47,6 +51,9 @@ export function useLogin() {
       }
 
       return Boolean(userName);
+    } catch (error) {
+      window.$message?.error(error instanceof Error ? error.message : '登录初始化失败，请重试');
+      return false;
     } finally {
       endLoading();
     }

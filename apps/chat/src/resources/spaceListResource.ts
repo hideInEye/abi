@@ -57,7 +57,7 @@ export function getChatSpacePageKey(pageNum: number, search: string): string {
   })
 }
 
-export function loadChatSpacePage(pageNum: number, search: string): Promise<ChatSpacePage> {
+export function loadChatSpacePage(pageNum: number, search: string, force = false): Promise<ChatSpacePage> {
   const normalizedSearch = search.trim()
   const key = getChatSpacePageKey(pageNum, normalizedSearch)
   return spacePageResource.load(key, async signal => {
@@ -68,9 +68,14 @@ export function loadChatSpacePage(pageNum: number, search: string): Promise<Chat
       pageSize: CHAT_SPACE_PAGE_SIZE,
       spaceName: normalizedSearch || undefined,
     }, signal)
+    const result = response as unknown as { code?: number | string; success?: boolean; msg?: string }
+    const success = result?.code != null ? ['200', '0000'].includes(String(result.code)) : result?.success === true
+    if (!success) {
+      throw new Error(result?.msg || '空间列表加载失败')
+    }
     const rows = normalizeSpaceList(response)
     return { hasMore: rows.length === CHAT_SPACE_PAGE_SIZE, pageNum, rows }
-  })
+  }, { force })
 }
 
 export function abortChatSpacePage(pageNum: number, search: string): void {

@@ -338,3 +338,5 @@ export function createAuthManager(options: AuthManagerOptions) {
     resetUnauthorizedState
   };
 }
+
+export { watchAuthSession } from './sessionSync';

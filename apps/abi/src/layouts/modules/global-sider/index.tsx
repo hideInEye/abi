@@ -2,7 +2,7 @@ import appLogo from '@/assets/imgs/home/abi_logo.png'
 import userIcon from '@/assets/imgs/home/用户.svg'
 import { itemMap, primaryMenuData, primaryMenuMap } from '@/constants/layout/global_side'
 import { selectSelectedMenuKey, setSelectedMenuKey } from '@/store/slice/layout'
-import { localStg } from '@/utils/storage'
+import { selectUserInfo } from '@/store/slice/auth'
 import { UserOutlined, SettingOutlined, TeamOutlined, LogoutOutlined, ClockCircleOutlined, BookOutlined } from '@ant-design/icons'
 import SvgIcon from '@/components/stateless/custom/SvgIcon'
 import { getOutlinedIcon } from '@/utils/antdIconRegistry'
@@ -20,7 +20,7 @@ const { Sider } = Layout
 
 const GlobalSider: FC = memo(() => {
   const selectedMenuKey = useAppSelector(selectSelectedMenuKey)
-  const userInfo = localStg.get('userInfo')
+  const userInfo = useAppSelector(selectUserInfo)
   const router = useRouter()
   const route = useRoute()
   const { t } = useTranslation()
@@ -156,7 +156,7 @@ const GlobalSider: FC = memo(() => {
     })
     
     return items
-  }, [showManage, showLog, routes])
+  }, [showManage, showLog, routes, isMicroApp, userInfo.userName])
 
   const handleMenuClick = (e: any) => {
     // 目标路由未注册时（如目录子菜单尚未配置）不跳转，避免回退到通配路由

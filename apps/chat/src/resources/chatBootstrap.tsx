@@ -5,7 +5,7 @@ import { CHAT_MODE } from '@/constant'
 import { useAfterFirstPaint } from '@/components/performance/useAfterFirstPaint'
 import type { SessionGroup } from '@/service/api/app'
 import { getSpaceId } from '@/utils/runtime'
-import { getCurrentUser } from '@/utils/identity'
+import { getCurrentUser, subscribeCurrentUser } from '@/utils/identity'
 
 import { getChatBootstrapKeys } from './chatBootstrapKeys'
 import type { ChatBootstrapIdentity } from './chatBootstrapKeys'
@@ -131,6 +131,7 @@ export function ChatBootstrapProvider({ children }: { children: ReactNode }) {
   const semantic = useSnapshot(semanticResource, keys.semantic)
 
   const loadConversations = useCallback((options: LoadResourceOptions = {}) => {
+    if (!identity.userName) return Promise.resolve([])
     return conversationsResource.load(
       keys.conversations,
       signal => import('@/service/api/app')
@@ -145,6 +146,7 @@ export function ChatBootstrapProvider({ children }: { children: ReactNode }) {
   }, [identity, keys.conversations])
 
   const loadGroups = useCallback((options: LoadResourceOptions = {}) => {
+    if (!identity.userName) return Promise.resolve([])
     return groupsResource.load(
       keys.groups,
       signal => import('@/service/api/app')
@@ -158,6 +160,7 @@ export function ChatBootstrapProvider({ children }: { children: ReactNode }) {
   }, [identity, keys.groups])
 
   const loadModels = useCallback((options: LoadResourceOptions = {}) => {
+    if (!identity.userName) return Promise.resolve({ currentModel: null, embedModelId: '', options: [] })
     return modelsResource.load(
       keys.models,
       signal => import('@/service/api/abi-system')
@@ -165,9 +168,10 @@ export function ChatBootstrapProvider({ children }: { children: ReactNode }) {
         .then(normalizeModels),
       { force: options.force },
     )
-  }, [identity.spaceId, keys.models])
+  }, [identity.spaceId, identity.userName, keys.models])
 
   const loadSemantic = useCallback((options: LoadResourceOptions = {}) => {
+    if (!identity.userName) return Promise.resolve([])
     return semanticResource.load(
       keys.semantic,
       signal => import('@/service/api/semantic')
@@ -175,7 +179,7 @@ export function ChatBootstrapProvider({ children }: { children: ReactNode }) {
         .then(normalizeSemantic),
       { force: options.force },
     )
-  }, [identity.spaceId, keys.semantic])
+  }, [identity.spaceId, identity.userName, keys.semantic])
 
   const invalidateConversations = useCallback(() => {
     conversationsResource.invalidate(keys.conversations)
@@ -194,12 +198,20 @@ export function ChatBootstrapProvider({ children }: { children: ReactNode }) {
   }, [keys.groups])
 
   useEffect(() => {
-    if (!bootstrapReady) return
+    if (!bootstrapReady || !identity.userName) return
     void loadConversations().catch(() => {})
     void loadGroups().catch(() => {})
     void loadModels().catch(() => {})
     void loadSemantic().catch(() => {})
-  }, [bootstrapReady, loadConversations, loadGroups, loadModels, loadSemantic])
+  }, [bootstrapReady, identity.userName, loadConversations, loadGroups, loadModels, loadSemantic])
+
+  useEffect(() => subscribeCurrentUser(() => {
+    setIdentity(current => {
+      // 登录完成后一起读取账号和空间，让资源缓存键与新身份一致，无需重挂载页面。
+      const next = readIdentity()
+      return current.userName === next.userName && current.spaceId === next.spaceId ? current : next
+    })
+  }), [])
 
   useEffect(() => {
     const handleSpaceChange = (event: Event) => {
@@ -215,6 +227,7 @@ export function ChatBootstrapProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('space-change', handleSpaceChange)
   }, [])
 
+  // 身份变化时终止旧账号或旧空间的在途请求，避免继续消耗资源或更新过期缓存。
   useEffect(() => () => abortIdentity(identity), [identity])
 
   const value = useMemo<ChatBootstrapValue>(() => ({

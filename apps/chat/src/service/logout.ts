@@ -29,5 +29,6 @@ export async function requestLogout(): Promise<void> {
 
 export async function logoutNow(): Promise<void> {
   await requestLogout()
-  await authManager.logout({ preserveRedirect: false })
+  // 主动退出后的重新登录统一回 ABI 首页，显式保留此目标以免再次返回 Chat。
+  await authManager.logout({ preserveRedirect: true, redirectPath: '/home' })
 }

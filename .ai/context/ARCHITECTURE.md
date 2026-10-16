@@ -20,9 +20,18 @@
 - `apps/abi` 是主壳和主要业务管理端，通过 qiankun 集成 `dashboard`；`chat` 当前是 `/chat-ui/` 独立 SPA，不应按 qiankun 卸载语义评估其生命周期。
 - `apps/chat` 负责聊天、会话、图表/问答呈现和相关请求，鉴权通过共享 token 或 host `window.onTokenExpired` 协作。
 - `apps/dashboard` 负责大屏设计器、画布、组件定义、蓝图、热键、Undo/Redo 等复杂交互。
-- `packages/auth` 只处理 token 标准化、Authorization header、登录过期流程，不应包含业务路由或页面。
+- `packages/auth` 只处理 token 标准化、Authorization header、登录过期和跨窗口会话通知，不应包含业务路由或页面。
 - `packages/axios` 只提供请求工厂、重试、取消和通用错误分层，不应写具体业务 API。
 - `packages/simple-router` 是 `apps/abi` 的路由适配层，修改时需兼容 React Router 行为。
+
+## ABI / Chat 会话与空间初始化
+
+- ABI 与同源 Chat 通过共享 token 和 `authSessionVersion`（用户信息及初始空间就绪后发布）同步账号；业务页面监听 storage，并在 focus / visibilitychange 时补查。接收方不得再次清理凭据，避免删除其他窗口刚完成的新登录。
+- 跨端观察器仅同步新登录就绪后的用户信息；token 删除、登录标记删除、缓存清空及随后 focus / visibilitychange 不联动另一端退出、不清空其内存用户状态、不发出用户变更通知或跳转。新登录同步不执行整页重载、共享缓存清理或 ABI 主题重置。ABI 用户展示订阅 auth store，Chat 订阅用户变更通知。两端仍共享凭据，后续真实 401 按原鉴权流程处理，不代表独立会话。
+- Chat 主动退出成功后进入带 `/home` 回跳目标的 ABI 登录页，重新登录后进入 ABI 首页。
+- ABI、Chat 新启动及登录恢复在业务挂载/跳转前读取空间列表，默认选择接口第一项，同时更新空间 ID 与名称；明确携带 `spaceId` 的 Chat 业务链接仍解析指定空间。请求失败或账号中途改变时，不用历史缓存继续进入业务。
+- 运行期间两个应用的空间选择器同步共享空间 ID 和名称；Chat 使用既有 `space-change` 事件更新数据上下文。
+- 实现入口：`packages/auth/src/sessionSync.ts`、`apps/abi/src/bootstrap/sessionSync.ts`、`apps/chat/src/bootstrap/sessionSync.ts`；空间初始化位于两个应用各自的 `src/bootstrap/sessionSpace.ts`。
 
 ## 微前端集成约束
 
