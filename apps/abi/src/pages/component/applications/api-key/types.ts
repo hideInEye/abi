@@ -16,6 +16,7 @@ export interface ApiKeyItem {
   id: number
   ipAccessType: IpAccessType
   ipWhitelist: string[]
+  name: string
   rawSecretKey?: string
   secretKey: string
   spaceId: number

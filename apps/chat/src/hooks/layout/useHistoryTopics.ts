@@ -1,21 +1,24 @@
 import { useCallback, useMemo } from 'react'
 
 import { fallbackTopics } from '@/constant/layout'
-import { useChatBootstrap } from '@/resources/chatBootstrap'
+import { useChatBootstrap, useChatConversations } from '@/resources/chatBootstrap'
 import type { TopicItem } from '@/types/layout'
 import { normalizeTopicsFromApi } from '@/utils/layout'
 
 export function useHistoryTopics() {
   const bootstrap = useChatBootstrap()
-  const historyApps = bootstrap.conversations.data ?? []
-  const historyLoading = bootstrap.conversations.status === 'loading'
+  const conversations = useChatConversations()
+  const historyApps = conversations.data ?? []
+  // 已加载的空列表同样是有效数据；后续刷新保留旧内容，不再给侧栏加加载遮罩。
+  const historyLoading = conversations.data === undefined
+    && (conversations.status === 'idle' || conversations.status === 'loading')
   const historyTopics = useMemo<TopicItem[]>(() => {
     const normalized = normalizeTopicsFromApi(historyApps)
     return normalized.length ? normalized : fallbackTopics
   }, [historyApps])
 
   const loadHistoryTopics = useCallback(
-    (options?: { force?: boolean; silent?: boolean }) => bootstrap.loadConversations({ force: options?.force }),
+    (options?: { force?: boolean }) => bootstrap.loadConversations({ force: options?.force }),
     [bootstrap.loadConversations],
   )
 

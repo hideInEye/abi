@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { createBrowserAuthAdapter } from '@sa/auth'
 
 const { authLogout, fetchLogout } = vi.hoisted(() => ({
   authLogout: vi.fn(),
@@ -39,7 +40,7 @@ describe('Chat logout flow', () => {
     resolveRequest?.({ code: 200 })
     await logoutPromise
 
-    expect(authLogout).toHaveBeenCalledWith({ preserveRedirect: false })
+    expect(authLogout).toHaveBeenCalledWith({ preserveRedirect: true, redirectPath: '/home' })
   })
 
   it('blocks local logout when the API reports failure', async () => {
@@ -47,6 +48,21 @@ describe('Chat logout flow', () => {
 
     await expect(logoutNow()).rejects.toThrow('logout failed')
     expect(authLogout).not.toHaveBeenCalled()
+  })
+
+  it('uses the auth adapter to enter ABI login with a home return path, not the Chat URL', async () => {
+    const environment = {
+      location: { pathname: '/chat-ui/', hash: '#/chat/conversation/123', search: '', href: '' },
+      localStorage: { getItem: () => 'account-a-token', removeItem: vi.fn() },
+    }
+    const adapter = createBrowserAuthAdapter({ getEnvironment: () => environment, stateKey: '__CHAT_LOGOUT_HOME_TEST__' })
+    adapter.authManager.resetUnauthorizedState()
+    authLogout.mockImplementation(adapter.authManager.logout)
+    fetchLogout.mockResolvedValue({ code: 200 })
+    await logoutNow()
+    expect(environment.location.href).toBe('/login?redirect=%2Fhome')
+    expect(environment.localStorage.removeItem).toHaveBeenCalledWith('SOY-REACT_token')
+    adapter.authManager.resetUnauthorizedState()
   })
 
   it('blocks local logout when the API request rejects', async () => {

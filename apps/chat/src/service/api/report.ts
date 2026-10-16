@@ -35,6 +35,8 @@ export interface SubmitReportRequest extends ReportSourceVersionFields {
   conv_id: string
   session_id: string
   user_id: number
+  /** 登录账号 userName，与用户 ID 分开传递。 */
+  user_name: string
   embed_model_id?: number
   chat_model_id: number
   app_type?: string

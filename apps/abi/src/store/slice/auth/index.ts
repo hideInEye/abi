@@ -194,7 +194,7 @@ export const { selectToken, selectUserInfo } = authSlice.selectors;
 const { setAuthState } = authSlice.actions;
 export const { login, resetAuth } = authSlice.actions;
 
-export const syncAuthFromStorage = (): AppThunk => dispatch => {
+export const syncAuthFromStorage = (options: { resetTheme?: boolean } = {}): AppThunk => dispatch => {
   const token = getToken();
   dispatch(
     setAuthState({
@@ -202,7 +202,8 @@ export const syncAuthFromStorage = (): AppThunk => dispatch => {
       userInfo: getUserInfo()
     })
   );
-  if (token) dispatch(resetTheme());
+  // 登录恢复沿用主题初始化；业务页面仅同步用户信息时显式跳过，保留当前主题设置。
+  if (token && options.resetTheme !== false) dispatch(resetTheme());
 };
 // We can also write thunks by hand, which may contain both sync and async logic.
 // Here's an example of conditionally dispatching actions based on current state.

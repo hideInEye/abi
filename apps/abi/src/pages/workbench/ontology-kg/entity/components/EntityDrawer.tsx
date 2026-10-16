@@ -92,7 +92,7 @@ export const EntityDrawer: React.FC<EntityDrawerProps> = ({ entity, labels, onCl
             { min: 2, message: '实体名称长度需为2-50个字符' },
           ]}
         >
-          <Input disabled={Boolean(entity)} maxLength={50} placeholder="请输入实体名称" />
+          <Input maxLength={50} placeholder="请输入实体名称" />
         </Form.Item>
         <Form.Item
           label="实体编码"
@@ -108,7 +108,7 @@ export const EntityDrawer: React.FC<EntityDrawerProps> = ({ entity, labels, onCl
         </Form.Item>
         <Form.Item label="标签类型" name="labelSelection" rules={[{ message: '请选择或输入一个标签类型', required: true }]}>
           {entity ? (
-            <Select<OntologyNetworkId> disabled options={labelOptions} placeholder="请选择标签类型" />
+            <Select<OntologyNetworkId> options={labelOptions} placeholder="请选择标签类型" />
           ) : (
             <Select<OntologyNetworkId | string> maxCount={1} mode="tags" options={labelOptions} placeholder="请选择或输入标签类型后按回车" tokenSeparators={[',']} />
           )}

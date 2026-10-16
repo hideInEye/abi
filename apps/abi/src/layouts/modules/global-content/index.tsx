@@ -10,7 +10,7 @@ import {
   mergeSpacePages,
   type SpaceListItem,
 } from '@/resources/spaceListResource';
-import { persistSpaceName, readPersistedSpaceName } from '@/utils/spaceStorage';
+import { persistSpaceName, readPersistedSpaceId, readPersistedSpaceName } from '@/utils/spaceStorage';
 
 import { changeSpaceId, getReloadFlag, getSpaceId } from '@/store/slice/app'
 import { getRemoveCacheKey, selectCacheRoutes } from '@/store/slice/route'
@@ -165,9 +165,8 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
 
   // 同步 Redux store 中的 spaceId 到本地状态
   useEffect(() => {
-    if (currentSpaceId) {
-      setCurrentSpace(currentSpaceId);
-    }
+    setCurrentSpace(currentSpaceId);
+    setCurrentSpaceName(readPersistedSpaceId() === currentSpaceId ? readPersistedSpaceName() : '');
   }, [currentSpaceId]);
 
   // 窗口重新获得焦点或用户交互时，从 localStorage 同步最新 spaceId
@@ -183,6 +182,7 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
             dispatch(changeSpaceId(sid));
             setCurrentSpace(sid);
           }
+          if (sid > 0) setCurrentSpaceName(readPersistedSpaceName());
         }
       } catch {
         // ignore
@@ -194,13 +194,18 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
     };
     // 同 tab 内微应用场景：用户点击管理区域时检测 localStorage 变化
     const handleClick = () => syncSpaceId();
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === 'spaceId' || event.key === 'spaceName') syncSpaceId();
+    };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('focus', syncSpaceId);
+    window.addEventListener('storage', handleStorage);
     document.addEventListener('click', handleClick, true);
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', syncSpaceId);
+      window.removeEventListener('storage', handleStorage);
       document.removeEventListener('click', handleClick, true);
     };
   }, [dispatch, currentSpaceId]);

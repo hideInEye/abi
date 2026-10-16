@@ -13,10 +13,16 @@ import '@/plugins/assets'
 import { preloadInitialRoute, setupRouter } from '@/router'
 import { fetchLoginChatbiByOnenet } from '@/service/api/auth'
 import { store } from '@/store'
+import { syncAuthFromStorage } from '@/store/slice/auth'
 import { resetLoginExpiredState } from '@/utils/auth'
 import { localStg } from '@/utils/storage'
+import { hasActiveLoginSession } from '@/pages/login/loginSessionSync'
+
+import { initializeSessionSpace } from './sessionSpace'
+import { startAbiSessionSync } from './sessionSync'
 
 let root: Root | null = null
+let stopSessionSync: (() => void) | undefined
 
 async function setupOptionalIconify() {
   if (!import.meta.env.VITE_ICONIFY_URL) return
@@ -77,6 +83,15 @@ export async function mountFullAbiApp(props: any, poweredByQiankun = false) {
 
   setupNProgress()
   await setupOptionalIconify()
+  if (!poweredByQiankun) {
+    stopSessionSync?.()
+    stopSessionSync = startAbiSessionSync()
+    const token = localStg.get('token')
+    if (!window.location.pathname.startsWith('/login') && hasActiveLoginSession(Boolean(token), token, localStg.get('userInfo'))) {
+      await initializeSessionSpace()
+      store.dispatch(syncAuthFromStorage())
+    }
+  }
   if (!poweredByQiankun) preloadInitialRoute(window.location.pathname)
   setupRouter()
   setupDayjs()
@@ -94,6 +109,8 @@ export async function mountFullAbiApp(props: any, poweredByQiankun = false) {
 }
 
 export function unmountFullAbiApp() {
+  stopSessionSync?.()
+  stopSessionSync = undefined
   root?.unmount()
   root = null
   window.qiankunStore = null

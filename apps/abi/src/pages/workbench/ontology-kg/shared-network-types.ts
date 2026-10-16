@@ -114,6 +114,7 @@ export interface CreateOntologyEntityParams {
 
 export interface UpdateOntologyEntityParams {
   color?: string
+  entityName?: string
   id: OntologyNetworkId
   labelId?: OntologyNetworkId
   remark?: string

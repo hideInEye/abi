@@ -76,4 +76,13 @@ describe('login theme reset', () => {
     syncAuthFromStorage()(vi.fn(), vi.fn(), undefined);
     expect(mocks.resetTheme).not.toHaveBeenCalled();
   });
+
+  it('updates the user without resetting theme or clearing storage for a remote session notification', () => {
+    mocks.get.mockImplementation(key => key === 'token' ? 'shared-token' : key === 'userInfo' ? user : null);
+    const dispatch = vi.fn();
+    syncAuthFromStorage({ resetTheme: false })(dispatch, vi.fn(), undefined);
+    expect(dispatch).toHaveBeenCalledWith({ type: 'auth/setAuthState', payload: { token: 'shared-token', userInfo: user } });
+    expect(mocks.resetTheme).not.toHaveBeenCalled();
+    expect(mocks.remove).not.toHaveBeenCalled();
+  });
 });

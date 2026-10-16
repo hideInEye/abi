@@ -2,7 +2,7 @@ import { message } from 'antd'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { fetchConvMaxRound, streamExplorePlan } from '../../../service/api/conv'
-import { isApiSuccess } from '../hooks/conversationRequests'
+import { getConversationUserName, isApiSuccess } from '../hooks/conversationRequests'
 
 import { interruptExploreItem, settleExploreItem } from './exploreProcessTimeline'
 import { parseExploreStreamEvent, reduceExploreEvent } from './exploreStreamReducer'
@@ -145,6 +145,7 @@ export function useExploreConversation({ conv, spaceId, currentModelId, embedMod
       conv_id: conv.conv_uid,
       session_id: conv.chat_id,
       user_id: getCurrentUserId(),
+      user_name: getConversationUserName(),
       embed_model_id: embedModelId || 0,
       chat_model_id: currentModelId || 0,
       sse_mcp_source_version_ids: mcpFields.sse,

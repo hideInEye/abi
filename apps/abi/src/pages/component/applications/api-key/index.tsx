@@ -133,6 +133,7 @@ function mapClientRowToView(item: AbiClientListItem, fallbackSpaceId: number): A
     id: Number(item.id),
     ipAccessType: isRestrictedIp(item.restrictedIp) ? 'whitelist' : 'unlimited',
     ipWhitelist: parseWhitelist(item),
+    name: item.name || '',
     rawSecretKey: item.secretKey || '',
     secretKey: item.secretKey || '',
     spaceId: Number(item.spaceId || fallbackSpaceId),
@@ -149,6 +150,7 @@ function mapClientDetailToView(item: AbiClientDetailItem, fallback: ApiKeyItem |
       accessKey: item.accessKey || fallback?.accessKey || '',
       clientId: item.clientId || fallback?.clientId || '',
       createTime: item.createTime || fallback?.createdAt || '',
+      name: item.name ?? fallback?.name,
       remark: item.remark || '',
       spaceId: item.spaceId || fallbackSpaceId,
       spaceName: fallback?.businessSpace || ''
@@ -185,6 +187,7 @@ export function Component() {
   })
   const [viewMode, setViewMode] = useState<'list' | 'card'>('card')
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>([
+    { key: 'name', label: '名称', visible: true },
     { key: 'businessSpace', label: '业务空间', visible: true },
     { key: 'clientId', label: 'Client ID', visible: true },
     { key: 'accessKey', label: 'Access Key', visible: true },
