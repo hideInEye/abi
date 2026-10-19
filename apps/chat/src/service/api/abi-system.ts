@@ -128,7 +128,7 @@ export function fetchOperateRecordList(type: string) {
 }
 
 // 收藏列表（应用工坊-我的收藏）
-export function fetchFavoriteList(data: FavoriteParams & { pageNum?: number; pageSize?: number } = {}) {
+export function fetchFavoriteList(data: FavoriteParams & { pageNum?: number; pageSize?: number; spaceId?: number | string } = {}) {
   return request({
     url: "/api/abi-system/favorite/list",
     method: "get",
@@ -137,6 +137,8 @@ export function fetchFavoriteList(data: FavoriteParams & { pageNum?: number; pag
       favorType: data.favorType ?? 'chat',
       pageNum: data.pageNum ?? 1,
       pageSize: data.pageSize ?? 999,
+      // 对话技能按当前空间筛选；未传空间的收藏入口保持原查询范围。
+      ...(data.spaceId != null ? { spaceId: data.spaceId } : {}),
     },
   });
 }

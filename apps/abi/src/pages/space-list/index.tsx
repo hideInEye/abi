@@ -220,8 +220,9 @@ export function Component() {
     return isAdmin || isCreator;
   }
 
-  function enterSpace(spaceId: number) {
-    switchToSpace(spaceId, undefined, { redirect: true });
+  async function enterSpace(spaceId: number, spaceName: string) {
+    const switched = await switchToSpace(spaceId, undefined, { redirect: true, spaceName });
+    if (!switched) return;
     dispatch(setSelectedMenuKey('assistant-manage_assistant-config'));
     push('/workbench');
   }
@@ -288,7 +289,7 @@ export function Component() {
       minWidth: 200,
       onHeaderCell: () => ({ className: 'col-left-header' }),
       render: (text: string, record: ISpaceItem) => (
-        <span className="source-name-cell" style={{ cursor: 'pointer' }} onClick={() => enterSpace(record.spaceId)}>
+        <span className="source-name-cell" style={{ cursor: 'pointer' }} onClick={() => enterSpace(record.spaceId, record.spaceName)}>
           <span className="source-name-text" title={text}>{text}</span>
         </span>
       ),
@@ -378,7 +379,7 @@ export function Component() {
             const dotColor = dotColors[idx % dotColors.length];
             const canDelete = canDeleteSpace(record);
             return (
-              <div key={record.spaceId} className="abi-data-card" onClick={() => enterSpace(record.spaceId)} style={{ cursor: 'pointer' }}>
+              <div key={record.spaceId} className="abi-data-card" onClick={() => enterSpace(record.spaceId, record.spaceName)} style={{ cursor: 'pointer' }}>
                 <div className="abi-data-card-head">
                   <div className="abi-data-card-title">
                     <span className={`abi-space-dot abi-space-dot--${dotColor}`} />

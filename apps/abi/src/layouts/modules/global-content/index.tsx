@@ -10,9 +10,7 @@ import {
   mergeSpacePages,
   type SpaceListItem,
 } from '@/resources/spaceListResource';
-import { persistSpaceName, readPersistedSpaceId, readPersistedSpaceName } from '@/utils/spaceStorage';
-
-import { changeSpaceId, getReloadFlag, getSpaceId } from '@/store/slice/app'
+import { getCurrentSpaceInfo, getReloadFlag } from '@/store/slice/app'
 import { getRemoveCacheKey, selectCacheRoutes } from '@/store/slice/route'
 import { getThemeSettings } from '@/store/slice/theme'
 import { GLOBAL_SIDER_MENU_ID, hideMenuRoute } from '@/constants/app'
@@ -93,10 +91,10 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
 
   const cacheKey = useGetCacheKey()
 
-  const currentSpaceId = useAppSelector(getSpaceId);
+  const currentSpaceInfo = useAppSelector(getCurrentSpaceInfo);
+  const currentSpace = currentSpaceInfo?.spaceId;
+  const currentSpaceName = currentSpaceInfo?.spaceName || '';
   const { switchToSpace } = useSpaceSwitch();
-  const [currentSpaceName, setCurrentSpaceName] = useState(() => readPersistedSpaceName());
-  const [currentSpace, setCurrentSpace] = useState<number | null>(currentSpaceId);
   const [spaceDropdownOpen, setSpaceDropdownOpen] = useState(false);
   const [spaceSearch, setSpaceSearch] = useState('');
   const [spaceRows, setSpaceRows] = useState<SpaceListItem[]>([]);
@@ -154,76 +152,17 @@ const GlobalContent: FC<Props> = memo(({ closePadding }) => {
     if (activeRequest) abortSpaceListPage(activeRequest.page, activeRequest.search);
   }, []);
 
-  useEffect(() => {
-    if (currentSpace) {
-      const space = spaceRows.find((item) => item.spaceId === currentSpace);
-      if (space) {
-        setCurrentSpaceName(space.spaceName);
-      }
-    }
-  }, [spaceRows, currentSpace]);
-
-  // 同步 Redux store 中的 spaceId 到本地状态
-  useEffect(() => {
-    setCurrentSpace(currentSpaceId);
-    setCurrentSpaceName(readPersistedSpaceId() === currentSpaceId ? readPersistedSpaceName() : '');
-  }, [currentSpaceId]);
-
-  // 窗口重新获得焦点或用户交互时，从 localStorage 同步最新 spaceId
-  // 处理 Chat 等其他应用切换空间后回到管理端的场景（跨 tab / 同 tab 微应用均覆盖）
-  const dispatch = useAppDispatch();
-  useEffect(() => {
-    const syncSpaceId = () => {
-      try {
-        const saved = localStorage.getItem('spaceId');
-        if (saved) {
-          const sid = Number(saved);
-          if (sid > 0 && sid !== currentSpaceId) {
-            dispatch(changeSpaceId(sid));
-            setCurrentSpace(sid);
-          }
-          if (sid > 0) setCurrentSpaceName(readPersistedSpaceName());
-        }
-      } catch {
-        // ignore
-      }
-    };
-    // 跨 tab 切换回来时触发
-    const handleVisibilityChange = () => {
-      if (!document.hidden) syncSpaceId();
-    };
-    // 同 tab 内微应用场景：用户点击管理区域时检测 localStorage 变化
-    const handleClick = () => syncSpaceId();
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === 'spaceId' || event.key === 'spaceName') syncSpaceId();
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', syncSpaceId);
-    window.addEventListener('storage', handleStorage);
-    document.addEventListener('click', handleClick, true);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', syncSpaceId);
-      window.removeEventListener('storage', handleStorage);
-      document.removeEventListener('click', handleClick, true);
-    };
-  }, [dispatch, currentSpaceId]);
-
   const handleSpaceClick = async (spaceId: number, spaceName: string) => {
     // 点击当前已选中的空间，仅关闭下拉
     if (spaceId === currentSpace) {
       setSpaceDropdownOpen(false);
       return;
     }
-    const switched = await switchToSpace(spaceId);
+    const switched = await switchToSpace(spaceId, undefined, { spaceName });
     if (!switched) {
       message.error('空间切换失败，已保留当前空间');
       return;
     }
-    setCurrentSpaceName(spaceName);
-    setCurrentSpace(spaceId);
-    persistSpaceName(spaceName);
     setSpaceDropdownOpen(false);
   };
 

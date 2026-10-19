@@ -1,8 +1,33 @@
 import { describe, expect, it } from 'vitest'
 
 import type { RuleFieldOption } from '../../rule-expression'
+import type { KnowledgeIndicatorItem } from '../types/metricModeling.types'
 
 import { buildDerivedConditionDescription, buildDerivedMetricPreview } from './derivedMetricPreview'
+import { buildKnowledgeCalcLogic } from './knowledgeSubmitPayload'
+
+const productAtomic: KnowledgeIndicatorItem = {
+  indId: 758,
+  bizName: '商品SKU表_#_商品ID',
+  techName: 't_product_sku.atomic_product_id',
+  techId: [{ techId: '19943704006211' }],
+  calcLogic: {
+    agg: { data: ['sum', 'COUNT(X)'], type: 'simple' },
+    techName: 't_product_sku.product_id'
+  }
+}
+
+function previewProduct(projectionFunc: string, atomicMetric = productAtomic) {
+  return buildDerivedMetricPreview({
+    allFields: [],
+    atomicLabel: '商品ID',
+    atomicMetric,
+    dimensionOptions: [],
+    projectionFunc,
+    ruleFields: [],
+    ruleLayers: []
+  })
+}
 
 const fields: RuleFieldOption[] = [
   {
@@ -180,7 +205,7 @@ describe('derived metric preview', () => {
     expect(result.displaySql).not.toContain('WHERE')
   })
 
-  it('keeps the existing submission expression separate from the complete display SQL', () => {
+  it('submits the source-field expression and conditions without the complete display SQL', () => {
     const result = buildDerivedMetricPreview({
       allFields: [{ fieldName: 'payment_amount', tableName: 'trade_fact', techId: 'amount-id' }],
       atomicLabel: '实付金额',
@@ -193,13 +218,13 @@ describe('derived metric preview', () => {
     })
 
     expect(result.submissionExpression).toBe(
-      "SUM(实付金额)\nWHERE ((payment_amount >= 100 OR region_code = '华东') AND (payment_amount < 1000))"
+      "SUM(payment_amount)\nWHERE ((payment_amount >= 100 OR region_code = '华东') AND (payment_amount < 1000))"
     )
     expect(result.submissionExpression).not.toContain('SELECT')
     expect(result.displaySql).toContain('SELECT SUM(payment_amount) FROM trade_fact')
   })
 
-  it('preserves the legacy sum fallback independently from display metadata', () => {
+  it('uses the same metadata aggregation fallback for display and submission', () => {
     const result = buildDerivedMetricPreview({
       allFields: [{ fieldName: 'payment_amount', tableName: 'trade_fact', techId: 'amount-id' }],
       atomicLabel: '实付金额',
@@ -210,12 +235,12 @@ describe('derived metric preview', () => {
     })
 
     expect(result.displaySql).toContain('SELECT AVG(payment_amount)')
-    expect(result.submissionExpression).toBe('SUM(实付金额)')
+    expect(result.submissionExpression).toBe('AVG(payment_amount)')
   })
 
   it('uses an atomic techName without a dot directly in the SQL preview', () => {
     const result = buildDerivedMetricPreview({
-      allFields: [{ fieldName: 'legacy_field', tableName: 'legacy_table', techId: 'amount-id' }],
+      allFields: [],
       atomicLabel: '实付金额',
       atomicMetric: { techId: 'amount-id', techName: 'payment_amount' },
       dimensionOptions: [],
@@ -245,5 +270,102 @@ describe('derived metric preview', () => {
     expect(result.displaySql).toBe(`SELECT ${expression} FROM trade_fact`)
     expect(result.submissionExpression).toBe(expression)
     expect(result.displaySql).not.toContain(`SUM(${expression})`)
+  })
+
+  it.each([productAtomic.calcLogic, JSON.stringify(productAtomic.calcLogic)])(
+    'uses calcLogic source metadata instead of the atomic code or Chinese label: %j',
+    calcLogic => {
+      const result = previewProduct('sum', { ...productAtomic, calcLogic })
+      const payload = buildKnowledgeCalcLogic({
+        indicatorClass: 'derived',
+        expr: result.submissionExpression,
+        projectionFunc: 'sum',
+        techId: productAtomic.techId
+      })
+
+      expect(result.displaySql).toBe('SELECT SUM(product_id) FROM t_product_sku')
+      expect(result.submissionExpression).toBe('SUM(product_id)')
+      expect(result.businessPreview).toContain('计算基础：商品ID')
+      expect(payload.expr).toBe('SUM(product_id)')
+      expect(payload.aggMethod).toBe('sum')
+      expect(payload.techId).toEqual(productAtomic.techId)
+    }
+  )
+
+  it('prefers explicit source fields over an atomic metric code', () => {
+    const result = previewProduct('sum', {
+      ...productAtomic,
+      calcLogic: undefined,
+      techId: [{ techId: '19943704006211', techName: 't_product_sku.product_id' }]
+    })
+
+    expect(result.displaySql).toBe('SELECT SUM(product_id) FROM t_product_sku')
+    expect(result.submissionExpression).toBe('SUM(product_id)')
+  })
+
+  it('resolves legacy source IDs from semantic fields before falling back to the indicator code', () => {
+    const result = buildDerivedMetricPreview({
+      allFields: [
+        {
+          techId: '19943704006211',
+          fieldName: '19943704006211',
+          originName: 'product_id',
+          tableName: 't_product_sku'
+        }
+      ],
+      atomicLabel: '商品ID',
+      atomicMetric: { ...productAtomic, calcLogic: undefined },
+      dimensionOptions: [],
+      projectionFunc: 'sum',
+      ruleFields: [],
+      ruleLayers: []
+    })
+
+    expect(result.displaySql).toBe('SELECT SUM(product_id) FROM t_product_sku')
+    expect(result.submissionExpression).toBe('SUM(product_id)')
+  })
+
+  it('uses the exact first dictionary template when the selection has not been populated', () => {
+    const result = previewProduct('', {
+      ...productAtomic,
+      calcLogic: { agg: { data: ['COUNT(X)'], type: 'simple' }, techName: 't_product_sku.product_id' }
+    })
+
+    expect(result.displaySql).toBe('SELECT COUNT(product_id) FROM t_product_sku')
+    expect(result.submissionExpression).toBe('COUNT(product_id)')
+  })
+
+  it('inherits complex expressions verbatim without replacing their identifiers or literal X', () => {
+    const expression = "COALESCE(SUM(product_id), 0) + CASE WHEN marker = 'X' THEN 1 ELSE 0 END"
+    const result = previewProduct('', {
+      ...productAtomic,
+      calcLogic: { agg: { data: expression, type: 'complex' }, techName: 't_product_sku.product_id' }
+    })
+
+    expect(result.submissionExpression).toBe(expression)
+    expect(result.displaySql).toBe(`SELECT ${expression} FROM t_product_sku`)
+  })
+
+  it.each([
+    ['sum', 'SUM(product_id)'],
+    ['COUNT DISTINCT', 'COUNT(DISTINCT product_id)'],
+    ['COUNT(X)', 'COUNT(product_id)'],
+    ['DISTINCT (X)', 'DISTINCT (product_id)'],
+    ['COUNT(DISTINCT X)', 'COUNT(DISTINCT product_id)'],
+    ['coalesce(SUM(X), 0)', 'coalesce(SUM(product_id), 0)'],
+    ['SUM({field})', 'SUM(product_id)'],
+    ['SUM(${field})', 'SUM(product_id)'],
+    ['SUM({{field}})', 'SUM(product_id)'],
+    ['SUM(##字段##)', 'SUM(product_id)'],
+    ['SUM(%s)', 'SUM(product_id)'],
+    ['COUNT(*)', 'COUNT(*)']
+  ])('renders dictionary template %s without adding another function call', (projectionFunc, expression) => {
+    const result = previewProduct(projectionFunc)
+
+    expect(result.displaySql).toBe(`SELECT ${expression} FROM t_product_sku`)
+    expect(result.submissionExpression).toBe(expression)
+    const calcLogic = buildKnowledgeCalcLogic({ indicatorClass: 'derived', expr: result.submissionExpression, projectionFunc })
+    expect(calcLogic.expr).toBe(expression)
+    expect(calcLogic.aggMethod).toBe(projectionFunc)
   })
 })

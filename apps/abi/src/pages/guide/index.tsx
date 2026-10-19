@@ -6,18 +6,16 @@ import { GuideDataSource } from './components/GuideDataSource'
 import { GuideDataCollection } from './components/GuideDataCollection'
 import { GuideTableMeaning } from './components/GuideTableMeaning'
 import { GuideAssistant } from './components/GuideAssistant'
-import { persistSpaceId, persistSpaceName } from '@/utils/spaceStorage'
+import { getCurrentSpaceInfo, setCurrentSpaceInfo } from '@/store/slice/app'
 
 export function Component() {
   const [current, setCurrent] = useState(0)
-  const [selectedSpace, setSelectedSpace] = useState<ISpaceItem | null>(null)
+  const selectedSpace = useAppSelector(getCurrentSpaceInfo)
+  const dispatch = useAppDispatch()
   const items = [{ title: '选择空间' }, { title: '数据源' }, { title: '数据集' }, { title: '表语义' }, { title: '智能助手' }, { title: '智能对话' }]
   
   const handleSelectSpace = (space: ISpaceItem) => {
-    setSelectedSpace(space)
-    // 保存到localStorage，供后续步骤的列表组件读取
-    persistSpaceId(space.spaceId)
-    persistSpaceName(space.spaceName)
+    dispatch(setCurrentSpaceInfo(space))
   }
   
   const handleNext = () => {

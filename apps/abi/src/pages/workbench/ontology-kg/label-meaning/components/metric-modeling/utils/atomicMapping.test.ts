@@ -10,7 +10,7 @@ describe('atomic metric one-click mapping payload', () => {
           aggregationMethods: ['SUM', 'AVG'],
           alias: '支付金额',
           bizName: '支付金额',
-          description: '订单支付金额',
+          fieldDesc: '订单支付金额',
           englishName: 'payment_amount',
           fieldType: 'decimal',
           dataType: 'amount',
@@ -39,6 +39,7 @@ describe('atomic metric one-click mapping payload', () => {
           agg: { data: ['SUM', 'AVG'], type: 'simple' },
           bizName: '订单明细表_#_支付金额',
           dataType: 'amount',
+          fieldDesc: '订单支付金额',
           fieldType: 'decimal',
           projectionFunc: 'sum',
           techId: 'field-1',
@@ -48,6 +49,30 @@ describe('atomic metric one-click mapping payload', () => {
     })
     expect(payload[0]).not.toHaveProperty('bizName')
     expect(payload[0]).not.toHaveProperty('dataType')
+    expect(payload[0].techId[0]).not.toHaveProperty('description')
+  })
+
+  it.each(['更新后的描述', ''])('submits the edited description as fieldDesc: %j', fieldDesc => {
+    const raw = Object.freeze({ description: '原始语义描述', fieldDesc: '原始指标描述', techId: 'field-1' })
+    const [payload] = buildAtomicMappingPayload(
+      [{
+        aggregationMethods: ['SUM'],
+        alias: '支付金额',
+        bizName: '支付金额',
+        dataType: 'amount',
+        fieldDesc,
+        englishName: 'payment_amount',
+        fieldType: 'decimal',
+        raw,
+        tableBizName: '订单明细表',
+        tableTechName: 'order_detail'
+      }],
+      { relSchemaId: 'schema-1', spaceId: 82 }
+    )
+
+    expect(payload.techId[0].fieldDesc).toBe(fieldDesc)
+    expect(payload.techId[0]).not.toHaveProperty('description')
+    expect(raw).toEqual({ description: '原始语义描述', fieldDesc: '原始指标描述', techId: 'field-1' })
   })
 
   it('uses the first aggregation method for the legacy compatibility field', () => {
@@ -57,7 +82,7 @@ describe('atomic metric one-click mapping payload', () => {
           aggregationMethods: ['COUNT DISTINCT', 'COUNT'],
           alias: '客户数',
           bizName: '客户数',
-          description: '',
+          fieldDesc: '',
           englishName: 'customer_id',
           fieldType: 'string',
           dataType: 'num',

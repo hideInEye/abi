@@ -2,9 +2,8 @@ import { Alert, Button, Skeleton, message } from 'antd'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { deleteSpace } from '@/service/api/data-space'
-import { changeSpaceId, getSpaceId } from '@/store/slice/app'
+import { getCurrentSpaceInfo, setCurrentSpaceInfo } from '@/store/slice/app'
 import { clearTabs } from '@/store/slice/tab'
-import { clearPersistedSpace, persistSpaceName } from '@/utils/spaceStorage'
 import { useRouter } from '~/packages/simple-router/src'
 
 import { LazyFeatureFallback, RetryableLazy } from '@/components/common/RetryableLazy'
@@ -37,12 +36,12 @@ export function Component() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [editSpace, setEditSpace] = useState<ISpaceItem | null>(null)
   const dispatch = useAppDispatch()
-  const spaceId = useAppSelector(getSpaceId)
+  const currentSpaceInfo = useAppSelector(getCurrentSpaceInfo)
   const { push } = useRouter()
   const homeLoadRunRef = useRef(0)
   const spacesLoadRunRef = useRef(0)
-  const spaceIdRef = useRef(spaceId)
-  spaceIdRef.current = spaceId
+  const currentSpaceRef = useRef(currentSpaceInfo)
+  currentSpaceRef.current = currentSpaceInfo
 
   const loadOverview = useCallback((force = false) => {
     const run = ++homeLoadRunRef.current
@@ -72,12 +71,11 @@ export function Component() {
       .then(nextSpaces => {
         if (spacesLoadRunRef.current !== run) return
         setSpaces(nextSpaces)
-        const persistedSpaceId = Number(localStorage.getItem('spaceId'))
-        if (persistedSpaceId > 0 && !spaceIdRef.current) {
-          dispatch(changeSpaceId(persistedSpaceId))
-        } else if (!spaceIdRef.current && nextSpaces[0]?.spaceId) {
-          dispatch(changeSpaceId(nextSpaces[0].spaceId))
-          persistSpaceName(nextSpaces[0].spaceName)
+        const current = currentSpaceRef.current
+        const selected = current ? nextSpaces.find(space => space.spaceId === current.spaceId) : nextSpaces[0]
+        if (selected && (!current || selected.spaceName !== current.spaceName)) {
+          currentSpaceRef.current = selected
+          dispatch(setCurrentSpaceInfo(selected))
         }
       })
       .catch(error => {
@@ -107,7 +105,10 @@ export function Component() {
       message.error('删除空间失败，请重试')
       return
     }
-    clearPersistedSpace()
+    if (currentSpaceRef.current?.spaceId === space.spaceId) {
+      currentSpaceRef.current = null
+      dispatch(setCurrentSpaceInfo(null))
+    }
     dispatch(clearTabs())
     invalidateHomeResources()
     loadOverview(true)

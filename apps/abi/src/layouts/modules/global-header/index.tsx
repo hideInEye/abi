@@ -5,15 +5,14 @@ import { qiankunWindow } from 'vite-plugin-qiankun/dist/helper';
 import DarkModeContainer from '@/components/stateless/common/DarkModeContainer';
 import { hideMenuRoute } from '@/constants/app';
 import { useSpaceSwitch } from '@/hooks/business/useSpaceSwitch';
-import { useAppDispatch, useAppSelector } from '@/hooks/business/useStore';
+import { useAppSelector } from '@/hooks/business/useStore';
 import {
   abortSpaceListPage,
   loadSpaceListPage,
   mergeSpacePages,
   type SpaceListItem,
 } from '@/resources/spaceListResource';
-import { changeSpaceId, getSpaceId } from '@/store/slice/app';
-import { persistSpaceName } from '@/utils/spaceStorage';
+import { getCurrentSpaceInfo } from '@/store/slice/app';
 // import LangSwitch from '@/components/stateful/LangSwitch';
 // import ThemeSchemaSwitch from '@/components/stateful/ThemeSchemaSwitch';
 // import FullScreen from '@/components/stateless/common/FullScreen';
@@ -61,15 +60,13 @@ const GlobalHeader: FC<Props> = memo(({ isMobile: _isMobile, mode, reverse, side
   const route = useRoute();
   const router = useRouter();
   const authRoutes = useSelector(getAuthRoutes); // 从全局状态获取当前空间ID
-  const _curspaceId = useAppSelector(getSpaceId);
+  const currentSpaceInfo = useAppSelector(getCurrentSpaceInfo);
+  const currentSpace = currentSpaceInfo?.spaceId ?? null;
 
   const { switchToSpace } = useSpaceSwitch();
-  const dispatch = useAppDispatch();
 
   // const [isFullscreen, { toggleFullscreen }] = useFullscreen(document.body);
 
-  // 添加当前空间状态
-  const [currentSpace, setCurrentSpace] = useState<number | null>(_curspaceId || null);
   const [spaceRows, setSpaceRows] = useState<SpaceListItem[]>([]);
   const [spaceSearch, setSpaceSearch] = useState('');
   const [spaceDropdownOpen, setSpaceDropdownOpen] = useState(false);
@@ -106,11 +103,8 @@ const GlobalHeader: FC<Props> = memo(({ isMobile: _isMobile, mode, reverse, side
 
   // 添加空间切换处理函数
   const handleSpaceChange = async (value: number) => {
-    const switched = await switchToSpace(value);
-    if (!switched) return;
     const selected = spaceRows.find(space => space.spaceId === value);
-    if (selected) persistSpaceName(selected.spaceName);
-    setCurrentSpace(value);
+    await switchToSpace(value, undefined, { spaceName: selected?.spaceName });
   };
 
   useEffect(() => {
@@ -125,48 +119,6 @@ const GlobalHeader: FC<Props> = memo(({ isMobile: _isMobile, mode, reverse, side
     const active = spaceRequestRef.current;
     if (active) abortSpaceListPage(active.page, active.search);
   }, []);
-
-  useEffect(() => {
-    // 从localStorage获取当前空间
-    // 仅在处于“空间”相关页面时，从 localStorage 恢复上次选择的 spaceId
-    const savedSpace = localStorage.getItem('spaceId');
-    const isSpacePath =
-      typeof window !== 'undefined' &&
-      (window.location.pathname.includes('/ai-assistant') || window.location.pathname.includes('/chatbi/ai-assistant'));
-    if (savedSpace && isSpacePath) {
-      setCurrentSpace(Number(savedSpace));
-      dispatch(changeSpaceId(Number(savedSpace)));
-    }
-
-    // 添加全局事件监听器，响应其他组件修改的spaceId
-    const handleGlobalSpaceChange = (event: CustomEvent) => {
-      const { spaceId } = event.detail;
-      dispatch(changeSpaceId(spaceId));
-      setCurrentSpace(spaceId);
-    };
-
-    window.addEventListener('space-change', handleGlobalSpaceChange as EventListener);
-
-    return () => {
-      window.removeEventListener('space-change', handleGlobalSpaceChange as EventListener);
-    };
-  }, [dispatch]);
-
-  // 每次路由变化时，尝试从 localStorage 同步当前空间到 header 的选中值
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('spaceId');
-      if (saved) {
-        const sid = Number(saved);
-        setCurrentSpace(sid);
-        dispatch(changeSpaceId(sid));
-      } else {
-        setCurrentSpace(null);
-      }
-    } catch {
-      // ignore
-    }
-  }, [route, dispatch]);
 
   const { showLogo: _showLogo, showMenu: _showMenu, showMenuToggler } = HEADER_PROPS_CONFIG[mode];
   const _showToggler = reverse ? true : showMenuToggler;
@@ -225,8 +177,10 @@ const GlobalHeader: FC<Props> = memo(({ isMobile: _isMobile, mode, reverse, side
 
   // 格式化空间选项
   const spaceOptions =
-    spaceRows.map(space => ({
-      label: space.spaceName,
+    (currentSpaceInfo && !spaceRows.some(space => space.spaceId === currentSpace)
+      ? [currentSpaceInfo, ...spaceRows]
+      : spaceRows).map(space => ({
+      label: space.spaceId === currentSpace ? currentSpaceInfo?.spaceName : space.spaceName,
       value: space.spaceId
     }));
 

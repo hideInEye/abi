@@ -168,26 +168,56 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
     }, [getModeConfig, selectedMode.key, selectedModeKey]);
 
     // 懒加载技能列表（首次 hover 进入技能面板时触发一次）；助手会话直接用绑定候选，不请求全局收藏。
+    const skillSpaceId = spaceId ?? getSpaceId();
     const skillLoadStartedRef = useRef(false);
-    const startSkillLoad = useCallback(() => {
-      if (assistantSkills || skillLoadStartedRef.current) return;
+    const skillLoadGenerationRef = useRef(0);
+    const previousSkillSpaceIdRef = useRef(skillSpaceId);
+    const startSkillLoad = useCallback(async () => {
+      if (assistantSkills || skillLoadStartedRef.current || !Number.isFinite(skillSpaceId) || skillSpaceId <= 0) return;
       skillLoadStartedRef.current = true;
       setSkillLoading(true);
+      const generation = skillLoadGenerationRef.current;
       // 弹窗只认收藏列表：与技能商店「我的技能」同一套逻辑，仅调 favorite/list（favorType=skill）
-      fetchFavoriteList({ favorType: 'skill' })
-        .then((res: any) => {
-          const rows = res?.rows ?? res?.data?.rows ?? res?.data?.list ?? (Array.isArray(res?.data) ? res.data : []);
-          const list = Array.isArray(rows) ? rows : [];
-          // 保留行原始字段（latestVersionId/skillType 等提交要用），id/名称做兼容映射
-          setSkillList(list.map((r: any) => ({
-            ...r,
-            id: r.favorId ?? r.favor_id ?? r.skillId ?? r.id,
-            bizName: r.bizName ?? r.skillName ?? r.name ?? '',
-          })));
-        })
-        .catch(() => {})
-        .finally(() => setSkillLoading(false));
-    }, [assistantSkills]);
+      try {
+        const res: any = await fetchFavoriteList({ favorType: 'skill', spaceId: skillSpaceId });
+        // 空间切换后旧请求可能迟到，不能覆盖新空间的候选或加载状态。
+        if (generation !== skillLoadGenerationRef.current) return;
+        if (Number(res?.code) !== 200) {
+          skillLoadStartedRef.current = false;
+          return;
+        }
+        const rows = res?.rows ?? res?.data?.rows ?? res?.data?.list ?? (Array.isArray(res?.data) ? res.data : []);
+        const list = Array.isArray(rows) ? rows : [];
+        // 保留行原始字段（latestVersionId/skillType 等提交要用），id/名称做兼容映射
+        setSkillList(list.map((r: any) => ({
+          ...r,
+          id: r.favorId ?? r.favor_id ?? r.skillId ?? r.id,
+          bizName: r.bizName ?? r.skillName ?? r.name ?? '',
+        })));
+      } catch {
+        if (generation === skillLoadGenerationRef.current) skillLoadStartedRef.current = false;
+      } finally {
+        if (generation === skillLoadGenerationRef.current) setSkillLoading(false);
+      }
+    }, [assistantSkills, skillSpaceId]);
+
+    useEffect(() => {
+      if (Object.is(previousSkillSpaceIdRef.current, skillSpaceId)) return;
+      const shouldReload = skillLoadStartedRef.current && !assistantSkills;
+      previousSkillSpaceIdRef.current = skillSpaceId;
+      skillLoadGenerationRef.current += 1;
+      skillLoadStartedRef.current = false;
+      setSkillList([]);
+      setSelectedSkills(new Set());
+      setSkillLoading(false);
+      // 未打开技能面板时继续按需加载，已加载时按新空间刷新。
+      if (shouldReload) void startSkillLoad();
+    }, [assistantSkills, skillSpaceId, startSkillLoad]);
+
+    useEffect(() => () => {
+      skillLoadGenerationRef.current += 1;
+      skillLoadStartedRef.current = false;
+    }, []);
 
     // 懒加载 MCP 分组（首次 hover 进入 MCP 面板时触发一次）；助手会话直接用绑定候选，不请求全局分组。
     const mcpLoadStartedRef = useRef(false);
