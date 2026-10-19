@@ -15,6 +15,7 @@ export interface KnowledgeTechField {
   dataType?: string
   description?: string
   englishName?: string
+  fieldDesc?: string
   fieldName?: string
   fieldShortName?: string
   fieldType?: string

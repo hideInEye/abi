@@ -3,11 +3,12 @@ import { compileRulePredicate, normalizeRuleLayers, validateRuleLayers } from '.
 import type { KnowledgeIndicatorItem, KnowledgeTechField, StatisticalCaliber } from '../types/metricModeling.types'
 
 import {
+  getAtomicAggregationMethods,
   getAtomicComplexAggregationExpression,
-  getAtomicProjection,
   getAtomicTechnicalSource,
   parseAtomicSourceFields
 } from './atomicMetricSource'
+import { replaceOntologyFieldPlaceholder } from './ontologyFunctionTemplate'
 import { getStatisticalDateRangeSummary, normalizeStatisticalCaliber } from './precomputeConfig'
 
 interface DimensionSelection {
@@ -86,10 +87,10 @@ function getTechnicalFieldName(field?: KnowledgeTechField, sourceId?: string): s
   if (!field) return ''
   const fieldName = text(field.fieldName)
   const candidates = [
-    fieldName !== sourceId ? fieldName : '',
-    field.originName,
-    field.tfieldName,
     field.techName,
+    field.originName,
+    fieldName !== sourceId ? fieldName : '',
+    field.tfieldName,
     field.name
   ]
   return candidates.map(text).find(Boolean) || ''
@@ -99,10 +100,21 @@ function resolveAtomicSource(
   atomicMetric: KnowledgeIndicatorItem | undefined,
   semanticFields: readonly KnowledgeTechField[]
 ): { fieldName: string; tableName: string } {
-  const technicalSource = getAtomicTechnicalSource(atomicMetric?.techName || atomicMetric?.rawTechName)
-  if (technicalSource.fieldName) return technicalSource
-
   const parsedSourceFields = parseAtomicSourceFields(atomicMetric?.techId)
+  let calcLogic = atomicMetric?.calcLogic
+  if (typeof calcLogic === 'string') {
+    try {
+      calcLogic = JSON.parse(calcLogic)
+    } catch {
+      calcLogic = undefined
+    }
+  }
+  // 顶层 techName 可能是 atomic_* 指标编码；计算必须优先使用来源元数据。
+  const sourceTechName =
+    text(parsedSourceFields[0]?.techName) ||
+    (calcLogic && typeof calcLogic === 'object' ? text(calcLogic.techName) : '')
+  if (sourceTechName) return getAtomicTechnicalSource(sourceTechName)
+
   const rawTechId: unknown = atomicMetric?.techId
   const rawSourceId = typeof rawTechId === 'string' || typeof rawTechId === 'number' ? text(rawTechId) : ''
   const sourceFields = [...parsedSourceFields]
@@ -114,16 +126,29 @@ function resolveAtomicSource(
     const semanticField = findSemanticField(sourceField, semanticFields)
     const fieldName = getTechnicalFieldName(semanticField, sourceId) || getTechnicalFieldName(sourceField, sourceId)
     if (fieldName) {
+      const technicalSource = getAtomicTechnicalSource(fieldName)
       return {
-        fieldName,
-        tableName: text(
-          semanticField?.tableName || semanticField?.rtableName || sourceField.tableName || sourceField.rtableName
-        )
+        fieldName: technicalSource.fieldName,
+        tableName: fieldName.includes('.')
+          ? technicalSource.tableName
+          : text(
+              semanticField?.tableName || semanticField?.rtableName || sourceField.tableName || sourceField.rtableName
+            )
       }
     }
   }
 
-  return { fieldName: '', tableName: '' }
+  return getAtomicTechnicalSource(atomicMetric?.techName || atomicMetric?.rawTechName)
+}
+
+function buildSimpleAggregationExpression(aggregation: string, fieldName: string): string {
+  // 旧记录只保存函数名；字典模板已包含括号，按原模板替换字段，不能再包一层。
+  if (/^[A-Za-z][A-Za-z0-9_]*$/u.test(aggregation)) {
+    return `${aggregation.toUpperCase()}(${fieldName})`
+  }
+  const distinctFunction = aggregation.match(/^([A-Za-z][A-Za-z0-9_]*)\s+DISTINCT$/iu)
+  if (distinctFunction) return `${distinctFunction[1].toUpperCase()}(DISTINCT ${fieldName})`
+  return replaceOntologyFieldPlaceholder(aggregation, fieldName)
 }
 
 function parseDimensionSelections(value: unknown): DimensionSelection[] {
@@ -213,7 +238,6 @@ export function buildDerivedMetricPreview(params: DerivedMetricPreviewParams): D
   const caliber = normalizeStatisticalCaliber(params.statisticalCaliber)
   const selectedAtomicLabel = text(params.atomicLabel)
   const atomicLabel = selectedAtomicLabel || '请选择原子指标'
-  const legacyAtomicLabel = selectedAtomicLabel || '原子指标'
   const predicate = buildDerivedConditionPredicate(params.ruleLayers, params.ruleFields)
   const displayPredicate = validateRuleLayers(params.ruleLayers, params.ruleFields).valid ? predicate : ''
   const conditionText = buildDerivedConditionDescription(params.ruleLayers, params.ruleFields)
@@ -242,17 +266,14 @@ export function buildDerivedMetricPreview(params: DerivedMetricPreviewParams): D
   const sourceField = source.fieldName || 'source_field /* 来源字段待接口返回 */'
   const sourceTable = source.tableName || 'source_table /* 来源表待接口返回 */'
   const customAggregationExpression = getAtomicComplexAggregationExpression(params.atomicMetric)
-  const displayAggregation = text(params.projectionFunc) || getAtomicProjection(params.atomicMetric)
-  const simpleAggregation = String(params.projectionFunc || 'sum').toUpperCase()
-  const selectedAggregationExpression = customAggregationExpression
+  const displayAggregation =
+    text(params.projectionFunc) || customAggregationExpression || getAtomicAggregationMethods(params.atomicMetric)[0] || 'sum'
+  const aggregationExpression = customAggregationExpression
     ? displayAggregation || customAggregationExpression
-    : `${displayAggregation.toUpperCase()}(${sourceField})`
-  const submissionAggregationExpression = customAggregationExpression
-    ? displayAggregation || customAggregationExpression
-    : `${simpleAggregation}(${legacyAtomicLabel})`
+    : buildSimpleAggregationExpression(displayAggregation, sourceField)
   const timeRangeSummary = getTimeRangeSummary(caliber)
   const dateRangeSummary = getStatisticalDateRangeSummary(caliber)
-  const sqlLines = [`SELECT ${selectedAggregationExpression} FROM ${sourceTable}`]
+  const sqlLines = [`SELECT ${aggregationExpression} FROM ${sourceTable}`]
   if (displayPredicate) sqlLines.push(`WHERE ${displayPredicate}`)
   if (groupByFields.length) sqlLines.push(`GROUP BY ${groupByFields.join(', ')}`)
 
@@ -267,6 +288,6 @@ export function buildDerivedMetricPreview(params: DerivedMetricPreviewParams): D
     ].join('\n\n'),
     displaySql: sqlLines.join('\n'),
     predicate,
-    submissionExpression: `${submissionAggregationExpression}${predicate ? `\nWHERE ${predicate}` : ''}`
+    submissionExpression: `${aggregationExpression}${predicate ? `\nWHERE ${predicate}` : ''}`
   }
 }
