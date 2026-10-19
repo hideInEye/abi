@@ -20,8 +20,8 @@ const loadDataDirectoryDropdown = () => import('./-DataDirectoryDropdown')
 /** 应用工坊 tab 顺序：我的助手、我的分析、我的报告、最近使用、我的收藏、我的分享 */
 const WORKSHOP_TABS = [
   { key: 'my-assistant', label: '我的助手' },
-  { key: 'my-analysis', label: '我的分析' },
-  { key: 'my-report', label: '我的报告' },
+  // { key: 'my-analysis', label: '我的分析' },
+  // { key: 'my-report', label: '我的报告' },
   { key: 'recently-used', label: '最近使用' },
   { key: 'my-collect', label: '我的收藏' },
   { key: 'my-share', label: '我的分享' },
