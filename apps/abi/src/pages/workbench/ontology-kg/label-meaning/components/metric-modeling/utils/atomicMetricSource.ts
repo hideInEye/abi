@@ -7,6 +7,7 @@ import {
 import type {
   AggregationCode,
   KnowledgeAggregation,
+  KnowledgeFormValues,
   KnowledgeIndicatorItem,
   KnowledgeTechField
 } from '../types/metricModeling.types'
@@ -210,6 +211,33 @@ export function getAtomicSemanticSchemaId(item?: KnowledgeIndicatorItem): number
   if (!item) return undefined
   const source = item as KnowledgeIndicatorItem & UnknownRecord
   return (source.relSchemaId ?? source.semanticSchemaId ?? source.schemaId) as number | string | undefined
+}
+
+export function getSelectedMetricSemanticSchemaId(
+  values: KnowledgeFormValues,
+  options: ReadonlyArray<{ item: KnowledgeIndicatorItem; value: string }>
+): number | string | undefined {
+  const templateMetricFields: Partial<Record<string, keyof KnowledgeFormValues>> = {
+    comparison: 'compareMetricId',
+    cumulative: 'cumulativeMetricId',
+    percentile: 'techId',
+    // 占比类的分子、分母来自同一数据语义，使用分子读取共同的语义 ID。
+    ratio: 'ratioNumeratorId',
+    volatility: 'volatilityMetricId'
+  }
+  const metricField =
+    values.indicatorClass === 'derived'
+      ? 'techId'
+      : values.indicatorClass === 'composite'
+        ? templateMetricFields[values.templateType || '']
+        : undefined
+  if (!metricField) return values.semanticSchemaId ?? values.relSchemaId
+
+  // 必须在 techId 转为来源字段数组前按当前模板取值，避免读取其他模板残留的语义 ID。
+  const selectedId = values[metricField]
+  if (typeof selectedId !== 'string' && typeof selectedId !== 'number') return undefined
+  const selectedMetric = options.find(option => option.value === String(selectedId))
+  return getAtomicSemanticSchemaId(selectedMetric?.item)
 }
 
 export function getAtomicSemanticSchemaName(item?: KnowledgeIndicatorItem): string {

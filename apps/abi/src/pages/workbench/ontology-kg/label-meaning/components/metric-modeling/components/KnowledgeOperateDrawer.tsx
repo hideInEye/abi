@@ -38,6 +38,7 @@ import {
   getAtomicSemanticSchemaId,
   getAtomicSemanticSchemaName,
   getKnowledgeTechFieldId,
+  getSelectedMetricSemanticSchemaId,
   hasAtomicAggregationMetadata,
   parseAtomicSourceFields,
   parseSemanticModelFields,
@@ -1240,6 +1241,8 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
     )
 
     const selectedAtomic = atomicIndicatorOptions.find(item => item.value === String(values.techId || ''))
+    const relSchemaId =
+      getSelectedMetricSemanticSchemaId(values, atomicIndicatorOptions) ?? getAtomicSemanticSchemaId(editingItem || undefined)
     const selectedAtomicSource = allFields.find(
       item => getKnowledgeTechFieldId(item) === String(values.atomicSourceFieldId || '')
     )
@@ -1295,6 +1298,9 @@ export const KnowledgeOperateDrawer: React.FC<Props> = ({
       groupId,
       indAlias: aliasText,
       relItemId: buildRelItemId(values, nextIndicatorClass, allFields),
+      relSchemaId,
+      // 请求适配器优先读取表单别名，需同步避免旧值覆盖当前来源语义。
+      semanticSchemaId: relSchemaId,
       spaceId: getKnowledgeSpaceId(),
       templateParams: buildTemplateParams(values, nextIndicatorClass, allFields)
     }
