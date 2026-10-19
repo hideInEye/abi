@@ -10,7 +10,7 @@ describe('atomic metric one-click mapping payload', () => {
           aggregationMethods: ['SUM', 'AVG'],
           alias: '支付金额',
           bizName: '支付金额',
-          description: '订单支付金额',
+          fieldDesc: '订单支付金额',
           englishName: 'payment_amount',
           fieldType: 'decimal',
           dataType: 'amount',
@@ -52,7 +52,7 @@ describe('atomic metric one-click mapping payload', () => {
     expect(payload[0].techId[0]).not.toHaveProperty('description')
   })
 
-  it.each(['更新后的描述', ''])('submits the edited description as fieldDesc: %j', description => {
+  it.each(['更新后的描述', ''])('submits the edited description as fieldDesc: %j', fieldDesc => {
     const raw = Object.freeze({ description: '原始语义描述', fieldDesc: '原始指标描述', techId: 'field-1' })
     const [payload] = buildAtomicMappingPayload(
       [{
@@ -60,7 +60,7 @@ describe('atomic metric one-click mapping payload', () => {
         alias: '支付金额',
         bizName: '支付金额',
         dataType: 'amount',
-        description,
+        fieldDesc,
         englishName: 'payment_amount',
         fieldType: 'decimal',
         raw,
@@ -70,7 +70,7 @@ describe('atomic metric one-click mapping payload', () => {
       { relSchemaId: 'schema-1', spaceId: 82 }
     )
 
-    expect(payload.techId[0].fieldDesc).toBe(description)
+    expect(payload.techId[0].fieldDesc).toBe(fieldDesc)
     expect(payload.techId[0]).not.toHaveProperty('description')
     expect(raw).toEqual({ description: '原始语义描述', fieldDesc: '原始指标描述', techId: 'field-1' })
   })
@@ -82,7 +82,7 @@ describe('atomic metric one-click mapping payload', () => {
           aggregationMethods: ['COUNT DISTINCT', 'COUNT'],
           alias: '客户数',
           bizName: '客户数',
-          description: '',
+          fieldDesc: '',
           englishName: 'customer_id',
           fieldType: 'string',
           dataType: 'num',

@@ -1,8 +1,11 @@
 import React from 'react'
-import type { ReactNode } from 'react'
+import type { ReactElement, ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { TableSemantics } from '@/components/tableSemantics'
+import { queryTableSemanticsDetail } from '@/service/api/data-table-meaning'
+import { queryKnowledgeIndicators } from '@/service/api/knowledge-extraction'
 import { checkOntologyName } from '@/service/api/ontology-name'
 
 import { KNOWLEDGE_DATA_TYPE_OPTIONS } from '../constants/metricModeling.constants'
@@ -10,7 +13,7 @@ import { KNOWLEDGE_DATA_TYPE_OPTIONS } from '../constants/metricModeling.constan
 import { KnowledgeAtomicMappingDrawer } from './KnowledgeAtomicMappingDrawer'
 
 const { form, messages } = vi.hoisted(() => ({
-  form: { scrollToField: vi.fn(), validateFields: vi.fn() },
+  form: { scrollToField: vi.fn(), setFieldValue: vi.fn(), setFieldsValue: vi.fn(), validateFields: vi.fn() },
   messages: { error: vi.fn(), warning: vi.fn() }
 }))
 
@@ -23,7 +26,7 @@ vi.mock('@/components/stateless/common/CommonDrawer', () => ({
     </>
   )
 }))
-vi.mock('@/components/tableSemantics', () => ({ TableSemantics: () => null }))
+vi.mock('@/components/tableSemantics', () => ({ TableSemantics: vi.fn(() => null) }))
 vi.mock('@/pages/workbench/ontology-kg/components/OntologyFormSectionTitle', () => ({
   OntologyFormSectionTitle: ({ children }: { readonly children: ReactNode }) => <div>{children}</div>
 }))
@@ -47,7 +50,7 @@ const fieldRows = ['field-1', 'field-2', 'field-3'].map(key => ({
   aggregationMethods: ['SUM'],
   alias: '支付金额',
   bizName: '支付金额',
-  description: '',
+  fieldDesc: '当前字段描述',
   englishName: key,
   fieldType: 'decimal',
   key,
@@ -66,12 +69,23 @@ const values = {
   semanticsGroupId: 'semantic-group-1'
 }
 
-function renderDrawer(selectedKeys = ['field-1', 'field-3'], submitSuccess = true) {
-  const stateValues: unknown[] = [fieldRows, selectedKeys, ['field-3'], false, false, false]
+interface MappingColumn {
+  dataIndex?: string
+  key: string
+  render?: (value: unknown, row: (typeof fieldRows)[number]) => ReactNode
+}
+
+function renderDrawer(selectedKeys = ['field-1', 'field-3'], submitSuccess = true, rows = fieldRows) {
+  const stateValues: unknown[] = [rows, selectedKeys, ['field-3'], false, false, false]
   const fields: ItemProps[] = []
   const selectOptions: unknown[] = []
+  const setFieldRows = vi.fn()
+  let tableColumns: MappingColumn[] = []
   let save!: () => Promise<void>
-  vi.stubGlobal('useState', () => [stateValues.shift(), vi.fn()])
+  vi.stubGlobal('useState', () => {
+    const setter = stateValues.length === 6 ? setFieldRows : vi.fn()
+    return [stateValues.shift(), setter]
+  })
   vi.stubGlobal('useEffect', vi.fn())
   vi.stubGlobal('useMemo', (factory: () => unknown) => factory())
   vi.stubGlobal('useCallback', (callback: unknown) => callback)
@@ -101,19 +115,24 @@ function renderDrawer(selectedKeys = ['field-1', 'field-3'], submitSuccess = tru
       columns,
       dataSource
     }: {
-      columns: Array<{ key: string; render?: (value: unknown, row: (typeof fieldRows)[number]) => ReactNode }>
+      columns: MappingColumn[]
       dataSource: typeof fieldRows
-    }) => (
-      <>
-        {dataSource.map(row => (
-          <div key={row.key}>
-            {columns.map(column => (
-              <div key={column.key}>{column.render?.(row[column.key as keyof typeof row], row)}</div>
-            ))}
-          </div>
-        ))}
-      </>
-    )
+    }) => {
+      tableColumns = columns
+      return (
+        <>
+          {dataSource.map(row => (
+            <div key={row.key}>
+              {columns.map(column => (
+                <div key={column.key}>
+                  {column.render?.(row[(column.dataIndex || column.key) as keyof typeof row], row)}
+                </div>
+              ))}
+            </div>
+          ))}
+        </>
+      )
+    }
   )
 
   const onSubmit = vi.fn().mockResolvedValue(submitSuccess)
@@ -126,7 +145,7 @@ function renderDrawer(selectedKeys = ['field-1', 'field-3'], submitSuccess = tru
       onSubmit={onSubmit}
     />
   )
-  return { fields, onClose, onSubmit, save, selectOptions }
+  return { fields, onClose, onSubmit, save, selectOptions, setFieldRows, tableColumns }
 }
 
 beforeEach(() => {
@@ -139,6 +158,52 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('atomic mapping form', () => {
+  it.each([false, true])('loads fieldDesc for display from semantic fields (JSON=%s)', async asJson => {
+    const modelDetail = {
+      measures: [
+        { techId: 'field-1', fieldDesc: '接口字段描述', description: '旧描述' },
+        { techId: 'field-2', fieldDesc: '', description: '旧描述' },
+        { techId: 'field-3', description: '旧描述' }
+      ]
+    }
+    vi.mocked(queryTableSemanticsDetail).mockResolvedValueOnce({
+      data: { modelDetail: asJson ? JSON.stringify(modelDetail) : modelDetail },
+      error: null
+    } as never)
+    vi.mocked(queryKnowledgeIndicators).mockResolvedValueOnce({ data: { list: [] }, error: null } as never)
+    const { setFieldRows, tableColumns } = renderDrawer()
+    await vi.mocked(TableSemantics).mock.calls[0][0].getSchemaId!({
+      semanticGroupId: 'semantic-group-1',
+      semanticSchemaId: 'schema-1',
+      semanticsGroupId: 'semantic-group-1',
+      viewId: 'view-1'
+    })
+    const loadedRows = setFieldRows.mock.calls[0][0] as typeof fieldRows
+    expect(loadedRows.map(row => row.fieldDesc)).toEqual(['接口字段描述', '', ''])
+    const column = tableColumns.find(item => item.key === 'fieldDesc')!
+    expect(column.dataIndex).toBe('fieldDesc')
+    const input = column.render!(loadedRows[0].fieldDesc, loadedRows[0]) as ReactElement<{ value: string }>
+    expect(input.props.value).toBe('接口字段描述')
+  })
+
+  it.each(['更新后的描述', ''])('keeps the displayed, edited and submitted fieldDesc consistent: %j', async fieldDesc => {
+    const { setFieldRows, tableColumns } = renderDrawer()
+    const column = tableColumns.find(item => item.key === 'fieldDesc')!
+    const input = column.render!(fieldRows[0].fieldDesc, fieldRows[0]) as ReactElement<{
+      onChange: (event: { target: { value: string } }) => void
+      value: string
+    }>
+    expect(input.props.value).toBe('当前字段描述')
+    input.props.onChange({ target: { value: fieldDesc } })
+    const updatedRows = setFieldRows.mock.calls[0][0](fieldRows) as typeof fieldRows
+    expect(updatedRows[1]).toBe(fieldRows[1])
+    expect(fieldRows[0].fieldDesc).toBe('当前字段描述')
+    const { onSubmit, save } = renderDrawer(['field-1'], true, updatedRows)
+    await save()
+    expect(onSubmit.mock.calls[0][0][0].techId[0].fieldDesc).toBe(fieldDesc)
+    expect(onSubmit.mock.calls[0][0][0].techId[0]).not.toHaveProperty('description')
+  })
+
   it('validates Chinese names and data types without restoring a separate indicator name field', () => {
     const { fields, selectOptions } = renderDrawer()
     expect(fields.map(field => field.name)).toEqual([
