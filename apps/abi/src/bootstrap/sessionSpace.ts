@@ -1,7 +1,6 @@
 import { invalidateSpaceListPages, loadSpaceListPage } from '../resources/spaceListResource'
 import { store } from '../store'
-import { changeSpaceId, setSpaceHidden } from '../store/slice/app'
-import { clearPersistedSpace, persistSpaceName } from '../utils/spaceStorage'
+import { setCurrentSpaceInfo, setSpaceHidden } from '../store/slice/app'
 import { localStg } from '../utils/storage'
 
 let pending: { token: string; promise: Promise<void> } | undefined
@@ -13,8 +12,7 @@ export function initializeSessionSpace(): Promise<void> {
 
   const promise = (async () => {
     // 默认空间以当前账号的首条结果为准，不能沿用上次关闭浏览器时的空间名称或 ID。
-    clearPersistedSpace()
-    store.dispatch(changeSpaceId(0))
+    store.dispatch(setCurrentSpaceInfo(null))
     store.dispatch(setSpaceHidden(false))
     if (!token) return
 
@@ -25,8 +23,7 @@ export function initializeSessionSpace(): Promise<void> {
 
     const first = page.rows[0]
     if (first) {
-      persistSpaceName(first.spaceName)
-      store.dispatch(changeSpaceId(first.spaceId))
+      store.dispatch(setCurrentSpaceInfo(first))
     }
   })()
   pending = { token, promise }

@@ -46,8 +46,9 @@ export const SpaceItem: FC<SpaceItemProps> = ({ deleteSpace, setEditSpace, space
   const isCreator = Boolean(space.createBy && (createByMatchesUserName || createByMatchesUserId))
   const canDelete = isAdmin || Boolean(isCreator)
 
-  const setSpaceId = (spaceId: number) => {
-    switchToSpace(spaceId, undefined, { redirect: true })
+  const setSpaceId = async (spaceId: number) => {
+    const switched = await switchToSpace(spaceId, undefined, { redirect: true, spaceName: space.spaceName })
+    if (!switched) return
     dispatch(setSelectedMenuKey('assistant-manage_assistant-config'))
     push('/workbench')
   }

@@ -11,11 +11,10 @@ import { qiankunWindow } from 'vite-plugin-qiankun/dist/helper'
 import { getAllRoutes } from '@/store/slice/route'
 import { logoutNow } from '@/service/logout'
 import { openChatConversationWindow } from '@/utils/chatWindow'
-import { readPersistedSpaceId } from '@/utils/spaceStorage'
 import { Dropdown, Layout } from 'antd'
 import './index.scss'
 import { useRoute, useRouter } from '~/packages/simple-router/src'
-import { changeSpaceId, getSpaceId } from '@/store/slice/app'
+import { getSpaceId } from '@/store/slice/app'
 const { Sider } = Layout
 
 const GlobalSider: FC = memo(() => {
@@ -33,7 +32,7 @@ const GlobalSider: FC = memo(() => {
     router.push('/home')
   }
   const spaceId = useAppSelector(getSpaceId)
-  const effectiveSpaceId = spaceId || readPersistedSpaceId()
+  const effectiveSpaceId = spaceId
 
   useEffect(() => {
     const path = route.path || '';
@@ -53,12 +52,6 @@ const GlobalSider: FC = memo(() => {
       dispatch(setSelectedMenuKey(matchedName));
     }
   }, [route])
-
-  useEffect(() => {
-    if (!spaceId && effectiveSpaceId) {
-      dispatch(changeSpaceId(effectiveSpaceId))
-    }
-  }, [dispatch, effectiveSpaceId, spaceId])
 
   const userItems = useCallback(() => {
     const userName = isMicroApp ? window.qiankunStore.state.userInfo?.userName : userInfo?.userName

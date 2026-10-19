@@ -17,6 +17,7 @@ interface OperateRecord {
   readonly id: string;
   readonly chatId: string;
   spaceId: number;
+  spaceName?: string;
 }
 
 export const Component: React.FC & { loader?: () => Promise<any> } = () => {
@@ -70,8 +71,8 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
   }
 
   const handleNavigate = (r: OperateRecord) => {
-    const { spaceId, chatId } = r;
-    switchToSpace(spaceId, undefined, { chatId });
+    const { spaceId, spaceName, chatId } = r;
+    switchToSpace(spaceId, undefined, { chatId, spaceName });
   };
 
   // 前端按分享时间过滤 + 前端分页（apiFn 返回全量数据）

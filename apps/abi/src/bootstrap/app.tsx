@@ -20,9 +20,11 @@ import { hasActiveLoginSession } from '@/pages/login/loginSessionSync'
 
 import { initializeSessionSpace } from './sessionSpace'
 import { startAbiSessionSync } from './sessionSync'
+import { startAbiSpaceSync } from './spaceSync'
 
 let root: Root | null = null
 let stopSessionSync: (() => void) | undefined
+let stopSpaceSync: (() => void) | undefined
 
 async function setupOptionalIconify() {
   if (!import.meta.env.VITE_ICONIFY_URL) return
@@ -93,6 +95,8 @@ export async function mountFullAbiApp(props: any, poweredByQiankun = false) {
     }
   }
   if (!poweredByQiankun) preloadInitialRoute(window.location.pathname)
+  stopSpaceSync?.()
+  stopSpaceSync = startAbiSpaceSync()
   setupRouter()
   setupDayjs()
 
@@ -109,6 +113,8 @@ export async function mountFullAbiApp(props: any, poweredByQiankun = false) {
 }
 
 export function unmountFullAbiApp() {
+  stopSpaceSync?.()
+  stopSpaceSync = undefined
   stopSessionSync?.()
   stopSessionSync = undefined
   root?.unmount()

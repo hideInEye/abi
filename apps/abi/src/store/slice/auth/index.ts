@@ -12,7 +12,7 @@ import { resetTheme } from '../theme';
 
 import { clearAuthStorage, getToken, getUserInfo } from './shared';
 import { message } from 'antd';
-import { setSpaceHidden } from '../app';
+import { setCurrentSpaceInfo, setSpaceHidden } from '../app';
 
 // perform thorough cleanup of storages (localStg/localStorage/sessionStorage/localforage)
 async function performLogoutCleanup() {
@@ -237,6 +237,8 @@ export const resetStore = (): AppThunk => async dispatch => {
 
   // Reset in-memory auth
   dispatch(resetAuth());
+
+  dispatch(setCurrentSpaceInfo(null));
 
   dispatch(setSpaceHidden(false))
 
