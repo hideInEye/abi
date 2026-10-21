@@ -96,6 +96,7 @@ export const KnowledgeOperateDerivativeCustomTechnicalSection: React.FC<Props> =
             treeCheckable
             disabled={editing}
             treeDefaultExpandAll
+            treeExpandAction="click"
             maxTagCount={2}
             loading={fieldLoading}
             placeholder="请选择来源字段"
