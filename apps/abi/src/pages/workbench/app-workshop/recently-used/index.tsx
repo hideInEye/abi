@@ -54,8 +54,8 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
   }, [spaceId]);
 
   const handleNavigate = (r: any) => {
-    const { spaceId, chatId } = r;
-    switchToSpace(spaceId, undefined, { chatId });
+    const { spaceId, spaceName, chatId } = r;
+    switchToSpace(spaceId, undefined, { chatId, spaceName });
   };
 
   // 前端按最近使用时间过滤 + 前端分页（apiFn 返回全量数据）

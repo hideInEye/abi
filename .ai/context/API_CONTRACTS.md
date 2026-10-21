@@ -32,6 +32,8 @@
 - responseType 为 blob 时返回原始 response。
 - 业务 code 401 或 HTTP 401 触发 `handleLoginExpired`。
 
+三种登录态对话请求保留原有数字 `user_id` 及其取值逻辑，并在同层新增 `user_name`，值为当前用户资料的 `userName` 字符串，不使用昵称。交互模式位于 `context`，探索和报告模式位于请求顶层。用户名由 `apps/chat/src/components/conversation/hooks/conversationRequests.ts` 的 `getConversationUserName` 统一读取；发送时读取当前用户名，不覆盖原有 `user_id`。
+
 ## Dashboard 请求约定
 
 `apps/dashboard/src/utils/FetchUtil.ts` 使用 fetch 封装：

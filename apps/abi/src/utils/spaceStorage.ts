@@ -1,3 +1,5 @@
+import type { CurrentSpaceInfo } from '../store/slice/app/types'
+
 const SPACE_ID_KEY = 'spaceId'
 const SPACE_NAME_KEY = 'spaceName'
 
@@ -33,22 +35,17 @@ export function readPersistedSpaceId() {
   return Number.isFinite(spaceId) && spaceId > 0 ? spaceId : 0
 }
 
-export function persistSpaceId(spaceId?: number) {
-  if (!Number.isFinite(spaceId) || spaceId <= 0) return
-  writeStorageValue(SPACE_ID_KEY, String(spaceId))
-}
-
 export function readPersistedSpaceName() {
   return readStorageValue(SPACE_NAME_KEY) || ''
 }
 
-export function persistSpaceName(spaceName?: string) {
-  const normalizedName = spaceName?.trim()
-  if (!normalizedName) return
-  writeStorageValue(SPACE_NAME_KEY, normalizedName)
-}
-
-export function clearPersistedSpace() {
-  removeStorageValue(SPACE_ID_KEY)
-  removeStorageValue(SPACE_NAME_KEY)
+export function persistCurrentSpaceInfo(space: CurrentSpaceInfo | null) {
+  if (!space) {
+    removeStorageValue(SPACE_ID_KEY)
+    removeStorageValue(SPACE_NAME_KEY)
+    return
+  }
+  // Chat 和旧业务仍读取这两个键；由 store 的单一设置入口成对写入。
+  writeStorageValue(SPACE_NAME_KEY, space.spaceName)
+  writeStorageValue(SPACE_ID_KEY, String(space.spaceId))
 }

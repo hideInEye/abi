@@ -3,6 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { connectReportEvents, EMPTY_REPORT_SOURCE_VERSION_FIELDS, fetchReportTaskStatus, submitReportTask } from '@/service/api/report'
 import type { RawReportStreamEntry, ReportSourceVersionFields, SubmitReportRequest } from '@/service/api/report'
 
+import { getConversationUserName } from '../hooks/conversationRequests'
+
 import { createReportItemFromHistory, mergeReportTimelineItems } from './reportHistoryAdapter'
 import { canRevealReport, completeReportThinkingTypewriter, shouldAnimateReportPreview, toggleReportTaskKey } from './helpers'
 import { getNewlyCompletedReportTaskKey, getReportRecoveryAction, shouldNotifyReportCompleted, splitReportTaskRecordsByHistory } from './reportRecovery'
@@ -353,6 +355,7 @@ export function useReportConversation({ conv, spaceId, schemaId, currentModelId,
         conv_id: conversationId,
         session_id: sessionId,
         user_id: getCurrentUserId(),
+        user_name: getConversationUserName(),
         chat_model_id: chatModelId,
         // 四类能力源始终显式提交；没有选择时按后端约定发送空数组。
         ...(reportSources ?? EMPTY_REPORT_SOURCE_VERSION_FIELDS),

@@ -1,4 +1,5 @@
 import { spaceList } from '../service/api/data-space'
+import { assertFlatRequestSuccess } from '../service/request/flat-result'
 
 import { createStableRequestKey, RequestResource } from './requestResource'
 export { mergeSpacePages } from './spaceListMerge'
@@ -75,7 +76,7 @@ export function loadSpaceListPage(pageNum: number, search: string, force = false
         pageSize: SPACE_LIST_PAGE_SIZE,
         spaceName: normalizedSearch || undefined,
       }, signal)
-      if ((response as any)?.error) throw (response as any).error
+      assertFlatRequestSuccess(response)
       const rows = normalizeRows(response)
       return {
         hasMore: rows.length === SPACE_LIST_PAGE_SIZE,

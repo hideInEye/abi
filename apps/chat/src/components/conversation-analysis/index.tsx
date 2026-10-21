@@ -11,7 +11,7 @@ import { getSpaceId } from '../../utils/runtime'
 import type { ConverListProps } from './conver_list'
 import { hasSelectedConversationData } from '../conversation/components/chat-input/sendValidation'
 import { useSidebarCollapse } from '../layout/SidebarCollapseContext'
-import { useChatBootstrap } from '@/resources/chatBootstrap'
+import { useChatBootstrap, useChatConversations, useChatModels, useChatSemantic } from '@/resources/chatBootstrap'
 import { LazyFeatureFallback, RetryableLazy } from '@/components/performance/RetryableLazy'
 import { useAfterFirstPaint } from '@/components/performance/useAfterFirstPaint'
 // 助手会话（appId≠0）：输入框的数据语义/技能/MCP 只能从助手绑定资源里拿。
@@ -97,9 +97,12 @@ interface ConversationAnalysisProps {
 
 const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: propSpaceId, chatId: routeChatId, hideSidebar = false, pendingAssistantId }) => {
   const bootstrap = useChatBootstrap()
+  const conversations = useChatConversations()
+  const models = useChatModels()
+  const semantic = useChatSemantic()
   const interactiveReady = useAfterFirstPaint()
   const initialSpaceId = propSpaceId !== undefined ? Number(propSpaceId) : bootstrap.identity.spaceId || getSpaceId()
-  const initialAppList = bootstrap.conversations.data ?? EMPTY_APP_LIST
+  const initialAppList = conversations.data ?? EMPTY_APP_LIST
   const initialApp = (() => {
     if (routeChatId === 'new') return undefined
     if (!initialAppList.length) return undefined
@@ -113,7 +116,7 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
   const { collapseSidebar } = useSidebarCollapse()
   const [visible, setVisible] = useState(false)
   const [curApp, setCurApp] = useState<any>(initialApp ? { ...initialApp } : {})
-  const appList = bootstrap.conversations.data ?? EMPTY_APP_LIST
+  const appList = conversations.data ?? EMPTY_APP_LIST
   const [curConv, setCurConv] = useState<any>(initialApp?.conv_uid ? { ...initialApp } : undefined)
   const [, setLoading] = useState(false)
   const lastSpaceIdRef = useRef<number | null>(null)
@@ -153,29 +156,29 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
     if (open) collapseSidebar()
   }, [collapseSidebar])
 
-  const modelOptions = (bootstrap.models.data?.options ?? []) as ModelOption[]
+  const modelOptions = (models.data?.options ?? []) as ModelOption[]
   const [currentModel, setCurrentModel] = useState<ModelOption | null>(
-    () => (bootstrap.models.data?.currentModel as ModelOption | null | undefined) ?? null,
+    () => (models.data?.currentModel as ModelOption | null | undefined) ?? null,
   )
   const [embedModelOverride, setEmbedModelOverride] = useState<string | number>('')
-  const embedModelId = embedModelOverride || bootstrap.models.data?.embedModelId || ''
+  const embedModelId = embedModelOverride || models.data?.embedModelId || ''
 
-  const semanticTree = bootstrap.semantic.data ?? []
+  const semanticTree = semantic.data ?? []
   const [selectedData, setSelectedData] = useState<SemanticSelectedData | null>(null)
   const [selectedExcel, setSelectedExcel] = useState<any>(null)
+  const semLoading = semantic.status === 'loading'
   // 待发送图片附件（base64）：三模式共享，发送后清空。
   const [selectedImages, setSelectedImages] = useState<ImageAttachment[]>([])
-  const semLoading = bootstrap.semantic.status === 'loading'
 
   // ── 助手会话绑定资源（按 curConv.appId）：非空时输入框候选仅从其中取 ──
   const [boundResources, setBoundResources] = useState<AssistantBoundResources | null>(null)
   const [boundResourcesLoading, setBoundResourcesLoading] = useState(false)
 
   useEffect(() => {
-    const initialModel = bootstrap.models.data?.currentModel as ModelOption | null | undefined
+    const initialModel = models.data?.currentModel as ModelOption | null | undefined
     setCurrentModel(initialModel ?? null)
     setEmbedModelOverride('')
-  }, [bootstrap.models.data, currentSpaceId])
+  }, [models.data, currentSpaceId])
 
   // 模型是否支持关闭思考（1 为支持，0 或其他为不支持）
   const isSupportCloseThinking = useCallback((model: ModelOption | null | undefined) => {

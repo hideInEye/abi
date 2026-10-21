@@ -30,7 +30,7 @@ interface MeasureFieldItem extends AtomicMappingFieldInput {
   aggregationMethods: AggregationCode[]
   alias: string
   bizName: string
-  description: string
+  fieldDesc: string
   englishName: string
   fieldType: string
   key: string
@@ -94,7 +94,7 @@ function parseMeasureFields(modelDetail: unknown, schemaDetail?: Record<string, 
         return {
           alias: String(item?.alias || bizName).trim() || bizName,
           bizName,
-          description: String(item?.description || '').trim(),
+          fieldDesc: String(item?.fieldDesc ?? '').trim(),
           englishName,
           fieldType: String(item?.fieldType || item?.tfieldType || '-').trim() || '-',
           key,
@@ -466,15 +466,15 @@ export const KnowledgeAtomicMappingDrawer: React.FC<Props> = ({ groupId, groupNa
       width: 120
     },
     {
-      dataIndex: 'description',
-      key: 'description',
+      dataIndex: 'fieldDesc',
+      key: 'fieldDesc',
       render: (value: string, record: MeasureFieldItem) => (
         <AInput
           value={value}
           onChange={e => {
             const nextValue = e.target.value
             setFieldRows(prev =>
-              prev.map(item => (item.key === record.key ? { ...item, description: nextValue } : item))
+              prev.map(item => (item.key === record.key ? { ...item, fieldDesc: nextValue } : item))
             )
           }}
         />

@@ -1,6 +1,37 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { isApiSuccess, parseStoredUserInfo, runApiSuccessFlow } from './conversationRequests'
+import { getConversationUserName, isApiSuccess, parseStoredUserInfo, runApiSuccessFlow } from './conversationRequests'
+
+afterEach(() => vi.unstubAllGlobals())
+
+describe('conversation request user identity', () => {
+  it('uses the account name rather than the numeric ID or display nickname', () => {
+    const getItem = vi.fn(() => JSON.stringify({ userName: 'account_a', userId: 42, nickName: '昵称' }))
+    vi.stubGlobal('localStorage', { getItem })
+
+    expect(getConversationUserName()).toBe('account_a')
+    expect(getItem).toHaveBeenCalledWith('SOY-REACT_userInfo')
+  })
+
+  it.each([null, '{broken', 'null', '{}', '{"userId":42,"nickName":"昵称"}', '{"userName":42}'])
+  ('does not send a numeric ID when the account name is unavailable: %s', value => {
+    vi.stubGlobal('localStorage', { getItem: () => value })
+    expect(getConversationUserName()).toBe('')
+  })
+
+  it('reads the latest account at request time without caching it', () => {
+    let userName = 'account_a'
+    vi.stubGlobal('localStorage', { getItem: () => JSON.stringify({ userName }) })
+    expect(getConversationUserName()).toBe('account_a')
+    userName = 'account_b'
+    expect(getConversationUserName()).toBe('account_b')
+  })
+
+  it('keeps storage read failures from throwing during payload creation', () => {
+    vi.stubGlobal('localStorage', { getItem: () => { throw new Error('storage unavailable') } })
+    expect(getConversationUserName()).toBe('')
+  })
+})
 
 describe('conversation request helpers', () => {
   it('does not throw for malformed stored user data', () => {

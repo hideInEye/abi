@@ -2,7 +2,7 @@ import { DeleteOutlined, EditOutlined, FolderOutlined, MoreOutlined, PlusOutline
 import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { Button, Checkbox, ConfigProvider, Drawer, Dropdown, Input, message, Modal, Spin } from 'antd'
 import type { MenuProps } from 'antd'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { LazyFeatureFallback, RetryableLazy } from '@/components/performance/RetryableLazy'
 import { TASK_DETAIL_ROUTE } from '@/constant/layout'
@@ -50,13 +50,9 @@ export function SidebarHistoryTopics({ collapsed, suppressActive = false }: Side
 
   const { groups, loadGroups, addGroup } = useConversationGroups()
 
-  const initialLoadDone = useRef(false)
-
   useEffect(() => {
     if (!collapsed) {
-      const silent = initialLoadDone.current
-      loadHistoryTopics({ silent })
-      initialLoadDone.current = true
+      loadHistoryTopics()
       // 同时加载分组列表（用于移动到分组子菜单）
       loadGroups()
     }
@@ -284,7 +280,7 @@ export function SidebarHistoryTopics({ collapsed, suppressActive = false }: Side
       try {
         await moveSessionToGroup({ sessionId: app.chat_id, groupId, title: app.title || app.biz_name || '' })
         message.success('已移动到分组')
-        await Promise.all([loadGroups(), loadHistoryTopics({ force: true, silent: true })])
+        await Promise.all([loadGroups(), loadHistoryTopics({ force: true })])
       } catch {
         message.error('移动失败')
       }
@@ -384,7 +380,7 @@ export function SidebarHistoryTopics({ collapsed, suppressActive = false }: Side
           sortOrder: currentlyTop ? 0 : maxSortOrder + 1,
         })
         message.success(currentlyTop ? '已取消置顶' : '已置顶')
-        await loadHistoryTopics({ force: true, silent: true })
+        await loadHistoryTopics({ force: true })
       } catch {
         message.error('操作失败')
       }

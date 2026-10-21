@@ -11,7 +11,7 @@ export interface AtomicMappingFieldInput {
   aggregationMethods: AggregationCode[]
   alias: string
   bizName: string
-  description: string
+  fieldDesc: string
   englishName: string
   fieldType: string
   raw: KnowledgeTechField
@@ -36,12 +36,15 @@ export function buildAtomicMappingPayload(
 ): AtomicMappingPayload[] {
   return fields.map(item => {
     const projectionFunc = toLegacyProjectionFunc(item.aggregationMethods[0])
+    // 映射接口只接收 fieldDesc，避免透传来源数据中的旧描述键。
+    const sourceField = { ...item.raw }
+    delete sourceField.description
     return {
       ...context,
       projectionFunc,
       techId: [
         {
-          ...item.raw,
+          ...sourceField,
           agg: {
             data: item.aggregationMethods,
             type: 'simple'
@@ -49,8 +52,8 @@ export function buildAtomicMappingPayload(
           alias: item.alias,
           bizName: buildMappedBizName(item.tableBizName, item.bizName),
           dataType: item.dataType,
-          description: item.description,
           englishName: item.englishName,
+          fieldDesc: item.fieldDesc,
           fieldType: item.fieldType,
           projectionFunc,
           techId: String(item.raw?.techId || ''),

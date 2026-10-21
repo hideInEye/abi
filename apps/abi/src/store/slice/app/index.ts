@@ -2,11 +2,15 @@ import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 
 import { setLng } from '@/locales';
-import { persistSpaceId, readPersistedSpaceId } from '@/utils/spaceStorage';
+import { persistCurrentSpaceInfo } from '@/utils/spaceStorage';
 import { localStg } from '@/utils/storage';
 
 import type { AppThunk } from '../..';
 import { getThemeSettings } from '../theme';
+
+import type { CurrentSpaceInfo } from './types';
+
+export type { CurrentSpaceInfo } from './types';
 
 interface InitialStateType {
   contentXScrollable: boolean;
@@ -17,7 +21,7 @@ interface InitialStateType {
   mixSiderFixed: boolean;
   reloadFlag: boolean;
   siderCollapse: boolean;
-  spaceId: number;
+  currentSpaceInfo: CurrentSpaceInfo | null;
   themeDrawerVisible: boolean;
   spaceHidden: boolean
 }
@@ -41,7 +45,8 @@ const initialState: InitialStateType = {
   mixSiderFixed: false,
   reloadFlag: true,
   siderCollapse: false,
-  spaceId: readPersistedSpaceId(),
+  // 启动时由会话初始化选择空间，不把历史缓存直接当作当前账号的选中项。
+  currentSpaceInfo: null,
   themeDrawerVisible: false,
   spaceHidden: false,
 };
@@ -55,9 +60,14 @@ export const appSlice = createSlice({
       setLng(payload);
       localStg.set('lang', payload);
     },
-    changeSpaceId(state, { payload }: PayloadAction<number>) {
-      state.spaceId = payload;
-      persistSpaceId(payload);
+    setCurrentSpaceInfo(state, { payload }: PayloadAction<CurrentSpaceInfo | null>) {
+      const spaceId = Number(payload?.spaceId);
+      if (payload && (!Number.isFinite(spaceId) || spaceId <= 0 || !payload.spaceName?.trim())) return;
+      const next = payload ? { spaceId, spaceName: payload.spaceName.trim() } : null;
+      persistCurrentSpaceInfo(next);
+      if (state.currentSpaceInfo?.spaceId !== next?.spaceId || state.currentSpaceInfo?.spaceName !== next?.spaceName) {
+        state.currentSpaceInfo = next;
+      }
     },
     closeThemeDrawer: state => {
       state.themeDrawerVisible = false;
@@ -102,7 +112,9 @@ export const appSlice = createSlice({
     getMixSiderFixed: app => app.mixSiderFixed,
     getReloadFlag: app => app.reloadFlag,
     getSiderCollapse: app => app.siderCollapse,
-    getSpaceId: app => app.spaceId,
+    getCurrentSpaceInfo: app => app.currentSpaceInfo,
+    // 保留只需要 ID 的业务订阅，不额外维护一份可独立变更的 ID 状态。
+    getSpaceId: app => app.currentSpaceInfo?.spaceId ?? 0,
     getThemeDrawerVisible: app => app.themeDrawerVisible,
     getSpaceHidden: state => state.spaceHidden
   }
@@ -110,7 +122,7 @@ export const appSlice = createSlice({
 // Action creators are generated for each case reducer function.
 export const {
   changeLocale,
-  changeSpaceId,
+  setCurrentSpaceInfo,
   closeThemeDrawer,
   openThemeDrawer,
   setContentXScrollable,
@@ -135,6 +147,7 @@ export const {
   getReloadFlag,
   getSiderCollapse,
   getSpaceId,
+  getCurrentSpaceInfo,
   getThemeDrawerVisible,
   getSpaceHidden
 } = appSlice.selectors;

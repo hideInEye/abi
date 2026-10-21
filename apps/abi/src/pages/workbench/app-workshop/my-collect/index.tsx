@@ -17,6 +17,7 @@ interface OperateRecord {
   readonly id: string;
   readonly sessionId: string;
   spaceId: number;
+  spaceName?: string;
 }
 
 interface Response {
@@ -64,8 +65,8 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
   }, [spaceId]);
 
   const handleNavigate = (r: OperateRecord) => {
-    const { spaceId, sessionId } = r;
-    switchToSpace(spaceId, undefined, { chatId: sessionId });
+    const { spaceId, spaceName, sessionId } = r;
+    switchToSpace(spaceId, undefined, { chatId: sessionId, spaceName });
   };
 
   const handleCollect = async (id: string) => {

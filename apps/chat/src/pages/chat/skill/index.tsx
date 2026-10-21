@@ -88,13 +88,14 @@ function SkillStoreView() {
   const [pageSize, setPageSize] = useState(12)
   const [jumpValue, setJumpValue] = useState('')
 
-  // 拉取「我的技能」集合（仅区分 favorType=skill）
+  // 收藏集合按当前空间查询，避免「我的技能」混入其他空间的收藏。
   const fetchMyIds = useCallback(() => {
     setFavLoading(true)
     // 以后端为准：先清空前端残留的旧集合，避免重复进 tab 时先闪旧数据再刷新；只以接口返回渲染
     setMyIds(new Set())
-    fetchFavoriteList({ favorType: 'skill' })
+    return fetchFavoriteList({ favorType: 'skill', spaceId: getSpaceId() })
       .then((res: any) => {
+        if (Number(res?.code) !== 200) return
         const rows = res?.rows ?? res?.data?.rows ?? res?.data?.list ?? (Array.isArray(res?.data) ? res.data : [])
         const list = Array.isArray(rows) ? rows : []
         setMyIds(new Set(list.map((r: any) => String(r.favorId ?? r.favor_id ?? r.skillId ?? '')).filter(Boolean)))
@@ -105,11 +106,12 @@ function SkillStoreView() {
       })
   }, [])
 
-  // 拉取技能列表（与 abi 同一接口）：不传 spaceId 查全部，前端按 visibility 过滤
+  // 技能列表不按空间限制，由前端按 visibility 过滤；仅我的技能收藏查询传空间。
   const fetchList = useCallback(() => {
     setLoading(true)
     return querySkillList({})
       .then((res: any) => {
+        if (Number(res?.code) !== 200) return
         const rows =
           res?.data?.data?.pageItems ||
           res?.data?.data?.rows ||

@@ -17,7 +17,8 @@ function createHandlers() {
   }
   collect(file)
   const deps = {
-    clearPersistedSpace: vi.fn(),
+    currentSpaceRef: { current: { spaceId: 7, spaceName: '当前空间' } as { spaceId: number; spaceName: string } | null },
+    setCurrentSpaceInfo: vi.fn(space => ({ type: 'space', space })),
     clearTabs: vi.fn(),
     deleteSpace: vi.fn().mockResolvedValue({ error: null }),
     dispatch: vi.fn(),
@@ -56,6 +57,7 @@ describe('home space mutation refresh (index.tsx: deleteSpace/updateSpace)', () 
     expect(handlers.invalidateHomeResources).toHaveBeenCalledOnce()
     expect(handlers.loadOverview).toHaveBeenCalledWith(true)
     expect(handlers.loadSpaces).toHaveBeenCalledWith(true)
+    expect(handlers.setCurrentSpaceInfo).toHaveBeenCalledWith(null)
     expect(handlers.invalidateHomeResources.mock.invocationCallOrder[0]).toBeLessThan(
       handlers.loadOverview.mock.invocationCallOrder[0]
     )
@@ -66,7 +68,7 @@ describe('home space mutation refresh (index.tsx: deleteSpace/updateSpace)', () 
     handlers.deleteSpace.mockResolvedValueOnce({ error: new Error('failed') })
     await handlers.deleteSpaceHandler({ spaceId: 7 })
     expect(handlers.message.error).toHaveBeenCalledOnce()
-    expect(handlers.clearPersistedSpace).not.toHaveBeenCalled()
+    expect(handlers.setCurrentSpaceInfo).not.toHaveBeenCalled()
     expect(handlers.dispatch).not.toHaveBeenCalled()
     expect(handlers.invalidateHomeResources).not.toHaveBeenCalled()
     expect(handlers.loadOverview).not.toHaveBeenCalled()
@@ -77,7 +79,7 @@ describe('home space mutation refresh (index.tsx: deleteSpace/updateSpace)', () 
     const handlers = createHandlers()
     handlers.deleteSpace.mockRejectedValueOnce(new Error('network'))
     await expect(handlers.deleteSpaceHandler({ spaceId: 7 })).rejects.toThrow('network')
-    expect(handlers.clearPersistedSpace).not.toHaveBeenCalled()
+    expect(handlers.setCurrentSpaceInfo).not.toHaveBeenCalled()
     expect(handlers.loadOverview).not.toHaveBeenCalled()
     expect(handlers.loadSpaces).not.toHaveBeenCalled()
   })
@@ -88,5 +90,12 @@ describe('home space mutation refresh (index.tsx: deleteSpace/updateSpace)', () 
     expect(handlers.invalidateHomeResources).toHaveBeenCalledOnce()
     expect(handlers.loadOverview).toHaveBeenCalledWith(true)
     expect(handlers.loadSpaces).toHaveBeenCalledWith(true)
+  })
+
+  it('does not clear the current selection when another space is deleted', async () => {
+    const handlers = createHandlers()
+    await handlers.deleteSpaceHandler({ spaceId: 8 })
+    expect(handlers.setCurrentSpaceInfo).not.toHaveBeenCalled()
+    expect(handlers.currentSpaceRef.current?.spaceId).toBe(7)
   })
 })

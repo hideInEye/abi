@@ -13,6 +13,7 @@ import type { SpaceInfo } from '@/types/layout'
 
 const SPACE_ID_STORAGE_KEY = 'spaceId'
 const SPACE_NAME_STORAGE_KEY = 'spaceName'
+const CHAT_ID_STORAGE_KEY = 'chatId'
 
 const SPACE_AVATAR_COLORS = [
   { bg: 'linear-gradient(135deg, #6366f1, #5b7cf7)', shadow: 'rgba(91,124,247,0.35)' },
@@ -51,6 +52,39 @@ export function SpaceSelector({ collapsed, onSpaceChanged }: SpaceSelectorProps)
   const [loadError, setLoadError] = useState('')
   const requestRef = useRef<{ page: number; run: number; search: string } | null>(null)
   const requestRunRef = useRef(0)
+  const selectedSpaceRef = useRef(selectedSpaceId)
+  selectedSpaceRef.current = selectedSpaceId
+
+  useEffect(() => {
+    const syncPersistedSpace = () => {
+      const spaceId = getSpaceId()
+      if (!spaceId) return
+      const spaceName = localStorage.getItem(SPACE_NAME_STORAGE_KEY) || ''
+      setSelectedSpaceName(spaceName)
+      if (spaceId === selectedSpaceRef.current) return
+
+      selectedSpaceRef.current = spaceId
+      setSelectedSpaceId(spaceId)
+      localStorage.removeItem(CHAT_ID_STORAGE_KEY)
+      window.dispatchEvent(new CustomEvent('space-change', { detail: { spaceId, spaceName } }))
+      onSpaceChanged?.({ spaceId, spaceName })
+      void navigate({ to: '/chat' })
+    }
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === SPACE_ID_STORAGE_KEY || event.key === SPACE_NAME_STORAGE_KEY) syncPersistedSpace()
+    }
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') syncPersistedSpace()
+    }
+    window.addEventListener('storage', onStorage)
+    window.addEventListener('focus', syncPersistedSpace)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      window.removeEventListener('storage', onStorage)
+      window.removeEventListener('focus', syncPersistedSpace)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [navigate, onSpaceChanged])
 
   const currentSpace = useMemo(
     () => spaceList.find((space) => space.spaceId === selectedSpaceId),

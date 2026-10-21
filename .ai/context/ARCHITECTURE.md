@@ -20,9 +20,26 @@
 - `apps/abi` 是主壳和主要业务管理端，通过 qiankun 集成 `dashboard`；`chat` 当前是 `/chat-ui/` 独立 SPA，不应按 qiankun 卸载语义评估其生命周期。
 - `apps/chat` 负责聊天、会话、图表/问答呈现和相关请求，鉴权通过共享 token 或 host `window.onTokenExpired` 协作。
 - `apps/dashboard` 负责大屏设计器、画布、组件定义、蓝图、热键、Undo/Redo 等复杂交互。
-- `packages/auth` 只处理 token 标准化、Authorization header、登录过期流程，不应包含业务路由或页面。
+- `packages/auth` 只处理 token 标准化、Authorization header、登录过期和跨窗口会话通知，不应包含业务路由或页面。
 - `packages/axios` 只提供请求工厂、重试、取消和通用错误分层，不应写具体业务 API。
 - `packages/simple-router` 是 `apps/abi` 的路由适配层，修改时需兼容 React Router 行为。
+
+## ABI / Chat 会话与空间初始化
+
+- ABI 与同源 Chat 通过共享 token 和 `authSessionVersion`（用户信息及初始空间就绪后发布）同步账号；业务页面监听 storage，并在 focus / visibilitychange 时补查。接收方不得再次清理凭据，避免删除其他窗口刚完成的新登录。
+- 跨端观察器仅同步新登录就绪后的用户信息；token 删除、登录标记删除、缓存清空及随后 focus / visibilitychange 不联动另一端退出、不清空其内存用户状态、不发出用户变更通知或跳转。新登录同步不执行整页重载、共享缓存清理或 ABI 主题重置。ABI 用户展示订阅 auth store，Chat 订阅用户变更通知。两端仍共享凭据，后续真实 401 按原鉴权流程处理，不代表独立会话。
+- Chat 主动退出成功或登录失效时，进入带 `/home` 回跳目标的 ABI 登录页，重新登录后进入 ABI 首页；不保留触发失效的 Chat 地址。宿主提供 `onTokenExpired` 时仍交由宿主处理，不改变 ABI 其他页面的登录回跳逻辑。
+- ABI、Chat 新启动及登录恢复在业务挂载/跳转前读取空间列表，默认选择接口第一项，同时更新空间 ID 与名称；明确携带 `spaceId` 的 Chat 业务链接仍解析指定空间。请求失败或账号中途改变时，不用历史缓存继续进入业务。
+- ABI 当前选择只保存在 `app.currentSpaceInfo`（`spaceId`、`spaceName`）中，通过 `getCurrentSpaceInfo` 获取、`setCurrentSpaceInfo` 设置；设置入口同步写入兼容缓存 `spaceId`/`spaceName`，清空时一起删除。`getSpaceId` 仅为该对象的派生 selector，不维护另一份 ID 状态。初始化前为空，不直接恢复历史缓存。
+- ABI 空间选择器、首页/空间列表、引导页、登录初始化统一使用上述设置入口；普通点击、下拉开关和路由变化不再恢复缓存。实际空间切换仍在权限请求成功后提交，只有 ID 的入口通过既有空间详情接口解析名称，失败保留原选择。
+- 跨窗口同步集中在 `apps/abi/src/bootstrap/spaceSync.ts`，监听 storage/focus/visibilitychange 和明确的 `space-change` 事件，通过空间详情确认 ID 对应名称后整体设置；忽略缓存清空和过期账号/过期选择响应。Chat 保留兼容 ID/名称缓存与既有 `space-change` 数据上下文事件，不依赖 ABI store。
+- 实现入口：`packages/auth/src/sessionSync.ts`、`apps/abi/src/bootstrap/sessionSync.ts`、`apps/chat/src/bootstrap/sessionSync.ts`；空间初始化位于两个应用各自的 `src/bootstrap/sessionSpace.ts`。
+
+## Chat 工作台加载与数据订阅
+
+- `pages/chat/route.tsx` 中侧栏及空间选择器的懒加载边界在工作台内保持挂载，不使用新建/历史对话路由变化控制首屏就绪状态，也不设置固定等待时间；定时任务等可选功能仍按需加载。
+- `resources/chatBootstrap.tsx` 的 Context 仅提供身份、资源 key 和稳定操作。对话、分组、模型、语义数据分别通过 `useChatConversations`、`useChatGroups`、`useChatModels`、`useChatSemantic` 订阅现有 RequestResource；只需要操作的消费者不订阅数据快照。
+- 最近对话仅在当前身份尚无数据且处于 idle/loading 时显示局部加载状态。已有数据（包括成功的空列表）刷新时保留内容，失败时不清空。资源缓存、在途去重、身份隔离及取消/过期响应保护沿用既有实现。
 
 ## 微前端集成约束
 

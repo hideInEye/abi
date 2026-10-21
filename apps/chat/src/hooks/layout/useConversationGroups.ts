@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 
-import { useChatBootstrap } from '@/resources/chatBootstrap'
+import { useChatBootstrap, useChatGroups } from '@/resources/chatBootstrap'
 import {
   addSessionGroup,
   deleteSessionGroup,
@@ -11,8 +11,9 @@ import { getSpaceId } from '@/utils/runtime'
 
 export function useConversationGroups() {
   const bootstrap = useChatBootstrap()
-  const groups = bootstrap.groups.data ?? []
-  const loading = bootstrap.groups.status === 'loading'
+  const snapshot = useChatGroups()
+  const groups = snapshot.data ?? []
+  const loading = snapshot.status === 'loading'
 
   /** 加载分组列表 */
   const loadGroups = useCallback(
