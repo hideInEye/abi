@@ -90,7 +90,8 @@ export function Component() {
         resetLoginExpiredState()
         dispatch(syncAuthFromStorage())
         await dispatch(resetRouteStore())
-        await initializeSessionSpace()
+        // 此处恢复的是已登录会话，不应覆盖它已选中的空间；主动提交登录仍选首项。
+        await initializeSessionSpace({ restoreCachedSpace: true })
         await dispatch(initAuthRoute())
 
         // 恢复期间可能发生再次登录，不能用旧账号或尚未就绪的权限路由执行跳转。

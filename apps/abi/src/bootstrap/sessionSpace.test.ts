@@ -37,6 +37,66 @@ describe('ABI session space initialization', () => {
     expect(mocks.dispatch).toHaveBeenLastCalledWith({ type: 'space', value: { spaceId: 8, spaceName: '第一空间' } })
   })
 
+  it('restores the cached space on refresh and refreshes its name from the server', async () => {
+    mocks.load.mockResolvedValue({ rows: [{ spaceId: 8, spaceName: '第一空间' }, { spaceId: 99, spaceName: '当前空间新名称' }] })
+    await initializeSessionSpace({ restoreCachedSpace: true })
+    expect(localStorage.getItem('spaceId')).toBe('99')
+    expect(localStorage.getItem('spaceName')).toBe('当前空间新名称')
+    expect(mocks.dispatch).not.toHaveBeenCalledWith({ type: 'space', value: null })
+  })
+
+  it('finds a cached space beyond the first page', async () => {
+    mocks.load.mockResolvedValueOnce({ rows: [{ spaceId: 8, spaceName: '第一空间' }], hasMore: true, pageNum: 1 })
+      .mockResolvedValueOnce({ rows: [{ spaceId: 99, spaceName: '后续页空间' }], hasMore: false, pageNum: 2 })
+    await initializeSessionSpace({ restoreCachedSpace: true })
+    expect(mocks.load).toHaveBeenNthCalledWith(2, 2, '', true)
+    expect(localStorage.getItem('spaceId')).toBe('99')
+    expect(localStorage.getItem('spaceName')).toBe('后续页空间')
+  })
+
+  it('falls back to the first page rather than the last page when a cached space was removed', async () => {
+    mocks.load.mockResolvedValueOnce({ rows: [{ spaceId: 8, spaceName: '第一空间' }], hasMore: true, pageNum: 1 })
+      .mockResolvedValueOnce({ rows: [{ spaceId: 7, spaceName: '其他空间' }], hasMore: false, pageNum: 2 })
+    await initializeSessionSpace({ restoreCachedSpace: true })
+    expect(localStorage.getItem('spaceId')).toBe('8')
+    expect(localStorage.getItem('spaceName')).toBe('第一空间')
+  })
+
+  it.each([null, 'not-an-id', '99'])('falls back to the first space when the cached ID is %s or inaccessible', async cached => {
+    if (cached === null) localStorage.removeItem('spaceId')
+    else localStorage.setItem('spaceId', cached)
+    mocks.load.mockResolvedValue({ rows: [{ spaceId: 8, spaceName: '第一空间' }], hasMore: false, pageNum: 1 })
+    await initializeSessionSpace({ restoreCachedSpace: true })
+    expect(localStorage.getItem('spaceId')).toBe('8')
+    expect(localStorage.getItem('spaceName')).toBe('第一空间')
+  })
+
+  it('blocks failed refresh initialization without deleting the cached selection needed for retry', async () => {
+    mocks.load.mockRejectedValue(new Error('failed'))
+    await expect(initializeSessionSpace({ restoreCachedSpace: true })).rejects.toThrow('failed')
+    expect(localStorage.getItem('spaceId')).toBe('99')
+    expect(mocks.dispatch).not.toHaveBeenCalledWith({ type: 'space', value: expect.anything() })
+  })
+
+  it('clears an inaccessible cached selection when the account has no spaces', async () => {
+    mocks.load.mockResolvedValue({ rows: [], hasMore: false })
+    await initializeSessionSpace({ restoreCachedSpace: true })
+    expect(localStorage.getItem('spaceId')).toBeNull()
+    expect(localStorage.getItem('spaceName')).toBeNull()
+  })
+
+  it('does not overwrite a newer account while restoring a cached space on another page', async () => {
+    mocks.load.mockResolvedValueOnce({ rows: [{ spaceId: 8, spaceName: '第一空间' }], hasMore: true, pageNum: 1 })
+      .mockImplementationOnce(async () => {
+        mocks.token = 'account-b'
+        localStorage.setItem('spaceId', '7')
+        localStorage.setItem('spaceName', '新账号空间')
+        return { rows: [{ spaceId: 99, spaceName: '旧账号空间' }], hasMore: false, pageNum: 2 }
+      })
+    await expect(initializeSessionSpace({ restoreCachedSpace: true })).rejects.toThrow('登录账号已变更')
+    expect(localStorage.getItem('spaceId')).toBe('7')
+  })
+
   it('does not keep a cached space when the account has no spaces', async () => {
     mocks.load.mockResolvedValue({ rows: [] })
     await initializeSessionSpace()

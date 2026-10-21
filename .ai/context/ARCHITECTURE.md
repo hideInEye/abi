@@ -29,8 +29,8 @@
 - ABI 与同源 Chat 通过共享 token 和 `authSessionVersion`（用户信息及初始空间就绪后发布）同步账号；业务页面监听 storage，并在 focus / visibilitychange 时补查。接收方不得再次清理凭据，避免删除其他窗口刚完成的新登录。
 - 跨端观察器仅同步新登录就绪后的用户信息；token 删除、登录标记删除、缓存清空及随后 focus / visibilitychange 不联动另一端退出、不清空其内存用户状态、不发出用户变更通知或跳转。新登录同步不执行整页重载、共享缓存清理或 ABI 主题重置。ABI 用户展示订阅 auth store，Chat 订阅用户变更通知。两端仍共享凭据，后续真实 401 按原鉴权流程处理，不代表独立会话。
 - Chat 主动退出成功或登录失效时，进入带 `/home` 回跳目标的 ABI 登录页，重新登录后进入 ABI 首页；不保留触发失效的 Chat 地址。宿主提供 `onTokenExpired` 时仍交由宿主处理，不改变 ABI 其他页面的登录回跳逻辑。
-- ABI、Chat 新启动及登录恢复在业务挂载/跳转前读取空间列表，默认选择接口第一项，同时更新空间 ID 与名称；明确携带 `spaceId` 的 Chat 业务链接仍解析指定空间。请求失败或账号中途改变时，不用历史缓存继续进入业务。
-- ABI 当前选择只保存在 `app.currentSpaceInfo`（`spaceId`、`spaceName`）中，通过 `getCurrentSpaceInfo` 获取、`setCurrentSpaceInfo` 设置；设置入口同步写入兼容缓存 `spaceId`/`spaceName`，清空时一起删除。`getSpaceId` 仅为该对象的派生 selector，不维护另一份 ID 状态。初始化前为空，不直接恢复历史缓存。
+- ABI、Chat 已登录刷新/重新进入应用时，在业务挂载前用当前账号的空间列表校验缓存 `spaceId`（必要时继续分页），恢复该空间并更新最新名称；缓存缺失或空间不可访问时回退接口第一项。ABI 主动提交登录仍初始化为第一项，登录页检测到已登录会话时保留该会话的当前空间。明确携带 `spaceId` 的 Chat 业务链接优先于缓存，指定空间不可访问时阻断，不擅自更换链接上下文。请求失败或账号中途改变时，不用未校验缓存继续进入业务；刷新请求失败保留缓存供重试。
+- ABI 当前选择只保存在 `app.currentSpaceInfo`（`spaceId`、`spaceName`）中，通过 `getCurrentSpaceInfo` 获取、`setCurrentSpaceInfo` 设置；设置入口同步写入兼容缓存 `spaceId`/`spaceName`，清空时一起删除。`getSpaceId` 仅为该对象的派生 selector，不维护另一份 ID 状态。初始化前为空，缓存须经空间列表校验后才进入 store，不直接信任历史名称。
 - ABI 空间选择器、首页/空间列表、引导页、登录初始化统一使用上述设置入口；普通点击、下拉开关和路由变化不再恢复缓存。实际空间切换仍在权限请求成功后提交，只有 ID 的入口通过既有空间详情接口解析名称，失败保留原选择。
 - 跨窗口同步集中在 `apps/abi/src/bootstrap/spaceSync.ts`，监听 storage/focus/visibilitychange 和明确的 `space-change` 事件，通过空间详情确认 ID 对应名称后整体设置；忽略缓存清空和过期账号/过期选择响应。Chat 保留兼容 ID/名称缓存与既有 `space-change` 数据上下文事件，不依赖 ABI store。
 - 实现入口：`packages/auth/src/sessionSync.ts`、`apps/abi/src/bootstrap/sessionSync.ts`、`apps/chat/src/bootstrap/sessionSync.ts`；空间初始化位于两个应用各自的 `src/bootstrap/sessionSpace.ts`。
