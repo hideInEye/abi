@@ -1,3 +1,6 @@
+import { store } from '@/store';
+import { getSpaceId } from '@/store/slice/app';
+
 import { apiRequest } from '../request';
 
 export async function queryOperateRecordList(params: any) {
@@ -23,29 +26,14 @@ export const getOperateRecordList = (type: string, pagination?: {pageNumber: num
   });
 }
 
-// 从本地登录信息中获取当前用户 ID
-function getCurrentUserId(): number | undefined {
-  try {
-    const userInfoStr = localStorage.getItem('SOY-REACT_userInfo');
-    if (userInfoStr) {
-      const userInfo = JSON.parse(userInfoStr);
-      if (userInfo.userId != null) return Number(userInfo.userId);
-    }
-    const uid = localStorage.getItem('userId');
-    if (uid != null) return Number(uid);
-  } catch {
-    // ignore
-  }
-  return undefined;
-}
-
 // 新版收藏（收藏/取消收藏，状态由后端切换）
 export function fetchOperateNew(data: any = {}) {
   return apiRequest({
     url: "/api/abi-system/favorite/addOrRemove",
     method: "post",
     params: {
-      userId: data.userId ?? getCurrentUserId(),
+      // 收藏按当前空间隔离，默认读取 store，避免恢复历史缓存中的空间。
+      spaceId: data.spaceId ?? getSpaceId(store.getState()),
       favorType: data.favorType ?? 'chat',
       favorId: data.favorId ?? data.sessionId ?? data.chatId,
     },
@@ -58,7 +46,7 @@ export function fetchOperateNewList(data: any = {}) {
     url: "/api/abi-system/favorite/list",
     method: "get",
     params: {
-      userId: data.userId ?? getCurrentUserId(),
+      spaceId: data.spaceId ?? getSpaceId(store.getState()),
       favorType: data.favorType ?? 'chat',
       pageNum: data.pageNum ?? 1,
       pageSize: data.pageSize ?? 999,
