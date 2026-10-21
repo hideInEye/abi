@@ -24,13 +24,11 @@ import { getSpaceId } from '@/utils/runtime'
 const statusOptions = [
   { value: '', label: '全部状态' },
   { value: 'running', label: '运行中' },
-  { value: 'paused', label: '已暂停' },
   { value: 'stopped', label: '已停止' },
 ]
 
 const statusLabel: Record<string, string> = {
   running: '运行中',
-  paused: '已暂停',
   stopped: '已停止',
 }
 
@@ -39,7 +37,7 @@ interface ScheduleTask {
   name: string
   freq: string
   type: string
-  status: 'running' | 'paused' | 'stopped'
+  status: 'running' | 'stopped'
   creator: string
   created: string
   lastRun: string
@@ -85,7 +83,7 @@ export function ScheduleTaskDrawer({ open, onClose }: ScheduleTaskDrawerProps) {
   const [filters, setFilters] = useState({ name: '', status: '', time: '' })
   const [pageNum, setPageNum] = useState(1)
   const [listTotal, setListTotal] = useState(0)
-  const [stats, setStats] = useState({ total: 0, running: 0, paused: 0, stopped: 0 })
+  const [stats, setStats] = useState({ total: 0, running: 0, stopped: 0 })
   // 高级筛选：草稿值在点击“查询”前不会生效
   const [advOpen, setAdvOpen] = useState(false)
   const [advDraft, setAdvDraft] = useState({ status: '', time: '' })
@@ -98,15 +96,9 @@ export function ScheduleTaskDrawer({ open, onClose }: ScheduleTaskDrawerProps) {
 
   const hasAdvFilter = filters.status !== '' || filters.time !== ''
 
-  // 状态走服务端 triggerStatus 过滤；「已暂停」调度中心无对应状态，直接展示空列表
+  // 状态走服务端 triggerStatus 过滤：运行中(1)/已停止(0)，空为全部(-1)
   const loadTasks = async (page = 1) => {
     if (jobGroup === undefined) return
-    if (filters.status === 'paused') {
-      setRawList([])
-      setListTotal(0)
-      setPageNum(1)
-      return
-    }
     setLoading(true)
     try {
       const triggerStatus = filters.status === 'running' ? '1' : filters.status === 'stopped' ? '0' : '-1'
@@ -122,18 +114,20 @@ export function ScheduleTaskDrawer({ open, onClose }: ScheduleTaskDrawerProps) {
     }
   }
 
-  // 统计卡片与列表分页相互独立：调度中心只能按 triggerStatus 单条件计数，用 pageSize=1 的轻量请求取 total
+  // 统计卡片与列表分页相互独立：作业只有运行中(1)/已停止(0)两种状态，全部数 = 两者之和，
+  // 故只按状态各发一次 pageSize=1 的轻量请求取 total，无需再单独查「全部」
   const loadStats = async () => {
     if (jobGroup === undefined) return
     try {
       const spaceId = getSpaceId()
-      const [allRes, runningRes, stoppedRes] = await Promise.all([
-        fetchJobInfoList({ jobGroup, name: filters.name, pageNum: 1, pageSize: 1, spaceId, triggerStatus: '-1' }),
+      const [runningRes, stoppedRes] = await Promise.all([
         fetchJobInfoList({ jobGroup, name: filters.name, pageNum: 1, pageSize: 1, spaceId, triggerStatus: '1' }),
         fetchJobInfoList({ jobGroup, name: filters.name, pageNum: 1, pageSize: 1, spaceId, triggerStatus: '0' }),
       ])
       const totalOf = (res: any) => Number(res?.data?.total) || 0
-      setStats({ total: totalOf(allRes), running: totalOf(runningRes), paused: 0, stopped: totalOf(stoppedRes) })
+      const running = totalOf(runningRes)
+      const stopped = totalOf(stoppedRes)
+      setStats({ total: running + stopped, running, stopped })
     } catch {
       // 统计失败不阻塞列表
     }
@@ -142,15 +136,22 @@ export function ScheduleTaskDrawer({ open, onClose }: ScheduleTaskDrawerProps) {
   const refresh = () => Promise.all([loadTasks(1), loadStats()])
 
   // 打开抽屉时先解析默认执行器，拿到 jobGroup 后再查列表（列表接口缺 jobGroup 会被后端拒绝）
+  // StrictMode 开发环境会重挂载组件，用 ref 保证执行器列表仅拉取一次，避免 jobgroup/list 重复请求
+  const jobGroupFetchedRef = useRef(false)
   useEffect(() => {
-    if (!open || jobGroup !== undefined) return
+    if (!open || jobGroupFetchedRef.current) return
+    jobGroupFetchedRef.current = true
     fetchJobGroupList({ pageNum: 1 })
       .then((res: any) => {
         const rows = Array.isArray(res?.data?.data) ? res.data.data : Array.isArray(res?.data?.records) ? res.data.records : []
         const general = rows.find((group: any) => String(group.name || '').includes('通用')) ?? rows[0]
         setJobGroup(general?.id)
       })
-      .catch(() => message.error('执行器列表加载失败'))
+      .catch(() => {
+        // 失败时放开守卫，下次重开抽屉可重试
+        jobGroupFetchedRef.current = false
+        message.error('执行器列表加载失败')
+      })
   }, [open, jobGroup])
 
   // 打开抽屉/执行器就绪/名称搜索（防抖）统一回第一页，重刷列表与统计
@@ -274,12 +275,6 @@ export function ScheduleTaskDrawer({ open, onClose }: ScheduleTaskDrawerProps) {
                 {stats.running}
               </div>
               <div className="schedule-stat-label">运行中</div>
-            </div>
-            <div className="schedule-stat-card">
-              <div className="schedule-stat-num" style={{ color: 'var(--accent-2)' }}>
-                {stats.paused}
-              </div>
-              <div className="schedule-stat-label">已暂停</div>
             </div>
             <div className="schedule-stat-card">
               <div className="schedule-stat-num" style={{ color: 'var(--accent-orange)' }}>

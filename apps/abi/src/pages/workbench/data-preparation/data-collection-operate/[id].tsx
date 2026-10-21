@@ -96,6 +96,8 @@ export function Component() {
   const isFromDatasource = route.query?.from === 'data-source';
   const isFromGuide = route.query?.from === 'guide'
   const { id } = route.params;
+  // 编辑已有数据集时数据源归属不可更换；从数据源入口新建时 id 为数据源 id，不属于编辑
+  const isEditMode = Boolean(id) && id !== '0' && !isFromDatasource;
 
   const selectedTableNames = useMemo(() => {
     return new Set(getTableArr(nodeData || {}));
@@ -422,6 +424,7 @@ export function Component() {
                       <Select
                         allowClear
                         className="w-full"
+                        disabled={isEditMode}
                         fieldNames={{ label: 'sourceName', value: 'sourceId' }}
                         options={filterDataSourceList}
                         placeholder="请选择"

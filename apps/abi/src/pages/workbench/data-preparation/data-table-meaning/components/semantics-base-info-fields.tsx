@@ -305,7 +305,7 @@ export default function DataTableMeaningBaseInfoFields() {
               name="downSelectLabel"
               rules={[{ message: '数据集未选择', required: true }]}
             >
-              <ASelect options={dropDownData} />
+              <ASelect disabled={drawerTitle === '编辑数据语义'} options={dropDownData} />
             </AForm.Item>
 
             <AForm.Item

@@ -2,7 +2,6 @@ import { ApiOutlined, CheckCircleOutlined, CloseOutlined, CloudUploadOutlined, D
 import { message, Modal } from 'antd'
 import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 
-import { useDatasource } from '@/hooks/data-preparation/useDataSource'
 import { validDataSource } from '@/service/api'
 import clickhouseIcon from '@/assets/imgs/home/ClickHouse.svg'
 import dmIcon from '@/assets/imgs/home/dm.svg'
@@ -18,8 +17,9 @@ import kingbaseIcon from '@/assets/imgs/home/dekingbase.svg'
 import DataPreview from './data-preview'
 import Uploader from './uploader'
 
+// 类型字典由列表页统一请求后传入，避免抽屉挂载时再次请求 getDataSourceType
 type Props = Page.OperateDrawerProps & {
-  editingData?: any
+  sourceTypeOptions: any[]
 }
 
 const DB_TYPE_ICON_MAP: Record<string, string> = {
@@ -50,20 +50,13 @@ function getDbIcon(name?: string, sourceType?: string): string | undefined {
   return undefined
 }
 
-const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, open, operateType, editingData }) => {
+const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, open, operateType, sourceTypeOptions }) => {
   const { t } = useTranslation()
-  const [submitDisabled, setSubmitDisabled] = useState(true)
   const [testStatus, setTestStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const sourceTypeVal = AForm.useWatch('sourceType', form)
   const sourceFileVal = AForm.useWatch('sourceFile', form)
   const [uploadError, setUploadError] = useState({ messageTitle: '上传失败', message: '请检查文件格式和内容是否正确' })
   const [previewVisible, setPreviewVisible] = useState(false)
-
-  const { getSourceTypeOptions, sourceTypeOptions } = useDatasource()
-
-  useEffect(() => {
-    getSourceTypeOptions()
-  }, [])
 
   useEffect(() => {
     if (sourceFileVal && sourceFileVal.length > 0 && sourceFileVal[0].sheets && sourceFileVal[0].sheets.length > 0) {
@@ -92,7 +85,6 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
         message.destroy()
         message.success('测试连接成功')
         setTestStatus('success')
-        setSubmitDisabled(false)
       } else {
         setTestStatus('error')
       }
@@ -102,27 +94,24 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
   }
 
   const handleClose = () => {
-    setSubmitDisabled(true)
     setTestStatus('idle')
     onClose()
   }
 
   const submit = async () => {
+    // 数据库数据源需先测试连接成功再提交；未测试时给出明确引导，避免点击确认静默无反应
+    if (sourceTypeVal !== 'Excel' && testStatus !== 'success') {
+      message.warning('请先测试连接后再提交')
+      return
+    }
     try {
       const values = await form.validateFields()
       await handleSubmit({ ...values })
-      setSubmitDisabled(true)
       setTestStatus('idle')
     } catch (err) {
       console.log(err)
     }
   }
-
-  const sourceTypeDisabled = useMemo(() => {
-    if (!editingData) return false
-    if (editingData?.excelDatasourceFlag) return true
-    return false
-  }, [editingData])
 
   const isExcel = sourceTypeVal === 'Excel'
   const selectedIcon = sourceTypeVal ? getDbIcon(sourceTypeVal, sourceTypeVal) : undefined
@@ -153,7 +142,7 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
                 测试连接
               </AButton>
             )}
-            <AButton className="btn-accent-gradient" disabled={submitDisabled && !isExcel} onClick={submit}>
+            <AButton className="btn-accent-gradient" onClick={submit}>
               {t('common.confirm')}
             </AButton>
           </div>
@@ -174,7 +163,7 @@ const DatasourceOperateDrawer: FC<Props> = memo(({ form, handleSubmit, onClose, 
             <ASelect
               fieldNames={{ label: 'name', value: 'sourceType' }}
               options={sourceTypeOptions}
-              disabled={operateType === 'edit' && sourceTypeVal === 'Excel' && sourceTypeDisabled}
+              disabled={operateType === 'edit'}
               placeholder="请选择数据源类型"
               optionRender={(option: any) => {
                 const icon = getDbIcon(option.data.name, option.data.sourceType)

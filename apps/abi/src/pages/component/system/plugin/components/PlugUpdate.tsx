@@ -1,4 +1,4 @@
-import { CloseOutlined, ImportOutlined, PlusOutlined, DownloadOutlined } from '@ant-design/icons'
+import { ImportOutlined, PlusOutlined, DownloadOutlined } from '@ant-design/icons'
 import { Form, Tabs, Button, Input, Select, Space, Typography, message, Switch } from 'antd'
 import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 import { useEffect, useState } from 'react'
@@ -530,14 +530,6 @@ export const PlugUpdate = ({ currentEdit, groupName, namespaceId, onClose, onSub
       onClose={onClose}
       width={960}
       footer={<DrawerFooter onClose={onClose} onSubmit={() => form.submit()} />}
-      extra={
-        <Button
-          type="text"
-          icon={<CloseOutlined />}
-          onClick={onClose}
-          style={{ fontSize: 12 }}
-        />
-      }
     >
       <Form form={form} layout="vertical" onFinish={handleFinish} initialValues={{ protocol: 'sse', version: '1.0.0' }}>
         <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} />

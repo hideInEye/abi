@@ -76,6 +76,12 @@ const ProjectListView = memo((props: ProjectListViewProps) => {
 
     const handleControlsReady = useCallback(() => setControlsReady(true), []);
 
+    // 切换视图时清空批量选中态，避免切到卡片视图后批量删除按钮仍可点击
+    const handleViewModeChange = useCallback((mode: 'card' | 'list') => {
+        onSelectionChange([]);
+        setViewMode(mode);
+    }, [onSelectionChange]);
+
     useEffect(() => {
         if (!controlsReady) return undefined;
         const timer = window.setTimeout(() => setContentReady(true), 0);
@@ -217,7 +223,7 @@ const ProjectListView = memo((props: ProjectListViewProps) => {
                 onReset,
                 onSearchChange,
                 onSearchSubmit,
-                onViewModeChange: setViewMode,
+                onViewModeChange: handleViewModeChange,
                 searchKeyword,
                 selectedCount: selectedRowKeys.length,
                 statusFilter,

@@ -630,11 +630,6 @@ const AssistantDetailDrawer: FC<Props> = ({ open, onClose, appId, fallback }) =>
                         setPreviewId(it.id)
                         setPreviewStepId(undefined)
                       }}
-                      onOpenStep={(stepId) => {
-                        void loadExplorePreviewPane()
-                        setPreviewId(it.id)
-                        setPreviewStepId(stepId)
-                      }}
                     />
                   ))}
                 </div>
