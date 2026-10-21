@@ -211,6 +211,7 @@ export const KnowledgeOperateDimensionStep: React.FC<Props> = ({ form }) => {
               <Tree
                 blockNode
                 checkable
+                expandAction="click"
                 checkedKeys={[...selectedKeys, ...targetKeys]}
                 className={styles.dimensionTree}
                 treeData={transferTree}

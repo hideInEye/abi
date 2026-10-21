@@ -90,7 +90,7 @@ export async function mountFullAbiApp(props: any, poweredByQiankun = false) {
     stopSessionSync = startAbiSessionSync()
     const token = localStg.get('token')
     if (!window.location.pathname.startsWith('/login') && hasActiveLoginSession(Boolean(token), token, localStg.get('userInfo'))) {
-      await initializeSessionSpace()
+      await initializeSessionSpace({ restoreCachedSpace: true })
       store.dispatch(syncAuthFromStorage())
     }
   }

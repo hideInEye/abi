@@ -34,6 +34,12 @@
 
 三种登录态对话请求保留原有数字 `user_id` 及其取值逻辑，并在同层新增 `user_name`，值为当前用户资料的 `userName` 字符串，不使用昵称。交互模式位于 `context`，探索和报告模式位于请求顶层。用户名由 `apps/chat/src/components/conversation/hooks/conversationRequests.ts` 的 `getConversationUserName` 统一读取；发送时读取当前用户名，不覆盖原有 `user_id`。
 
+## 收藏接口空间参数
+
+- `/api/abi-system/favorite/addOrRemove`、`/api/abi-system/favorite/list`、`/api/abi-system/favorite/status` 的 query 均携带 `spaceId`，不传 `userId`；token 鉴权保持原样。
+- 显式传入 `spaceId` 时原值透传；未传时在请求发起时读取当前空间。ABI 读取当前空间 store selector，Chat 使用现有 `getSpaceId`。
+- `favorType`、`favorId` 及分页规则保持不变；技能全量列表 `/api/abi-copilot/v1/skill/list` 不受此约定影响。
+
 ## Dashboard 请求约定
 
 `apps/dashboard/src/utils/FetchUtil.ts` 使用 fetch 封装：

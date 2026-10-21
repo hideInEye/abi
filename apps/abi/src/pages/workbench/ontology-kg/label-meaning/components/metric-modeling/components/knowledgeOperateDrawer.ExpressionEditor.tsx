@@ -109,7 +109,9 @@ const ReferenceMetricField: React.FC<{
           onChange={(e) => setSearch(e.target.value)}
         />
         <ATree
+          blockNode
           defaultExpandedKeys={['atomic', 'derived']}
+          expandAction="click"
           treeData={treeData}
           onSelect={(_, e) => {
             const node = e.selectedNodes[0] as (KnowledgeTechField & { isLeaf?: boolean }) | undefined

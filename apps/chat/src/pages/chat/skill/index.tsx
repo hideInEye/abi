@@ -273,7 +273,7 @@ function SkillStoreView() {
   // 添加/移除：与收藏对话同一套逻辑（addOrRemove 由后端切换，按响应 favoriteStatus 回写，不乐观更新）
   const handleToggleSkill = useCallback(async (card: SkillCard) => {
     try {
-      const res: any = await fetchOperateNew({ favorType: 'skill', favorId: card.key })
+      const res: any = await fetchOperateNew({ favorType: 'skill', favorId: card.key, spaceId: getSpaceId() })
       if (res?.code !== 200) {
         message.error(res?.message || res?.msg || '操作失败，请稍后再试')
         return

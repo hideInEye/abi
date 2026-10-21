@@ -14,6 +14,7 @@ interface TreeProps {
   multiple: boolean
   onSelect?: unknown
   treeCheckable: boolean
+  treeExpandAction: string
   treeData: Array<{ title: string; checkable: boolean; children: Array<{ value: string; searchText: string; label: string }> }>
   treeNodeFilterProp: string
 }
@@ -72,6 +73,7 @@ describe('custom composite source field picker', () => {
     const html = renderSection()
     expect(tree.multiple).toBe(true)
     expect(tree.treeCheckable).toBe(true)
+    expect(tree.treeExpandAction).toBe('click')
     expect(tree.onSelect).toBeUndefined()
     expect(tree.treeData.map((group) => group.title)).toEqual(['维度', '度量', '日期'])
     expect(tree.treeData.every((group) => group.checkable === false)).toBe(true)

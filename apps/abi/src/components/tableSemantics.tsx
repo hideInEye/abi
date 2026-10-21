@@ -295,6 +295,8 @@ export const TableSemantics = ({ form, getSchemaId, getSchemaOptions, isEdit = f
           showSearch
           treeData={treeData}
           treeDefaultExpandAll={false}
+          // 目录行点击复用原生展开事件，保持懒加载与箭头展开一致。
+          treeExpandAction="click"
           filterTreeNode={(inputValue, treeNode) => String((treeNode as { searchLabel?: SelectId })?.searchLabel || '').toLowerCase().includes(inputValue.toLowerCase())}
           onTreeExpand={handleTreeExpand}
           onChange={backGroupIdAndSchemaId}

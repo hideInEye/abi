@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
 import request from "../request/index";
-import { getChatbiBaseApi } from '../../utils/runtime'
+import { getChatbiBaseApi, getSpaceId } from '../../utils/runtime'
 
 // 获取部门列表
 export function fetchDeptList(params: any) {
@@ -62,35 +62,19 @@ export function fetchOperate(_data: any) {
   return Promise.resolve({ code: 200, msg: 'ok', data: {} })
 }
 
-// 从本地登录信息中获取当前用户 ID
-function getCurrentUserId(): number | undefined {
-  try {
-    const userInfoStr = localStorage.getItem('SOY-REACT_userInfo')
-    if (userInfoStr) {
-      const userInfo = JSON.parse(userInfoStr)
-      if (userInfo.userId != null) return Number(userInfo.userId)
-    }
-    const uid = localStorage.getItem('userId')
-    if (uid != null) return Number(uid)
-  } catch {
-    // ignore
-  }
-  return undefined
-}
-
 interface FavoriteParams {
   favorId?: string | number
   favorType?: string
-  userId?: string | number
+  spaceId?: number | string
   // 兼容旧调用（对话 ID）
   sessionId?: string | number
   chatId?: string | number
 }
 
-// 统一构造收藏相关接口的 query 参数：userId + favorType + favorId
+// 收藏按空间隔离，未显式指定时在请求发起时读取当前空间，避免沿用旧空间。
 function buildFavoriteParams(data: FavoriteParams = {}) {
   return {
-    userId: data.userId ?? getCurrentUserId(),
+    spaceId: data.spaceId ?? getSpaceId(),
     favorType: data.favorType ?? 'chat',
     favorId: data.favorId ?? data.sessionId ?? data.chatId,
   }
@@ -128,17 +112,15 @@ export function fetchOperateRecordList(type: string) {
 }
 
 // 收藏列表（应用工坊-我的收藏）
-export function fetchFavoriteList(data: FavoriteParams & { pageNum?: number; pageSize?: number; spaceId?: number | string } = {}) {
+export function fetchFavoriteList(data: FavoriteParams & { pageNum?: number; pageSize?: number } = {}) {
   return request({
     url: "/api/abi-system/favorite/list",
     method: "get",
     params: {
-      userId: data.userId ?? getCurrentUserId(),
+      spaceId: data.spaceId ?? getSpaceId(),
       favorType: data.favorType ?? 'chat',
       pageNum: data.pageNum ?? 1,
       pageSize: data.pageSize ?? 999,
-      // 对话技能按当前空间筛选；未传空间的收藏入口保持原查询范围。
-      ...(data.spaceId != null ? { spaceId: data.spaceId } : {}),
     },
   });
 }

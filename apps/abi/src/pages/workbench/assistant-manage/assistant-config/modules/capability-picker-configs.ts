@@ -1,6 +1,8 @@
 import { schemalist } from '@/service/api/data-table-meaning'
 import { querySkillListApi } from '@/service/api/skill'
 import { fetchOperateNewList } from '@/service/api/operateRecord'
+import { store } from '@/store'
+import { getSpaceId } from '@/store/slice/app'
 import { normalizeRows } from '@/pages/workbench/ontology-kg/label-meaning/components/dimension-modeling/utils/dimensionModeling.mapper'
 
 import type { PickerOption, PickerTabConfig } from './capability-picker-drawer'
@@ -34,7 +36,7 @@ export const semanticPickerTabs: PickerTabConfig[] = [
 /** 「我的技能」集合以后端为准：拉收藏列表（与技能管理页同源，仅区分 favorType=skill），不读本地存储 */
 async function getMySkillIdSet(): Promise<Set<string>> {
   try {
-    const res: any = await fetchOperateNewList({ favorType: 'skill' })
+    const res: any = await fetchOperateNewList({ favorType: 'skill', spaceId: getSpaceId(store.getState()) })
     const body = res?.response?.data
     const rows = body?.rows ?? body?.data?.rows ?? body?.data?.list ?? (Array.isArray(body?.data) ? body.data : [])
     return new Set((Array.isArray(rows) ? rows : []).map((r: any) => String(r.favorId ?? r.favor_id ?? r.skillId ?? '')).filter(Boolean))
