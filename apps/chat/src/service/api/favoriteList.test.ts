@@ -8,7 +8,7 @@ vi.mock('../request/index', () => ({ default: request }))
 describe('fetchFavoriteList space query', () => {
   beforeEach(() => {
     request.mockReset().mockResolvedValue({ code: 200, rows: [] })
-    vi.stubGlobal('localStorage', { getItem: (key: string) => (key === 'userId' ? '7' : null) })
+    vi.stubGlobal('localStorage', { getItem: (key: string) => (key === 'spaceId' ? '164' : null) })
   })
 
   afterEach(() => vi.unstubAllGlobals())
@@ -18,13 +18,13 @@ describe('fetchFavoriteList space query', () => {
     expect(request).toHaveBeenCalledWith({
       url: '/api/abi-system/favorite/list',
       method: 'get',
-      params: { userId: 7, favorType: 'skill', pageNum: 1, pageSize: 999, spaceId },
+      params: { favorType: 'skill', spaceId, pageNum: 1, pageSize: 999 },
     })
   })
 
-  it('keeps callers without spaceId unfiltered and preserves explicit user/paging', async () => {
-    await fetchFavoriteList({ userId: '8', favorType: 'chat', pageNum: 2, pageSize: 12 })
-    expect(request.mock.calls[0][0].params).toEqual({ userId: '8', favorType: 'chat', pageNum: 2, pageSize: 12 })
+  it('falls back to the current space and preserves explicit paging without userId', async () => {
+    await fetchFavoriteList({ favorType: 'chat', pageNum: 2, pageSize: 12 })
+    expect(request.mock.calls[0][0].params).toEqual({ favorType: 'chat', spaceId: 164, pageNum: 2, pageSize: 12 })
   })
 
   it('preserves request failures for the calling workflow', async () => {

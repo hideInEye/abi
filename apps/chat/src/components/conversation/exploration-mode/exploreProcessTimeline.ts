@@ -79,5 +79,5 @@ export function settleExploreItem(item: ExploreItem, status: Exclude<ExploreStat
 
 export function interruptExploreItem(item: ExploreItem): ExploreItem {
   if (item.status !== 'running') return item
-  return settleExploreItem(item, 'failed', 'stream_interrupted', { message: '连接已中断，探索尚未完成。已收到的内容已保留。' })
+  return settleExploreItem(item, 'failed', 'stream_interrupted', { message: '连接已中断，探索尚未完成。' })
 }

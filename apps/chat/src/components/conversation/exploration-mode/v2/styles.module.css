@@ -128,7 +128,7 @@
 .reasoning { max-height: 300px; overflow-y: auto; overscroll-behavior: contain; color: var(--ink-2, #6b7280); }
 .reasoning p { color: inherit; }
 .metadata, .hint { color: var(--ink-3); font-size: 12px; margin: 10px 0; }
-.hint { padding: 10px 12px; border-radius: var(--r-sm); background: var(--accent-soft); color: var(--ink-2); }
+.hint { padding: 10px 12px; border-radius: var(--r-sm); background: color-mix(in srgb, var(--danger) 8%, transparent); color: var(--danger, #ef4444); font-weight: 600; }
 .metadata { word-break: break-word; }
 .pendingTask { display: flex; align-items: baseline; gap: 8px; color: var(--ink-2, #6b7280); margin: 12px 0; }
 .inlineStatus { display: inline-flex; margin-left: 8px; font-size: 11px; }

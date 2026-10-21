@@ -82,37 +82,74 @@ export const Component: React.FC = () => {
     getPluginList();
   };
 
+  // 启停开关与编辑抽屉走同一编辑接口，列表行缺 endpoint/tool 配置，先取详情补齐传参
   const updateStatus = async (record: PluginItem) => {
     if (!groupIdRef.current) return;
-    const version = record.versionDetail?.version || '1.0.0';
-    const remoteCfg = record.remoteServerConfig || {};
-    await updateMcp({
-      namespaceId: `s_${groupIdRef.current}`,
-      serverSpecification: {
-        id: String(record.pluginId),
-        name: record.pluginName,
-        protocol: record.protocol || 'sse',
-        frontProtocol: record.frontProtocol || 'sse',
-        description: record.description || '',
-        version,
-        versionDetail: record.versionDetail || { version, release_date: null, is_latest: true },
-        enabled: record.status === 0,
-        status: 'active',
-        capabilities: record.capabilities ?? [],
-        remoteServerConfig: remoteCfg.serviceRef
-          ? remoteCfg
-          : {
-              serviceRef: {
-                namespaceId: `s_${groupIdRef.current}`,
-                groupName: groupName || 'mcp-endpoints',
-                serviceName: `${record.pluginName}::${version}`,
-                transportProtocol: (record.protocol || 'sse').toLowerCase()
-              },
-              exportPath: remoteCfg.exportPath || '/mcp',
-              frontEndpointConfigList: remoteCfg.frontEndpointConfigList ?? null
-            }
+    const namespaceId = `s_${groupIdRef.current}`;
+    const detailRes: any = await getMcpDetail({ mcpId: String(record.pluginId), mcpName: '', namespaceId });
+    const detail: any = detailRes?.data ?? detailRes?.response?.data?.data ?? detailRes?.response?.data ?? {};
+    const version = detail.versionDetail?.version || record.versionDetail?.version || '1.0.0';
+    const remoteCfg = detail.remoteServerConfig || record.remoteServerConfig || {};
+    const protocol = detail.protocol || record.protocol || 'sse';
+    const serverSpec: Record<string, any> = {
+      name: detail.name || record.pluginName,
+      protocol,
+      frontProtocol: detail.frontProtocol || record.frontProtocol || 'sse',
+      description: detail.description || record.description || '',
+      version,
+      versionDetail: detail.versionDetail || record.versionDetail || { version, release_date: null, is_latest: true },
+      enabled: record.status === 0,
+      status: 'active',
+      capabilities: detail.capabilities ?? record.capabilities ?? [],
+      remoteServerConfig: remoteCfg.serviceRef
+        ? remoteCfg
+        : {
+            serviceRef: {
+              namespaceId,
+              groupName: groupName || 'mcp-endpoints',
+              serviceName: `${record.pluginName}::${version}`,
+              transportProtocol: protocol.toLowerCase()
+            },
+            exportPath: remoteCfg.exportPath || '/mcp',
+            frontEndpointConfigList: remoteCfg.frontEndpointConfigList ?? null
+          }
+    };
+    serverSpec.id = String(detail.id ?? record.pluginId);
+
+    const payload: Parameters<typeof updateMcp>[0] = { namespaceId, serverSpecification: serverSpec };
+    // endpointSpecification 由详情 backendEndpoints 还原，对齐编辑抽屉提交结构
+    const endpoint = detail.backendEndpoints?.[0];
+    if (endpoint) {
+      let address = endpoint.address || '';
+      let port = endpoint.port != null ? String(endpoint.port) : '';
+      if (address.includes(':')) {
+        const [host, portPart] = address.split(':');
+        address = host;
+        if (!port && portPart && /^\d+$/.test(portPart)) port = portPart;
       }
-    });
+      payload.endpointSpecification = {
+        type: 'DIRECT',
+        data: {
+          address,
+          port,
+          transportProtocol: (endpoint.protocol || remoteCfg.serviceRef?.transportProtocol || protocol).toLowerCase()
+        }
+      };
+    }
+    // toolSpecification 直接透传详情 toolSpec
+    const toolSpec = detail.toolSpec;
+    if (toolSpec) {
+      const toolSpecification: Record<string, any> = {};
+      if (toolSpec.securitySchemes?.length) toolSpecification.securitySchemes = toolSpec.securitySchemes;
+      if (Object.keys(toolSpec.extensions ?? {}).length) toolSpecification.extensions = toolSpec.extensions;
+      if (toolSpec.tools?.length) {
+        toolSpecification.tools = toolSpec.tools;
+        toolSpecification.toolsMeta = toolSpec.toolsMeta;
+      }
+      if (Object.keys(toolSpecification).length) payload.toolSpecification = toolSpecification;
+    }
+
+    await updateMcp(payload);
     getPluginList();
   };
 

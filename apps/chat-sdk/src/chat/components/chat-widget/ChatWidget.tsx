@@ -691,6 +691,22 @@ const ChatWidgetPanel = ({ shareCode, apiBase, mode = 'page', onClose, theme = D
     if (initialPanelStyle && panelRef.current) panelRef.current.setAttribute('style', initialPanelStyle)
   }, [initialPanelStyle])
 
+  // 默认宽高是视口比例 CSS（32vw / 100vh-84），物理尺寸对浏览器缩放免疫（缩放时“只有文字变”）；
+  // 挂载时按当前视口解析值冻结为 inline px，缩放才能与文字同比例物理放大缩小（CSS max-width/max-height 仍兜底极端缩放不溢出）。
+  // embed 铺满容器、page 形态随从页面布局，均不冻结；恢复快照已带 px 宽高（resize 过）时跳过。
+  useLayoutEffect(() => {
+    if (mode !== 'float') return
+    const panel = panelRef.current
+    if (!panel) return
+    const style = panel.style
+    if (style.width.endsWith('px') && style.height.endsWith('px')) return
+    const rect = panel.getBoundingClientRect()
+    if (!style.width.endsWith('px')) style.width = `${rect.width}px`
+    if (!style.height.endsWith('px')) style.height = `${rect.height}px`
+    onPanelStyleChange?.(panel.getAttribute('style') || '')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // 分享 token 以 Bearer 头注入探索/报告 service（依赖注入，不写 localStorage、不影响主对话登录态）
   const shareAuth = shareToken ? `Bearer ${shareToken}` : null
   // 探索/报告 hook 在渲染期读取的 conv：由 convSession 构造（字段名对齐主对话 conv）
@@ -1185,8 +1201,8 @@ const ChatWidgetPanel = ({ shareCode, apiBase, mode = 'page', onClose, theme = D
     })
   }
 
-  // 拖拽/缩放落定：把面板 left/top 由绝对 px 换算成视口百分比。百分比对 fixed 元素按视口解析，
-  // 浏览器缩放（Ctrl+滚轮改视口 CSS px 尺寸）时面板保持同一屏幕相对位置，不再随缩放漂移或跑出视口。
+  // 拖拽/缩放落定：把面板 left/top 由绝对 px 换算成视口百分比。
+  // 百分比锚点按当前视口解析，浏览器缩放（Ctrl+滚轮）时位置不漂移；宽高保留 px，才能与文字同比例物理放大缩小。
   const persistPanelStyleAsViewportRatio = () => {
     const panel = panelRef.current
     if (!panel) return
@@ -1285,11 +1301,18 @@ const ChatWidgetPanel = ({ shareCode, apiBase, mode = 'page', onClose, theme = D
     window.addEventListener('pointerup', onUp)
   }
 
-  // 缩放/窗口尺寸变化时把自定义定位的面板钳回视口（Ctrl+滚轮缩放会触发 resize）：仅处理拖拽/改过尺寸的百分比定位态，
+  // 窗口尺寸变化时把自定义定位的面板钳回视口：仅处理拖拽/改过尺寸的百分比定位态，
   // 默认 right/top 锚定、embed、放大态百分比布局本身随视口自适应，早退不动。
+  // Ctrl+滚轮缩放也触发 resize，但 devicePixelRatio 会变：此时 px 宽高应随缩放物理放大缩小、百分比锚点本就不漂移，跳过钳制。
   useEffect(() => {
     if (mode === 'embed') return
+    let lastDpr = window.devicePixelRatio
     const clampToViewport = () => {
+      const dpr = window.devicePixelRatio
+      if (dpr !== lastDpr) {
+        lastDpr = dpr
+        return
+      }
       const panel = panelRef.current
       if (!panel || maximized) return
       const style = panel.style

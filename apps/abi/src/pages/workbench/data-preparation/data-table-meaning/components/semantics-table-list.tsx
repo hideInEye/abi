@@ -243,7 +243,9 @@ export function SemanticsTableList({ deleteTable, editTable, tableSchemaList = [
                 <div className="abi-data-card-title">
                   <span className="abi-data-card-name" title={record.bizName}>{record.bizName}</span>
                 </div>
-                <span className="abi-db-tag tag-default">{record.techName || '-'}</span>
+                <span className="abi-db-tag tag-default" title={record.techName || '-'}>
+                  <span className="abi-db-tag-text">{record.techName || '-'}</span>
+                </span>
               </div>
               <div className="abi-data-card-body">
                 {visibleKeys.has('createBy') && (

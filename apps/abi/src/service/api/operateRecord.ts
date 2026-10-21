@@ -1,4 +1,5 @@
 import { apiRequest } from '../request';
+import { readPersistedSpaceId } from '../../utils/spaceStorage';
 
 export async function queryOperateRecordList(params: any) {
   const res: any = await apiRequest({
@@ -23,20 +24,9 @@ export const getOperateRecordList = (type: string, pagination?: {pageNumber: num
   });
 }
 
-// 从本地登录信息中获取当前用户 ID
-function getCurrentUserId(): number | undefined {
-  try {
-    const userInfoStr = localStorage.getItem('SOY-REACT_userInfo');
-    if (userInfoStr) {
-      const userInfo = JSON.parse(userInfoStr);
-      if (userInfo.userId != null) return Number(userInfo.userId);
-    }
-    const uid = localStorage.getItem('userId');
-    if (uid != null) return Number(uid);
-  } catch {
-    // ignore
-  }
-  return undefined;
+// 收藏接口按空间隔离：spaceId 优先调用方传入，否则取当前空间；用户由后端从 token 解析，不再传参
+function resolveFavoriteSpaceId(spaceId?: string | number) {
+  return (spaceId ?? readPersistedSpaceId()) || undefined;
 }
 
 // 新版收藏（收藏/取消收藏，状态由后端切换）
@@ -45,21 +35,21 @@ export function fetchOperateNew(data: any = {}) {
     url: "/api/abi-system/favorite/addOrRemove",
     method: "post",
     params: {
-      userId: data.userId ?? getCurrentUserId(),
       favorType: data.favorType ?? 'chat',
       favorId: data.favorId ?? data.sessionId ?? data.chatId,
+      spaceId: resolveFavoriteSpaceId(data.spaceId),
     },
   });
 }
 
-// 收藏列表接口
+// 收藏列表接口，按当前空间查询
 export function fetchOperateNewList(data: any = {}) {
   return apiRequest({
     url: "/api/abi-system/favorite/list",
     method: "get",
     params: {
-      userId: data.userId ?? getCurrentUserId(),
       favorType: data.favorType ?? 'chat',
+      spaceId: resolveFavoriteSpaceId(data.spaceId),
       pageNum: data.pageNum ?? 1,
       pageSize: data.pageSize ?? 999,
     },

@@ -12,6 +12,7 @@ import { fetchFavoriteList, fetchOperateNew } from '@/service/api/abi-system'
 import { querySkillList, updateSkillStatus } from '@/service/api/skill'
 import { getSpaceId } from '@/utils/runtime'
 import SkillDetailDrawer from './-SkillDetailDrawer'
+import { filterSkillCardsByTab, isBuiltinSkill } from './skill-type'
 
 const loadDateRangePicker = () => import('@/components/performance/DeferredDateRangePicker')
 
@@ -26,6 +27,7 @@ type SkillItem = {
   spaceName?: string
   createTime?: string
   icon?: string
+  skillType?: number | string
 }
 
 /** 卡片图标颜色轮询顺序（保持静态数据多色风格） */
@@ -44,6 +46,7 @@ function mapSkillToCard(item: SkillItem, index: number): SkillCard {
     color: COLOR_KEYS[index % COLOR_KEYS.length],
     enabled: String(item.status) === '1',
     icon: item.icon || undefined,
+    skillType: item.skillType,
   }
 }
 
@@ -165,20 +168,16 @@ function SkillStoreView() {
     [rawMap],
   )
 
-  // 当前 tab 可见性 + 关键字 + 时间范围，一次过滤即可（避免多层中间数组，useMemo 才真正生效）：
-  // 广场——公开(PUBLIC)全平台可见，私有(PRIVATE)仅本空间可见；我的技能——仅收藏的（收藏即可见）
+  // 当前 tab 可见性过滤统一走纯函数（内置技能恒可见、我的技能以收藏集合为准），见 skill-type.ts；
+  // 关键字 + 时间范围过滤保留在组件内
   const filteredCards = useMemo(() => {
     const curSpaceId = String(getSpaceId() ?? '')
     const kw = searchText.trim()
     const start = dateRange?.[0] ? dayjs(dateRange[0]).startOf('day') : null
     const end = dateRange?.[1] ? dayjs(dateRange[1]).endOf('day') : null
-    return cards.filter((c) => {
+    const visible = filterSkillCardsByTab(cards, { tab, myIds, curSpaceId, getRaw: (c) => rawMap[c.key] })
+    return visible.filter((c) => {
       const raw = rawMap[c.key]
-      if (tab === 'mine') {
-        if (!myIds.has(c.key)) return false
-      } else if (String(raw?.visibility || '').toUpperCase() === 'PRIVATE') {
-        if (String(raw?.spaceId ?? '') !== curSpaceId) return false
-      }
       if (kw && !(c.title.includes(kw) || c.description.includes(kw) || c.tagLabel.includes(kw))) return false
       if (start && end) {
         const t = dayjs(raw?.createTime)
@@ -250,6 +249,8 @@ function SkillStoreView() {
   }
 
   const handleToggleEnable = useCallback((card: SkillCard) => {
+    // 内置技能锁定开启，不接受开关
+    if (isBuiltinSkill(card.skillType)) return
     const nextEnabled = !card.enabled
     const nextStatus = nextEnabled ? '1' : '0'
     // 乐观更新
@@ -272,12 +273,12 @@ function SkillStoreView() {
 
   // 添加/移除：与收藏对话同一套逻辑（addOrRemove 由后端切换，按响应 favoriteStatus 回写，不乐观更新）
   const handleToggleSkill = useCallback(async (card: SkillCard) => {
+    // 内置技能由系统下发，不存在添加/移除
+    if (isBuiltinSkill(card.skillType)) return
     try {
       const res: any = await fetchOperateNew({ favorType: 'skill', favorId: card.key })
-      if (res?.code !== 200) {
-        message.error(res?.message || res?.msg || '操作失败，请稍后再试')
-        return
-      }
+      // 失败时请求层已统一弹归纳文案，此处不重复弹、也不透传后端原文
+      if (res?.code !== 200) return
       const favorited = Number(res?.data?.favoriteStatus) === 1
       setMyIds((prev) => {
         const next = new Set(prev)
@@ -397,16 +398,21 @@ function SkillStoreView() {
             <div className="ws-card-grid">
               {pagedCards.map((card) => {
                 const added = myIds.has(card.key)
+                // 内置技能（skillType=0）：系统下发恒可见，仅可查看，无添加/移除/发布操作
+                const builtin = isBuiltinSkill(card.skillType)
                 return (
                   <div key={card.key} className="ws-assistant-card" onClick={() => handleOpenDetail(card)}>
                     <div className="wac-head">
                       <AssistantIconBlock iconKey={skillIconKey(card.key, card.icon)} radius={12} size={42} />
                       <div className="wac-main">
-                        <div className="wac-title" title={card.title}>{card.title}</div>
+                        <div className="wac-title-row">
+                          <div className="wac-title" title={card.title}>{card.title}</div>
+                          {builtin && <span className="wac-builtin-tag">系统</span>}
+                        </div>
                         <div className="wac-desc">{card.description || '暂无描述'}</div>
                       </div>
-                      {/* 广场 Tab：添加/已添加（点已添加可取消）；我的技能 Tab：移除 */}
-                      {tab === 'plaza' ? (
+                      {/* 广场 Tab：添加/已添加（点已添加可取消）；我的技能 Tab：移除；内置技能不提供 */}
+                      {builtin ? null : tab === 'plaza' ? (
                         added ? (
                           <button className="wac-add-btn wac-add-btn--added" onClick={(e) => { e.stopPropagation(); handleToggleSkill(card) }}>
                             已添加
@@ -424,6 +430,10 @@ function SkillStoreView() {
                     </div>
                     <div className="wac-footer">
                       <span className={`wac-tag ${card.enabled ? '' : 'offline'}`}>{card.enabled ? '当前启用' : '离线版本'}</span>
+                      {/* 内置技能仅展示锁定状态说明；外部技能保留 查看/发布 操作 */}
+                      {builtin ? (
+                        <span className="wac-builtin-hint">系统内置 · 默认开启</span>
+                      ) : (
                       <div className="wac-actions">
                         <button type="button" className="wac-act" onClick={(e) => { e.stopPropagation(); handleOpenDetail(card) }}>
                           <EyeOutlined /> 查看
@@ -432,6 +442,7 @@ function SkillStoreView() {
                           {card.enabled ? '取消发布' : '发布'}
                         </button>
                       </div>
+                      )}
                     </div>
                   </div>
                 )

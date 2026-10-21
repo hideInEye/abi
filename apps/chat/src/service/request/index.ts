@@ -1,5 +1,5 @@
 import axios from "axios";
-import { isBackendCodeIn } from "@sa/axios";
+import { isBackendCodeIn, resolveBackendErrorMessage } from "@sa/axios";
 
 import { getAuthorization, handleLoginExpired } from "@/utils/auth";
 
@@ -90,14 +90,14 @@ service.interceptors.response.use(
       if (shouldHandleLoginExpiredForRequest(response.config.url)) {
         void handleTokenExpired();
       } else {
-        showBackendError((response.data as any)?.msg || (response.data as any)?.message);
+        showBackendError(resolveBackendErrorMessage(response.data));
       }
       return Promise.reject(new Error((response.data as any)?.msg || 'Token expired'));
     }
 
-    // 后端业务失败（如 {"code":500,"msg":"内部服务器错误"}）：统一弹出提示
+    // 后端业务失败（如 {"code":500,"msg":"内部服务器错误"}）：统一弹出归纳文案，不透传后端原始异常
     if (isBackendBizError(response.data)) {
-      showBackendError((response.data as any)?.msg || (response.data as any)?.message);
+      showBackendError(resolveBackendErrorMessage(response.data));
     }
 
     return response.data;
@@ -109,9 +109,9 @@ service.interceptors.response.use(
     if (isUnauthorized && shouldHandleLoginExpiredForRequest(error.config?.url)) {
       void handleTokenExpired();
     } else if (error.response) {
-      // HTTP 非 2xx（含 500 内部服务器错误）：优先展示后端返回的 msg
+      // HTTP 非 2xx（含 500 内部服务器错误）：响应体无业务码时按 HTTP 状态码枚举归纳描述
       const data: any = error.response.data;
-      showBackendError(data?.msg || data?.message || `请求失败（${error.response.status}）`);
+      showBackendError(resolveBackendErrorMessage({ code: data?.code ?? error.response.status, msg: data?.msg, message: data?.message }));
     } else if (error.request) {
       showBackendError('网络异常，请检查网络连接');
     }
