@@ -17,6 +17,7 @@ import {
   Dropdown,
   Empty,
   Input as AInput,
+  Modal,
   Popconfirm as APopconfirm,
   Select as ASelect,
   Table as ATable,
@@ -539,7 +540,13 @@ export function Component() {
                         } else if (key === 'analysis') {
                           setAnalysisContext({ nodeId: record.sourceId, nodeName: record.sourceName, nodeType: 'DATA_SOURCE', spaceId: spaceId || undefined });
                         } else if (key === 'delete') {
-                          // handled by popconfirm inside
+                          Modal.confirm({
+                            title: '提示',
+                            content: t('common.confirmDelete'),
+                            okText: t('common.confirm'),
+                            cancelText: t('common.cancel'),
+                            onOk: () => handleDelete(record),
+                          });
                         }
                       }
                     }}
@@ -677,8 +684,8 @@ export function Component() {
       </section>
       <Suspense>
         <DatasourceOperateDrawer
-          editingData={editingData}
           {...generalPopupOperation}
+          sourceTypeOptions={sourceTypeOptions}
         />
       </Suspense>
       <MetadataAnalysisDrawer

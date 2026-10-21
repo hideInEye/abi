@@ -193,20 +193,27 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
   // 代码编辑右侧面板：与工作室 / 报告侧栏互斥，共用同一套分屏动画壳
   const [codeEditor, setCodeEditor] = useState<ExploreCodeEditPayload>()
   const exploreStatusRef = React.useRef<Map<string, string>>(new Map())
+  // 打开工作室后的首屏回传只确认初始屏，不触发定位高亮，避免打开瞬间过程区闪一下染色；
+  // 后续同值回传被 state 天然拦截，只有工具栏真实切屏才联动定位。
+  const exploreScreenReportedRef = React.useRef(false)
   const openExplore = React.useCallback((exploreId: string) => {
     void loadExplorePreviewPane()
     reportController.closeReport()
     setCodeEditor(undefined)
     setActiveExploreId(exploreId)
     setExploreStepId(undefined)
+    exploreScreenReportedRef.current = false
   }, [reportController])
-  const openExploreStep = React.useCallback((exploreId: string, stepId: string) => {
-    openExplore(exploreId)
-    setExploreStepId(stepId)
-  }, [openExplore])
   const closeExplore = React.useCallback(() => {
     setActiveExploreId(undefined)
     setExploreStepId(undefined)
+  }, [])
+  const handleExploreScreenChange = React.useCallback((stepId?: string) => {
+    if (!exploreScreenReportedRef.current) {
+      exploreScreenReportedRef.current = true
+      return
+    }
+    setExploreStepId(stepId)
   }, [])
   const openCodeEditor = React.useCallback((payload: ExploreCodeEditPayload) => {
     void loadExploreCodeEditorPane()
@@ -424,7 +431,6 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
             onToggleReportTask={reportController.toggleTaskExecution}
             onOpenReport={openReport}
             onOpenExplore={openExplore}
-            onOpenExploreStep={openExploreStep}
             exploreLocateStepId={exploreStepId}
             onCloseExplore={closeExplore}
             onEditExploreCode={openCodeEditor}
@@ -454,7 +460,7 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
           >
             <RetryableLazy
               loader={loadExplorePreviewPane}
-              componentProps={{ item: explorePreview.renderedItem, onClose: closeExplore, frozenWidth: exploreFrozenWidth, activeStepId: exploreStepId, onScreenChange: setExploreStepId }}
+              componentProps={{ item: explorePreview.renderedItem, onClose: closeExplore, frozenWidth: exploreFrozenWidth, activeStepId: exploreStepId, onScreenChange: handleExploreScreenChange }}
               fallback={<LazyFeatureFallback label="正在加载探索结果…" style={{ width: '100%', height: '100%', minHeight: 360 }} />}
             />
           </div>

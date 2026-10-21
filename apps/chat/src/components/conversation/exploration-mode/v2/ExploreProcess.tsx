@@ -2,7 +2,7 @@ import { CheckOutlined, ClockCircleOutlined, CloseOutlined, LoadingOutlined, Min
 import React, { useId } from 'react'
 
 import ExploreCodeBlock, { type ExploreCodeEditPayload, type ExploreCodeLanguage, detectCodeLanguage } from '../ExploreCodeBlock'
-import ExploreRichText, { containsTable, containsText } from '../ExploreRichText'
+import ExploreRichText, { containsText } from '../ExploreRichText'
 import type { ExploreStep, ExploreStepOutput, ExploreThoughtNode } from '../types'
 
 import { type ProcessBlock, type ProcessContent, getToolLabel, normalizeActionInput } from './displayModel'
@@ -65,11 +65,6 @@ function Thought({ thought, disclosure }: { readonly disclosure: ProcessDisclosu
   )
 }
 
-function isStudioOutput(output: ExploreStepOutput) {
-  return output.outputType === 'json' || output.outputType === 'html' || typeof output.content === 'object'
-    || (typeof output.content === 'string' && containsTable(output.content))
-}
-
 function Output({ output, onEdit }: { readonly onEdit?: (code: string, language: ExploreCodeLanguage) => void; readonly output: ExploreStepOutput }) {
   const content = output.content
   if (typeof content !== 'string' || output.outputType === 'json' || output.outputType === 'html') return null
@@ -86,14 +81,11 @@ interface ProcessProps {
   readonly disclosure: ProcessDisclosure
   readonly highlightStepId?: string
   readonly onEditCode?: (payload: ExploreCodeEditPayload) => void
-  readonly onOpen?: () => void
-  readonly onOpenStep?: (stepId: string) => void
 }
 
-function ToolStep({ step, thoughts, disclosure, onEditCode, onOpen, onOpenStep, highlightStepId }: ProcessProps & { readonly step: ExploreStep; readonly thoughts: ExploreThoughtNode[] }) {
+function ToolStep({ step, thoughts, disclosure, onEditCode, highlightStepId }: ProcessProps & { readonly step: ExploreStep; readonly thoughts: ExploreThoughtNode[] }) {
   const title = getToolLabel(step)
   const input = normalizeActionInput(step.actionInput)
-  const hasData = step.outputs.some(isStudioOutput)
   const outputs = step.outputs.filter((output) => typeof output.content === 'string' && output.outputType !== 'json' && output.outputType !== 'html'
     && (['code', 'image', 'pdf', 'word'].includes(output.outputType) || containsText(output.content as string)))
   const edit = onEditCode ? (code: string, language: ExploreCodeLanguage) => onEditCode({ code, language, title }) : undefined
@@ -115,8 +107,6 @@ function ToolStep({ step, thoughts, disclosure, onEditCode, onOpen, onOpenStep, 
         </Disclosure>}
         {step.outputs.length === 0 && <p className={styles.metadata}>{step.status === 'running' ? '正在执行…' : '未返回输出'}</p>}
       </Disclosure>
-      {hasData && <button type="button" className={styles.resultLink} disabled={!onOpenStep && !onOpen}
-        onClick={() => (onOpenStep ? onOpenStep(step.id) : onOpen?.())}>已返回数据 · 在工作室查看</button>}
     </div>
   )
 }

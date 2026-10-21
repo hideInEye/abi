@@ -83,4 +83,30 @@ describe('project list presentation', () => {
         expect(source('./ProjectList.tsx')).not.toContain('searchTimerRef');
         expect(source('./SearchFilterBar.tsx')).toContain('clearTimer();');
     });
+
+    it('grays out batch delete without selection and keeps Chinese confirm labels', () => {
+        const markup = renderToStaticMarkup(createElement(ProjectListControls, {
+            children: null,
+            columnOptions: [],
+            dateRange: null,
+            onBatchDelete: vi.fn(),
+            onColumnToggle: vi.fn(),
+            onDateRangeChange: vi.fn(),
+            onNewProject: vi.fn(),
+            onPreloadNewProject: vi.fn(),
+            onReady: vi.fn(),
+            onReset: vi.fn(),
+            onSearchChange: vi.fn(),
+            onSearchSubmit: vi.fn(),
+            onViewModeChange: vi.fn(),
+            searchKeyword: '',
+            selectedCount: 0,
+            viewMode: 'card',
+        }));
+        expect(markup).toMatch(/<button[^>]*ant-btn-dangerous[^>]*disabled/);
+        const controls = source('./ProjectListControls.tsx');
+        expect(controls).toContain('okText="确认"');
+        expect(controls).toContain('cancelText="取消"');
+        expect(source('./ProjectListView.tsx')).toContain('onSelectionChange([])');
+    });
 });

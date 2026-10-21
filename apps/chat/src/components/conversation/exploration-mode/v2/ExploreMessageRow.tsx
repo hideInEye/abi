@@ -1,4 +1,4 @@
-import { CompassOutlined, DeleteOutlined, DislikeOutlined, ExpandOutlined, FileTextOutlined, LikeOutlined, RightOutlined, ShrinkOutlined } from '@ant-design/icons'
+import { CompassOutlined, CopyOutlined, DeleteOutlined, DislikeOutlined, ExpandOutlined, FileTextOutlined, LikeOutlined, RightOutlined, ShrinkOutlined } from '@ant-design/icons'
 import { Dropdown, Tooltip, message } from 'antd'
 import { type RefObject, useEffect, useId, useMemo, useRef, useState } from 'react'
 
@@ -23,15 +23,13 @@ export interface ExploreMessageRowProps {
   readonly onDelete?: (item: ExploreItem) => void
   readonly onEditCode?: (payload: ExploreCodeEditPayload) => void
   readonly onOpen?: () => void
-  /** 点击步骤内工作室入口时定位到该步骤屏；缺省时回退 onOpen。 */
-  readonly onOpenStep?: (stepId: string) => void
   readonly scrollContainerRef?: RefObject<HTMLDivElement>
 }
 
 const STATUS_LABELS = { running: '探索执行中', completed: '探索已完成', failed: '探索失败', cancelled: '探索已取消' }
 const STATUS_BADGES = { running: '执行中', completed: '已完成', failed: '失败', cancelled: '已取消' }
 
-function ExploreMessage({ item, active, onOpen, onClose, onEditCode, onDelete, compact, scrollContainerRef, locateStepId, onOpenStep }: ExploreMessageRowProps) {
+function ExploreMessage({ item, active, onOpen, onClose, onEditCode, onDelete, compact, scrollContainerRef, locateStepId }: ExploreMessageRowProps) {
   const processId = useId()
   const rootRef = useRef<HTMLElement>(null)
   const beforeToggle = useExploreScroll(item, scrollContainerRef)
@@ -42,9 +40,25 @@ function ExploreMessage({ item, active, onOpen, onClose, onEditCode, onDelete, c
   const summary = getFinalSummary(item)
   // 与工作室分屏口径一致：有结构化步骤或最终结论/摘要才可保存为文档
   const canSave = item.steps.some((step) => step.outputs.some(isStructuredOutput)) || Boolean(item.finalContent) || Boolean(item.summary)
+  // 复制问题文案，口径同报告模式（仅复制用户提问文本）
+  const copyQuestion = async () => {
+    try {
+      await navigator.clipboard.writeText(item.question)
+      message.success('已复制')
+    } catch {
+      message.error('复制失败')
+    }
+  }
   const [highlightId, setHighlightId] = useState<string>()
   const locatedRef = useRef<string>()
+  // 只在工作室当前打开的行内定位：step id 是单次运行内序号（step-1 等），
+  // 同一 id 存在于每张探索卡片，不按 active 隔离会连带展开、滚动并高亮历史卡片。
   useEffect(() => {
+    if (!active) {
+      locatedRef.current = undefined
+      setHighlightId(undefined)
+      return
+    }
     if (!locateStepId || locateStepId === locatedRef.current) return
     if (!item.steps.some((step) => step.id === locateStepId)) return
     locatedRef.current = locateStepId
@@ -58,18 +72,24 @@ function ExploreMessage({ item, active, onOpen, onClose, onEditCode, onDelete, c
       container.scrollTo({ top: Math.max(0, top) })
     }))
     setHighlightId(locateStepId)
+    return () => cancelAnimationFrame(frame)
+  }, [active, locateStepId, item, disclosure, scrollContainerRef])
+  // 消退倒计时与定位 effect 分离：实时流式期间 item 逐帧变化、disclosure 每次渲染都是新身份，
+  // 定时器若写在定位 effect 内会被重跑时的 cleanup 取消，导致高亮不消退、背景被永久染色。
+  useEffect(() => {
+    if (!highlightId) return
     const timer = setTimeout(() => setHighlightId(undefined), 1600)
-    return () => {
-      cancelAnimationFrame(frame)
-      clearTimeout(timer)
-    }
-  }, [locateStepId, item, disclosure, scrollContainerRef])
+    return () => clearTimeout(timer)
+  }, [highlightId])
   return (
     <article ref={rootRef} className={`${styles.message} ${compact ? styles.compact : ''}`} data-explore-id={item.id}>
       <div className={styles.questionWrap}>
         <div className={styles.questionColumn}>
           <div className={styles.question}>{item.question}</div>
-          {onDelete && <Tooltip title="删除"><button type="button" className={styles.deleteButton} aria-label="删除" onClick={() => onDelete(item)}><DeleteOutlined /></button></Tooltip>}
+          <div className={styles.questionActions}>
+            <Tooltip title="复制"><button type="button" className={styles.questionActionButton} aria-label="复制" onClick={copyQuestion}><CopyOutlined /></button></Tooltip>
+            {onDelete && <Tooltip title="删除"><button type="button" className={styles.questionActionButton} aria-label="删除" onClick={() => onDelete(item)}><DeleteOutlined /></button></Tooltip>}
+          </div>
         </div>
       </div>
       <section className={styles.answerCard} aria-label="探索回答">
@@ -88,8 +108,7 @@ function ExploreMessage({ item, active, onOpen, onClose, onEditCode, onDelete, c
         </header>
         <div className={styles.answerBody}>
           {open && <div id={processId} className={styles.process} aria-label="探索执行过程">
-            <ExploreProcess blocks={blocks} disclosure={disclosure} onEditCode={onEditCode} onOpen={onOpen}
-              onOpenStep={onOpenStep} highlightStepId={highlightId} />
+            <ExploreProcess blocks={blocks} disclosure={disclosure} onEditCode={onEditCode} highlightStepId={highlightId} />
             {!blocks.length && <p className={styles.metadata}>{item.status === 'running' ? '正在规划任务…' : '暂无已保存的过程详情'}</p>}
           </div>}
           {item.status === 'running' && <p className={styles.hint}>正在处理中，请留在当前对话页面，离开将中断任务。</p>}

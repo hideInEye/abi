@@ -89,14 +89,15 @@ describe('新版探索消息结构', () => {
 
   it('完整展开时无协议标记，保留工具标识与代码编辑，表格移交工作室', () => {
     const markup = renderToStaticMarkup(<ExploreProcess blocks={buildProcessBlocks(completed())}
-      disclosure={{ isOpen: () => true, toggle: vi.fn(), reveal: vi.fn() }} onEditCode={vi.fn()} onOpen={vi.fn()} />)
+      disclosure={{ isOpen: () => true, toggle: vi.fn(), reveal: vi.fn() }} onEditCode={vi.fn()} />)
     expect(markup).not.toContain('Previous Result Summary:')
     expect(markup).not.toContain('Summarizes Step ID:')
     expect(markup).toContain('execute_skill_script_file')
     expect(markup).toContain('执行脚本')
     expect(markup).toContain('编辑')
     expect(markup).toContain('复制代码')
-    expect(markup).toContain('在工作室查看')
+    // 步骤内不再提供工作室入口，统一由卡片右上角进入。
+    expect(markup).not.toContain('在工作室查看')
     expect(markup).not.toContain('<table')
   })
 
