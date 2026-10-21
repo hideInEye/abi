@@ -38,7 +38,7 @@
 }
 .answerBody { padding: 18px 20px 8px; }
 .answerBody:empty { display: none; }
-.toggle, .studio, .resultLink, .deleteButton, .actions button {
+.toggle, .studio, .questionActionButton, .actions button {
   appearance: none;
   border: 0;
   background: transparent;
@@ -56,7 +56,7 @@
   line-height: 1.6;
 }
 .toggle > :global(.anticon) { flex-shrink: 0; }
-.toggle:hover, .resultLink:hover, .actions button:hover { color: var(--ink, #25304d); }
+.toggle:hover, .actions button:hover { color: var(--ink, #25304d); }
 .message button:focus-visible { outline: 2px solid var(--accent, #5b7cf7); outline-offset: 3px; border-radius: 4px; }
 .message button:disabled { cursor: default; opacity: .65; }
 .nodeTitle { min-width: 0; }
@@ -133,7 +133,6 @@
 .pendingTask { display: flex; align-items: baseline; gap: 8px; color: var(--ink-2, #6b7280); margin: 12px 0; }
 .inlineStatus { display: inline-flex; margin-left: 8px; font-size: 11px; }
 .error { color: var(--danger, #c53c3c); margin: 12px 0; padding: 10px 12px; border-radius: var(--r-sm); background: color-mix(in srgb, var(--danger) 6%, transparent); }
-.resultLink { display: block; font-size: 12px; padding: 0 0 0 22px; text-align: left; }
 .stepHighlight {
   border-radius: var(--r-sm);
   background: var(--accent-soft);
@@ -147,10 +146,10 @@
 .finalSummary > div > :first-child { margin-top: 0; }
 .finalSummary > div > :last-child { margin-bottom: 0; }
 .actions { display: flex; gap: 4px; margin: 4px 20px 0; padding: 8px 0 10px; border-top: 1px solid var(--border-2); }
-.actions button, .deleteButton { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; font-size: 14px; border-radius: 5px; }
-.deleteButton { opacity: 0; margin-top: 4px; }
-.questionColumn:hover .deleteButton, .questionColumn:focus-within .deleteButton { opacity: 1; }
-.actions button:hover, .deleteButton:hover { color: var(--accent); background: var(--accent-soft); }
+.actions button, .questionActionButton { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; font-size: 14px; border-radius: 5px; }
+.questionActions { display: flex; align-items: center; gap: 2px; margin-top: 4px; opacity: 0; visibility: hidden; transition: opacity 0.15s ease; }
+.questionColumn:hover .questionActions, .questionColumn:focus-within .questionActions { opacity: 1; visibility: visible; }
+.actions button:hover, .questionActionButton:hover { color: var(--accent); background: var(--accent-soft); }
 
 @container (max-width: 440px) {
   .questionColumn { max-width: 95%; }
@@ -166,4 +165,4 @@
 .compact .header { padding: 12px; }
 .compact .answerBody { padding: 14px 12px 6px; }
 .compact .actions { margin-right: 12px; margin-left: 12px; }
-@media (hover: none) { .deleteButton { opacity: 1; } }
+@media (hover: none) { .questionActions { opacity: 1; visibility: visible; } }

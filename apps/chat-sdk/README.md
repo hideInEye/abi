@@ -93,6 +93,13 @@
 <abi-assistant share-code="rkh7lyn8" base="https://你的ABI地址/api"></abi-assistant>
 ```
 
+**两个必知：**
+
+- `base` 是**接口网关前缀**，不是 SDK 部署目录：填成 `/chat-sdk` 会让接口请求落进静态目录，返回调试页 HTML（状态 200 但响应体是 HTML），面板报「获取分享信息失败」；`/chat-sdk` 只应出现在 `<script src>` 里。
+- 相对 `base` 相对**宿主页面的 origin** 解析：宿主跑在 `http://localhost:8082` 时 `base="/api"` 等于 `http://localhost:8082/api`，到不了 ABI 网关；方案② 仅在宿主服务端做了同源反代时成立。
+
+**自检**：打开宿主页，Network 第一条请求应为 `{base}/dashboard/api/v1/project/getProjectInfo/react?shareCode=<share-code>` 且返回 **JSON**；返回 HTML = base 配错；返回 JSON 但带错误码 = share-code 无效。
+
 ---
 
 ## 五、事件
@@ -111,15 +118,23 @@ document.querySelector('abi-assistant').addEventListener('close', () => {
 
 ## 六、显隐控制
 
-SDK 是纯面板，**标签一放即渲染**。打开入口（按钮等）由宿主自己实现，通过控制 `<abi-assistant>` 的 `display` 来显隐：
+SDK 是纯面板，**标签一放即渲染**，不自带打开入口；打开入口（按钮等）由宿主自己实现，通过控制 `<abi-assistant>` 的 `display` 来显隐（`none` 隐藏 / `contents` 显示）。
+
+**两个必读时序**（对应「初始展开」「关不掉」两大坑）：
+
+1. 元素挂载时内部会把内联 display 统一置为 `contents`，**覆盖标签上写的内联 `style="display: none"`** → 初始收起必须挂载后用 JS 设一次 `display='none'`（脚本异步加载时放在其 load 之后）；
+2. 面板「⋮ 菜单 → 关闭页面」只派发 `close` 事件，**SDK 不会自己隐藏**；宿主不监听，点了就没有任何反应。
 
 ```html
-<abi-assistant id="abi" share-code="rkh7lyn8" base="/api" style="display: none"></abi-assistant>
+<abi-assistant id="abi" share-code="rkh7lyn8" base="/api"></abi-assistant>
 <button id="openBtn">打开 AI 助手</button>
 
 <script>
   const widget = document.getElementById('abi')
   const openBtn = document.getElementById('openBtn')
+
+  // 初始收起：标签上写 display:none 会在挂载时被覆盖，必须挂载后用 JS 隐藏一次
+  widget.style.display = 'none'
 
   // 点自己的按钮 -> 显示面板
   openBtn.addEventListener('click', () => {
@@ -135,7 +150,7 @@ SDK 是纯面板，**标签一放即渲染**。打开入口（按钮等）由宿
 </script>
 ```
 
-> 说明：元素挂载时内部默认 `display: contents`，让面板脱离标签盒子直接铺到页面；宿主用 `display: none` / `contents` 切换即可。
+> 若 widget 脚本为异步加载（`async`/动态插入），元素升级发生在脚本 load 时刻：把上面的「隐藏一次」与事件绑定放进该 script 的 `onload` / load Promise 里执行，否则会被升级覆盖。
 
 ---
 
@@ -204,6 +219,8 @@ Access-Control-Allow-Headers: Content-Type, Authorization
 Access-Control-Max-Age: 86400
 ```
 
+> **防坑：CORS 头只能加一层。** 若 nginx `add_header` 与后端网关各加一套，响应会出现多个 `Access-Control-Allow-Origin` 值，浏览器直接拒绝预检（报错 `header contains multiple values`）。要么 nginx 用 `proxy_hide_header Access-Control-Allow-Origin;` 等剥掉上游 CORS 头后自己加单层，要么删掉 nginx 的 `add_header` 只由后端加。
+
 两种规避跨域的方案：
 
 1. **同源反向代理（推荐）**：宿主服务端加一条 `location /api/ { proxy_pass https://你的ABI地址/api/; }`，然后 `base="/api"`，浏览器视为同源，无需 CORS。
@@ -225,12 +242,14 @@ Access-Control-Max-Age: 86400
   <body>
     <button id="openBtn" style="position: fixed; right: 24px; bottom: 24px">打开 AI 助手</button>
 
-    <abi-assistant id="abi" share-code="rkh7lyn8" base="/api" theme="blue" theme-switch style="display: none"></abi-assistant>
+    <abi-assistant id="abi" share-code="rkh7lyn8" base="/api" theme="blue" theme-switch></abi-assistant>
 
     <script src="./abi-assistant-widget.js"></script>
     <script>
       var widget = document.getElementById('abi')
       var openBtn = document.getElementById('openBtn')
+      // 标签上写 display:none 会在挂载时被覆盖；同步加载完脚本升级已完成，这里隐藏一次实现初始收起
+      widget.style.display = 'none'
       openBtn.addEventListener('click', function () {
         widget.style.display = 'contents'
         openBtn.style.display = 'none'
@@ -246,20 +265,61 @@ Access-Control-Max-Age: 86400
 
 ### 9.2 Vue2
 
-Vue2 需告诉编译器忽略该自定义标签，且**建议把模板放进 `script type="text/x-template"`**，避免 in-DOM 模板下脚本先于属性升级元素导致的「缺少 share-code」误报。
+Vue2 需告诉编译器忽略该自定义标签（`main.js` 加 `Vue.config.ignoredElements = ['abi-assistant']`）；in-DOM 模板下**建议把模板放进 `script type="text/x-template"`**，避免脚本先于属性升级元素导致的「缺少 share-code」误报。以下为已在真实第三方工程验证的自包含组件（异步加载 SDK + 自己的按钮显隐）：
 
-```html
-<div id="app"></div>
+```vue
+<template>
+  <div>
+    <button v-if="!visible" @click="openPanel">打开 AI 助手</button>
+    <!-- 不绑 :style，显隐用 applyDisplay 手动覆盖 -->
+    <abi-assistant ref="abi" :share-code="shareCode" :base="base"></abi-assistant>
+  </div>
+</template>
 
-<script type="text/x-template" id="app-tpl">
-  <abi-assistant share-code="rkh7lyn8" base="/api"></abi-assistant>
-</script>
-
-<script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
-<script src="./abi-assistant-widget.js"></script>
 <script>
-  Vue.config.ignoredElements = ['abi-assistant']
-  new Vue({ el: '#app', template: '#app-tpl' })
+  // 全局只加载一次 SDK 脚本（多实例共享）
+  let sdkLoadPromise = null
+  function loadSdkOnce (src) {
+    if (!sdkLoadPromise) {
+      sdkLoadPromise = new Promise(function (resolve, reject) {
+        if (typeof customElements !== 'undefined' && customElements.get('abi-assistant')) return resolve()
+        const s = document.createElement('script')
+        s.src = src
+        s.async = true
+        s.onload = resolve
+        s.onerror = function () { reject(new Error('SDK 脚本加载失败: ' + src)) }
+        document.head.appendChild(s)
+      })
+    }
+    return sdkLoadPromise
+  }
+
+  export default {
+    name: 'AbiFloatWidget',
+    data () {
+      return { visible: false, shareCode: 'rkh7lyn8', base: '/api' }
+    },
+    mounted () {
+      // 关键：事件绑定与“隐藏一次”都放在 load 之后（此时升级已完成，display 已被置为 contents）
+      loadSdkOnce('https://你的ABI地址/chat-sdk/abi-assistant-widget.js').then(() => {
+        const el = this.$refs.abi
+        if (!el) return
+        // 面板关闭只派发 close 事件，SDK 不自隐藏，宿主自行收起
+        el.addEventListener('close', () => { this.visible = false })
+        this.applyDisplay()
+      })
+    },
+    watch: {
+      visible () { this.$nextTick(this.applyDisplay) }
+    },
+    methods: {
+      applyDisplay () {
+        const el = this.$refs.abi
+        if (el) el.style.display = this.visible ? 'contents' : 'none'
+      },
+      openPanel () { this.visible = true }
+    }
+  }
 </script>
 ```
 
@@ -285,6 +345,8 @@ export default function AbiWidget() {
   return <div ref={hostRef} />
 }
 ```
+
+> 若 widget 脚本为**异步**引入：把 `useEffect` 内的创建逻辑移到脚本 load 完成之后（复用 9.2 的 `loadSdkOnce` 思路）；否则 `appendChild` 后立即设的 `display='none'` 会被稍后的升级覆盖，导致初始展开。
 
 > ⚠️ 旧版命令式 API `window.AbiAssistant.init()` 已废弃，请勿再使用，改为上面的自定义标签方式。
 
@@ -324,3 +386,20 @@ pnpm --filter @abi/chat-widget build
 
 **Q5：能双击 HTML 直接看效果吗？**
 不能。`file://` 下 `origin` 为 `null` 会被 CORS 拒绝，必须经 `http(s)://` 静态服务访问。
+
+---
+
+## 十二、症状 → 原因 → 处理 速查表
+
+| 症状 | 原因 | 处理 |
+| --- | --- | --- |
+| 接口 200 但 Response 是 HTML，面板报「获取分享信息失败」 | base 指到静态目录/错误路径（如 `/chat-sdk`） | 第四节 base 填法与自检 |
+| 接口打到了宿主自己的端口（如 localhost:8082/api） | 相对 base 相对宿主 origin 解析，且无同源反代 | 改方案①或③ |
+| 页面一打开面板就是展开的 | 挂载后没用 JS 隐藏（标签内联 display:none 会被覆盖） | 第六节 |
+| 异步引入 SDK 脚本时面板初始展开 | 隐藏动作跑在元素升级之前，被升级覆盖 | “隐藏一次”放进脚本 onload / load Promise 之后（第六、九节） |
+| 点「关闭页面」没任何反应 | 没监听 `close` 事件 | 第五、六节 |
+| 报跨域错误 / OPTIONS 失败 | 选方案③但网关未放行 CORS | 第八节 |
+| CORS 报错 `Access-Control-Allow-Origin header contains multiple values` | 服务端 CORS 头加重复（nginx 与后端网关各加一次） | 服务端去重：`proxy_hide_header` 剥上游 CORS 头、只保留一层 `add_header`（第八节）；接入方无需改动 |
+| 面板内弹出密钥填入框 | 未传 `api-key` / `secret-key` 属性（正常兜底流程） | 传属性，或由访客手动填入 |
+| 无面板、控制台报「缺少 share-code」 | 属性缺失 / Vue2 in-DOM 模板时序 | 补属性 / 用 x-template（第九节） |
+| 面板无样式 | `.css` 未与 `.js` 同目录部署 | 两文件放同目录（第三节） |

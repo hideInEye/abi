@@ -101,8 +101,6 @@ type MessageListProps = {
   onOpenReport?: (reportId: string) => void
   /** 打开探索结果工作室侧栏。 */
   onOpenExplore?: (exploreId: string) => void
-  /** 探索消息内点击步骤结果入口：打开工作室并定位到该步骤屏。 */
-  onOpenExploreStep?: (exploreId: string, stepId: string) => void
   /** 工作室当前屏绑定的步骤 id，用于消息内定位高亮。 */
   exploreLocateStepId?: string
   /** 关闭探索结果工作室侧栏。 */
@@ -157,7 +155,6 @@ const MessageList = ({
   onToggleReportTask,
   onOpenReport,
   onOpenExplore,
-  onOpenExploreStep,
   exploreLocateStepId,
   onCloseExplore,
   onEditExploreCode,
@@ -372,7 +369,6 @@ const MessageList = ({
             locateStepId: exploreLocateStepId,
             active: activeExploreId === exploration.id,
             onOpen: () => onOpenExplore?.(exploration.id),
-            onOpenStep: onOpenExploreStep ? (stepId: string) => onOpenExploreStep(exploration.id, stepId) : undefined,
             onClose: onCloseExplore,
             onEditCode: onEditExploreCode,
             onDelete: deleteRoundIndex !== undefined && onEnterDeleteMode

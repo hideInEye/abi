@@ -108,6 +108,8 @@ const ProjectListControls = memo((props: ProjectListControlsProps) => {
                             title="确定要批量删除选中的项目吗？"
                             onConfirm={onBatchDelete}
                             disabled={selectedCount === 0}
+                            okText="确认"
+                            cancelText="取消"
                         >
                             <Button danger disabled={selectedCount === 0}>
                                 <DeleteOutlined/> 批量删除{selectedCount ? `(${selectedCount})` : ''}
