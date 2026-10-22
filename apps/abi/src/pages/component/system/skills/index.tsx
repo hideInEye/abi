@@ -1,7 +1,8 @@
-import { DeleteOutlined, DownOutlined, EditOutlined, EyeOutlined, LeftOutlined, MoreOutlined, ReloadOutlined, RightOutlined, SearchOutlined, SyncOutlined } from '@ant-design/icons';
+import { ApartmentOutlined, DeleteOutlined, DownOutlined, EditOutlined, EyeOutlined, LeftOutlined, MoreOutlined, ReloadOutlined, RightOutlined, SearchOutlined, SyncOutlined } from '@ant-design/icons';
 import { App, Button, Dropdown, Empty, Input, Select, Spin, Tabs, Tooltip, Typography } from 'antd';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import MetadataAnalysisDrawer, { useMetadataAnalysis } from '@/components/metadata-analysis';
 // import PageTitle from '@/components/stateless/common/PageTitle';
 import { deleteSkillApi, querySkillListApi, updateSkillStatusApi } from '@/service/api/skill';
 import { fetchOperateNew, fetchOperateNewList } from '@/service/api/operateRecord';
@@ -72,6 +73,7 @@ function NameCell({ text }: { text?: string }) {
 }
 
 export function Component() {
+  const { analysisContext, openAnalysis, closeAnalysis } = useMetadataAnalysis();
   const { t } = useTranslation();
   const { message, modal } = App.useApp();
   const spaceId = useAppSelector(getSpaceId);
@@ -399,6 +401,11 @@ export function Component() {
             menu={{
               items: [
                 {
+                  key: 'metadata',
+                  label: <span><ApartmentOutlined /> 元数据分析</span>,
+                  onClick: () => openAnalysis({ nodeId: record.id, nodeName: record.bizName, nodeType: 'SKILL' }),
+                },
+                {
                   key: 'update',
                   label: (
                     <span onClick={() => openUpdate(record)}>
@@ -426,7 +433,7 @@ export function Component() {
         </div>
       )
     },
-  ], []);
+  ], [openAnalysis]);
 
   const tableColumns = useMemo(() => {
     const visibleKeys = new Set(columnOptions.filter(c => c.visible).map(c => c.key));
@@ -646,6 +653,11 @@ export function Component() {
                                 menu={{
                                   items: [
                                     {
+                                      key: 'metadata',
+                                      label: <span><ApartmentOutlined /> 元数据分析</span>,
+                                      onClick: () => { menuActionRef.current = true; openAnalysis({ nodeId: item.id, nodeName: item.bizName, nodeType: 'SKILL' }); },
+                                    },
+                                    {
                                       key: 'update',
                                       label: '更新技能',
                                       onClick: () => { menuActionRef.current = true; openUpdate(item); },
@@ -738,6 +750,7 @@ export function Component() {
         onClose={() => setEditOpen(false)}
         onSuccess={fetchList}
       />
+      <MetadataAnalysisDrawer context={analysisContext} open={Boolean(analysisContext)} onClose={closeAnalysis} />
     </div>
   );
 }

@@ -1,9 +1,11 @@
-import { DeleteOutlined, DownOutlined, EditOutlined, SettingOutlined } from '@ant-design/icons'
-import { Button, Dropdown, Popconfirm, Table } from 'antd'
+import { EditOutlined, SettingOutlined } from '@ant-design/icons'
+import { Button, Table } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import React, { useCallback, useMemo } from 'react'
 
+import MetadataAnalysisDrawer, { useMetadataAnalysis } from '@/components/metadata-analysis'
 import { OntologyCardList } from '@/pages/workbench/ontology-kg/components/OntologyCardList'
+import { OntologyMetadataActions } from '@/pages/workbench/ontology-kg/components/OntologyMetadataActions'
 import { OntologyTablePagination } from '@/pages/workbench/ontology-kg/components/OntologyTablePagination'
 import type { OntologyViewMode } from '@/pages/workbench/ontology-kg/hooks/useOntologyViewControls'
 import type { OntologyEntity, OntologyLabel, OntologyNetworkId } from '@/pages/workbench/ontology-kg/shared-network-types'
@@ -43,6 +45,10 @@ export const EntityTable: React.FC<EntityTableProps> = ({
   viewMode,
   visibleColumnKeys,
 }) => {
+  const { analysisContext, openAnalysis, closeAnalysis } = useMetadataAnalysis()
+  const handleAnalysis = useCallback((record: OntologyEntity) => {
+    openAnalysis({ nodeId: record.id, nodeName: record.entityName, nodeType: 'ENTITY' })
+  }, [openAnalysis])
   const labelMap = useMemo(() => new Map(labels.map((label) => [String(label.id), label.bizName])), [labels])
 
   const renderTableActions = useCallback(
@@ -53,56 +59,42 @@ export const EntityTable: React.FC<EntityTableProps> = ({
           <Button className="abi-action-link" icon={<EditOutlined />} size="small" type="link" onClick={() => onEdit(record)}>
             编辑
           </Button>
-          <Dropdown
-            menu={{
-              items: [
-                {
-                  key: 'attributes',
-                  label: <span><SettingOutlined style={{ marginRight: 4 }} />属性配置</span>,
-                  onClick: () => onAttributes(record)
-                },
-                { type: 'divider' },
-                {
-                  key: 'delete',
-                  danger: true,
-                  label: (
-                    <Popconfirm cancelText="取消" description="删除实体后不可恢复，确定要删除吗？" disabled={deleting} okText="确定" title="删除确认" onConfirm={() => onDelete(record.id)}>
-                      <span><DeleteOutlined style={{ marginRight: 4 }} />删除</span>
-                    </Popconfirm>
-                  )
-                }
-              ]
-            }}
-          >
-            <Button className="abi-action-link" loading={deleting} size="small" type="link">
-              更多 <DownOutlined style={{ fontSize: '0.625rem' }} />
-            </Button>
-          </Dropdown>
+          <OntologyMetadataActions
+            deleteDescription="删除实体后不可恢复，确定要删除吗？"
+            deleteTitle="删除确认"
+            deleting={deleting}
+            extraItems={[{ key: 'attributes', icon: <SettingOutlined />, label: '属性配置', onClick: () => onAttributes(record) }]}
+            onAnalysis={() => handleAnalysis(record)}
+            onDelete={() => onDelete(record.id)}
+          />
         </div>
       )
     },
-    [deletingId, onAttributes, onDelete, onEdit],
+    [deletingId, onAttributes, onDelete, onEdit, handleAnalysis],
   )
   const renderCardActions = useCallback(
     (record: OntologyEntity): React.ReactNode => {
       const deleting = String(deletingId) === String(record.id)
       return (
-        <div className="flex items-center justify-center" style={{ gap: 4 }}>
+        <div className="flex w-full items-center" style={{ gap: 4 }}>
           <Button className="abi-action-link" icon={<EditOutlined />} size="small" type="link" onClick={() => onEdit(record)}>
             编辑
           </Button>
           <Button className="abi-action-link" icon={<SettingOutlined />} size="small" type="link" onClick={() => onAttributes(record)}>
             属性配置
           </Button>
-          <Popconfirm cancelText="取消" description="删除实体后不可恢复，确定要删除吗？" disabled={deleting} okText="确定" title="删除确认" onConfirm={() => onDelete(record.id)}>
-            <Button className="abi-action-link-danger" icon={<DeleteOutlined />} loading={deleting} size="small" type="link">
-              删除
-            </Button>
-          </Popconfirm>
+          <OntologyMetadataActions
+            viewMode="card"
+            deleteDescription="删除实体后不可恢复，确定要删除吗？"
+            deleteTitle="删除确认"
+            deleting={deleting}
+            onAnalysis={() => handleAnalysis(record)}
+            onDelete={() => onDelete(record.id)}
+          />
         </div>
       )
     },
-    [deletingId, onAttributes, onDelete, onEdit],
+    [deletingId, onAttributes, onDelete, onEdit, handleAnalysis],
   )
 
   const columns = useMemo<ColumnsType<OntologyEntity>>(
@@ -129,7 +121,7 @@ export const EntityTable: React.FC<EntityTableProps> = ({
       { align: 'center', dataIndex: 'validFlag', key: 'validFlag', render: (value: string) => formatBoolean(value, '有效', '无效'), title: '有效状态', width: 100 },
       { align: 'center', dataIndex: 'createBy', ellipsis: true, key: 'createBy', title: '创建人', width: 120, render: formatDisplayValue },
       { align: 'center', dataIndex: 'createTime', ellipsis: true, key: 'createTime', render: formatDateTime, title: '创建时间', width: 180 },
-      { align: 'center', fixed: 'right', key: 'actions', render: (_, record) => renderTableActions(record), title: '操作', width: 168 },
+      { align: 'center', fixed: 'right', key: 'actions', render: (_, record) => renderTableActions(record), title: '操作', width: 200 },
     ],
     [labelMap, renderTableActions],
   )
@@ -196,6 +188,7 @@ export const EntityTable: React.FC<EntityTableProps> = ({
         </div>
       )}
       <OntologyTablePagination {...pagination} onChange={onPageChange} />
+      <MetadataAnalysisDrawer context={analysisContext} open={Boolean(analysisContext)} onClose={closeAnalysis} />
     </div>
   )
 }

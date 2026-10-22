@@ -1,8 +1,10 @@
-import { DeleteOutlined, DownOutlined, EditOutlined, PartitionOutlined } from '@ant-design/icons'
-import { Dropdown, Popconfirm, Table, Tag } from 'antd'
+import { EditOutlined, PartitionOutlined } from '@ant-design/icons'
+import { Table, Tag } from 'antd'
 import React, { useMemo } from 'react'
 
+import MetadataAnalysisDrawer, { useMetadataAnalysis } from '@/components/metadata-analysis'
 import { OntologyCardList } from '@/pages/workbench/ontology-kg/components/OntologyCardList'
+import { OntologyMetadataActions } from '@/pages/workbench/ontology-kg/components/OntologyMetadataActions'
 import { OntologyTablePagination } from '@/pages/workbench/ontology-kg/components/OntologyTablePagination'
 import type { OntologyViewMode } from '@/pages/workbench/ontology-kg/hooks/useOntologyViewControls'
 import { formatDateTime, formatDisplayValue } from '@/pages/workbench/ontology-kg/utils/table-display'
@@ -43,6 +45,10 @@ export const DimensionTable: React.FC<Props> = ({
   viewMode,
   visibleColumnKeys
 }) => {
+  const { analysisContext, openAnalysis, closeAnalysis } = useMetadataAnalysis()
+  const handleAnalysis = React.useCallback((record: DimensionModelItem) => {
+    openAnalysis({ nodeId: record.dimId ?? record.id, nodeName: record.zhName, nodeType: 'DIMENSION' })
+  }, [openAnalysis])
   const renderStatus = (value: string | number) => {
     const key = String(value ?? '0')
     return <Tag color={statusColorMap[key] || 'default'}>{DIMENSION_STATUS_TEXT_MAP[key] || '禁用'}</Tag>
@@ -116,38 +122,19 @@ export const DimensionTable: React.FC<Props> = ({
             <AButton className="abi-action-link" icon={<EditOutlined />} size="small" variant="link" onClick={() => onEdit(record)}>
               编辑
             </AButton>
-            <Dropdown
-              menu={{
-                items: [
-                  {
-                    key: 'hierarchy',
-                    label: <span><PartitionOutlined style={{ marginRight: 4 }} />层级配置</span>,
-                    onClick: () => onHierarchy(record)
-                  },
-                  { type: 'divider' },
-                  {
-                    key: 'delete',
-                    danger: true,
-                    label: (
-                      <Popconfirm cancelText="取消" description="确定删除该维度吗？" okText="确定" title="提示" onConfirm={() => onDelete(record)}>
-                        <span><DeleteOutlined style={{ marginRight: 4 }} />删除</span>
-                      </Popconfirm>
-                    )
-                  }
-                ]
-              }}
-            >
-              <AButton className="abi-action-link" size="small" variant="link">
-                更多 <DownOutlined style={{ fontSize: '0.625rem' }} />
-              </AButton>
-            </Dropdown>
+            <OntologyMetadataActions
+              deleteDescription="确定删除该维度吗？"
+              extraItems={[{ key: 'hierarchy', icon: <PartitionOutlined />, label: '层级配置', onClick: () => onHierarchy(record) }]}
+              onAnalysis={() => handleAnalysis(record)}
+              onDelete={() => onDelete(record)}
+            />
           </div>
         ),
         title: '操作',
-        width: 168
+        width: 200
       }
     ],
-    [onDelete, onEdit, onHierarchy]
+    [onDelete, onEdit, onHierarchy, handleAnalysis]
   )
 
   const visibleColumns = useMemo(() => columns.filter((column: any) => shouldDisplayColumn(column.key, visibleColumnKeys)), [columns, visibleColumnKeys])
@@ -178,18 +165,19 @@ export const DimensionTable: React.FC<Props> = ({
       {viewMode === 'card' ? (
         <OntologyCardList
           actions={record => (
-            <div className="flex items-center gap-1">
+            <div className="flex w-full items-center gap-1">
               <AButton className="abi-action-link" icon={<EditOutlined />} size="small" variant="link" onClick={() => onEdit(record)}>
                 编辑
               </AButton>
               <AButton className="abi-action-link" icon={<PartitionOutlined />} size="small" variant="link" onClick={() => onHierarchy(record)}>
                 层级配置
               </AButton>
-              <Popconfirm cancelText="取消" description="确定删除该维度吗？" okText="确定" title="提示" onConfirm={() => onDelete(record)}>
-                <AButton className="abi-action-link-danger" icon={<DeleteOutlined />} size="small" variant="link">
-                  删除
-                </AButton>
-              </Popconfirm>
+              <OntologyMetadataActions
+                deleteDescription="确定删除该维度吗？"
+                viewMode="card"
+                onAnalysis={() => handleAnalysis(record)}
+                onDelete={() => onDelete(record)}
+              />
             </div>
           )}
           dataSource={dataSource}
@@ -224,6 +212,7 @@ export const DimensionTable: React.FC<Props> = ({
         </div>
       )}
       <OntologyTablePagination {...pagination} onChange={onPaginationChange} />
+      <MetadataAnalysisDrawer context={analysisContext} open={Boolean(analysisContext)} onClose={closeAnalysis} />
     </div>
   )
 }

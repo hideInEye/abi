@@ -440,6 +440,8 @@ export function mapDimensionFromApi(item: any): DimensionModelItem {
     createBy,
     createTime,
     dimCategory,
+    // 元数据节点使用后端主键原值，避免 Long 字符串经数值转换后丢失精度。
+    dimId: pickFirst(item, ['dimId', 'dim_id', 'id', 'dimensionId']),
     dimType,
     drillDirection,
     englishName,

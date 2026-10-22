@@ -1,9 +1,11 @@
-import { DeleteOutlined, EditOutlined } from '@ant-design/icons'
-import { Popconfirm, Table, Tag } from 'antd'
+import { EditOutlined } from '@ant-design/icons'
+import { Table, Tag } from 'antd'
 import type { TableColumnsType } from 'antd'
 import React, { useCallback, useMemo } from 'react'
 
+import MetadataAnalysisDrawer, { useMetadataAnalysis } from '@/components/metadata-analysis'
 import { OntologyCardList } from '@/pages/workbench/ontology-kg/components/OntologyCardList'
+import { OntologyMetadataActions } from '@/pages/workbench/ontology-kg/components/OntologyMetadataActions'
 import { OntologyTablePagination } from '@/pages/workbench/ontology-kg/components/OntologyTablePagination'
 import type { OntologyViewMode } from '@/pages/workbench/ontology-kg/hooks/useOntologyViewControls'
 import { formatDateTime, formatDisplayValue } from '@/pages/workbench/ontology-kg/utils/table-display'
@@ -43,6 +45,10 @@ export const KnowledgeTable: React.FC<Props> = ({
   viewMode,
   visibleColumnKeys
 }) => {
+  const { analysisContext, openAnalysis, closeAnalysis } = useMetadataAnalysis()
+  const handleAnalysis = useCallback((record: KnowledgeIndicatorItem) => {
+    openAnalysis({ nodeId: record.indId, nodeName: record.bizName, nodeType: 'INDICATOR' })
+  }, [openAnalysis])
   const renderIndicatorClass = useCallback((value: string) => {
     const text = INDICATOR_TYPE_TEXT_MAP[value] || formatDisplayValue(value)
     return <Tag color="blue">{text}</Tag>
@@ -102,18 +108,18 @@ export const KnowledgeTable: React.FC<Props> = ({
             <AButton className="abi-action-link" icon={<EditOutlined />} size="small" variant="link" onClick={() => onEdit(record)}>
               编辑
             </AButton>
-            <Popconfirm cancelText="取消" description="确定删除该指标吗？" okText="确定" title="提示" onConfirm={() => onDelete(record)}>
-              <AButton className="abi-action-link-danger" icon={<DeleteOutlined />} size="small" variant="link">
-                删除
-              </AButton>
-            </Popconfirm>
+            <OntologyMetadataActions
+              deleteDescription="确定删除该指标吗？"
+              onAnalysis={() => handleAnalysis(record)}
+              onDelete={() => onDelete(record)}
+            />
           </div>
         ),
         title: '操作',
-        width: 168,
+        width: 200,
       },
     ],
-    [onDelete, onEdit, renderIndicatorClass, renderQualityLevel, renderStatus],
+    [onDelete, onEdit, handleAnalysis, renderIndicatorClass, renderQualityLevel, renderStatus],
   )
 
   const visibleColumns = useMemo(() => columns.filter((column) => shouldDisplayColumn(column.key, visibleColumnKeys)), [columns, visibleColumnKeys])
@@ -148,15 +154,16 @@ export const KnowledgeTable: React.FC<Props> = ({
       {viewMode === 'card' ? (
         <OntologyCardList
           actions={(record) => (
-            <div className="flex items-center gap-1">
+            <div className="flex w-full items-center gap-1">
               <AButton className="abi-action-link" icon={<EditOutlined />} size="small" variant="link" onClick={() => onEdit(record)}>
                 编辑
               </AButton>
-              <Popconfirm cancelText="取消" description="确定删除该指标吗？" okText="确定" title="提示" onConfirm={() => onDelete(record)}>
-                <AButton className="abi-action-link-danger" icon={<DeleteOutlined />} size="small" variant="link">
-                  删除
-                </AButton>
-              </Popconfirm>
+              <OntologyMetadataActions
+                deleteDescription="确定删除该指标吗？"
+                viewMode="card"
+                onAnalysis={() => handleAnalysis(record)}
+                onDelete={() => onDelete(record)}
+              />
             </div>
           )}
           dataSource={dataSource}
@@ -196,6 +203,7 @@ export const KnowledgeTable: React.FC<Props> = ({
         total={pagination.total}
         onChange={handlePaginationChange}
       />
+      <MetadataAnalysisDrawer context={analysisContext} open={Boolean(analysisContext)} onClose={closeAnalysis} />
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import Editor from '@monaco-editor/react'
 import {
+  ApartmentOutlined,
   DeleteOutlined,
   DownOutlined,
   EditOutlined,
@@ -22,6 +23,7 @@ import CommonDrawer from '@/components/stateless/common/CommonDrawer'
 import type { ColumnsType } from 'antd/es/table'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
+import MetadataAnalysisDrawer, { useMetadataAnalysis } from '@/components/metadata-analysis'
 // import PageTitle from '@/components/stateless/common/PageTitle';
 import type { CreateToolParams, ToolItem, UpdateToolParams } from '@/service/api/tool'
 import { getSpaceId } from '@/store/slice/app'
@@ -122,6 +124,7 @@ function formatJsonString(raw: string | undefined): string {
 }
 
 export function Component() {
+  const { analysisContext, openAnalysis, closeAnalysis } = useMetadataAnalysis()
   const { message, modal } = App.useApp()
   const [form] = Form.useForm()
   const spaceId = useAppSelector(getSpaceId)
@@ -513,13 +516,16 @@ export function Component() {
         title: '操作',
         key: 'action',
         align: 'center',
-        minWidth: 120,
+        minWidth: 280,
         fixed: 'right',
         render: (_, record) => (
           <div className="ds-action-group">
             <Button className="abi-action-link" size="small" variant="link" onClick={() => handleEdit(record)}>
               <EditOutlined style={{ marginRight: 3, fontSize: 12 }} />
               编辑
+            </Button>
+            <Button className="abi-action-link" size="small" variant="link" icon={<ApartmentOutlined />} onClick={() => openAnalysis({ nodeId: record.toolId, nodeName: record.toolName, nodeType: 'TOOL' })}>
+              元数据分析
             </Button>
             <APopconfirm title="提示" description="确定删除该工具吗？" onConfirm={() => handleDelete(record)}>
               <Button className="abi-action-link" size="small" variant="link">
@@ -531,7 +537,7 @@ export function Component() {
         ),
       },
     ],
-    [],
+    [openAnalysis],
   )
 
   const filteredColumns = useMemo(() => {
@@ -694,6 +700,11 @@ export function Component() {
                           <Dropdown
                             menu={{
                               items: [
+                                {
+                                  key: 'metadata',
+                                  label: <span><ApartmentOutlined /> 元数据分析</span>,
+                                  onClick: () => openAnalysis({ nodeId: item.toolId, nodeName: item.toolName, nodeType: 'TOOL' }),
+                                },
                                 {
                                   key: 'delete',
                                   danger: true,
@@ -1076,6 +1087,7 @@ export function Component() {
           </div>
         </Form>
       </CommonDrawer>
+      <MetadataAnalysisDrawer context={analysisContext} open={Boolean(analysisContext)} onClose={closeAnalysis} />
     </div>
   )
 }

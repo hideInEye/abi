@@ -3,11 +3,8 @@ import { ApartmentOutlined, DeleteOutlined, DownOutlined, EditOutlined, LeftOutl
 import { Button, Dropdown, Empty, Input, Popconfirm, Select, Space, Switch, Table, Tag, Typography, message } from 'antd';
 import type { ColumnsType, TableProps } from 'antd/es/table';
 
-import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnalysisDrawer';
-import type { MetadataAnalysisContext } from '@/components/metadata-analysis/types';
+import MetadataAnalysisDrawer, { useMetadataAnalysis } from '@/components/metadata-analysis';
 import type { PluginItem, PluginList } from '@/types/plug';
-import { useAppSelector } from '@/hooks/business/useStore';
-import { getSpaceId } from '@/store/slice/app';
 import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
 
@@ -58,8 +55,7 @@ export const PluginTable: React.FC<PluginTableProps> = ({
   groupId,
   onAdd,
 }: PluginTableProps) => {
-  const spaceId = useAppSelector(getSpaceId);
-  const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null);
+  const { analysisContext, openAnalysis, closeAnalysis } = useMetadataAnalysis();
   const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>(ALL_COLUMNS);
   const [checkedRowKeys, setCheckedRowKeys] = useState<React.Key[]>([]);
@@ -206,7 +202,7 @@ export const PluginTable: React.FC<PluginTableProps> = ({
                   label: (
                     <span><ApartmentOutlined style={{ marginRight: 4 }} />元数据分析</span>
                   ),
-                  onClick: () => setAnalysisContext({ nodeId: record.pluginId, nodeName: record.pluginName, nodeType: 'MCP', spaceId: spaceId || undefined })
+                  onClick: () => openAnalysis({ nodeId: record.mapping_id, nodeName: record.pluginName, nodeType: 'MCP' })
                 },
                 { type: 'divider' },
                 {
@@ -355,7 +351,7 @@ export const PluginTable: React.FC<PluginTableProps> = ({
                 <button className="abi-card-act" onClick={() => updateCurrentEdit(record)}>
                   <EditOutlined style={{ marginRight: 3 }} />编辑
                 </button>
-                <button className="abi-card-act" onClick={() => setAnalysisContext({ nodeId: record.pluginId, nodeName: record.pluginName, nodeType: 'MCP', spaceId: spaceId || undefined })}>
+                <button className="abi-card-act" onClick={() => openAnalysis({ nodeId: record.mapping_id, nodeName: record.pluginName, nodeType: 'MCP' })}>
                   <ApartmentOutlined style={{ marginRight: 3 }} />元数据
                 </button>
                 <Dropdown
@@ -478,7 +474,7 @@ export const PluginTable: React.FC<PluginTableProps> = ({
       <MetadataAnalysisDrawer
         context={analysisContext}
         open={Boolean(analysisContext)}
-        onClose={() => setAnalysisContext(null)}
+        onClose={closeAnalysis}
       />
     </div>
   );

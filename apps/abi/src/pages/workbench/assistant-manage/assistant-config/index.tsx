@@ -7,8 +7,7 @@ import { Group } from '@/components/stateful/group/Group';
 import { GroupContentGate } from '@/components/stateful/group/GroupContentGate';
 import { DeferredRangePicker, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
 import type { GroupHandle, GroupProps } from '@/components/stateful/group/Group';
-import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnalysisDrawer';
-import type { MetadataAnalysisContext } from '@/components/metadata-analysis/types';
+import MetadataAnalysisDrawer, { useMetadataAnalysis } from '@/components/metadata-analysis';
 import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
 import { AssistantIconBlock } from '@/components/AssistantIcon';
@@ -75,7 +74,7 @@ export function Component() {
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
   const [dateRange, setDateRange] = useState<[any, any] | null>(null);
-  const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null);
+  const { analysisContext, openAnalysis, closeAnalysis } = useMetadataAnalysis();
   const [checkedRowKeys, setCheckedRowKeys] = useState<React.Key[]>([]);
   const [selectedRows, setSelectedRows] = useState<AgentCard[]>([]);
   const [columnOptions, setColumnOptions] = useState<ColumnOption[]>([
@@ -228,11 +227,10 @@ export function Component() {
                   label: (
                     <span><ApartmentOutlined style={{ marginRight: 4 }} />元数据分析</span>
                   ),
-                  onClick: () => setAnalysisContext({
+                  onClick: () => openAnalysis({
                     nodeId: record.id,
                     nodeName: record.name,
-                    nodeType: 'ASSISTANT',
-                    spaceId: Number(localStorage.getItem('spaceId')) || undefined
+                    nodeType: 'COPILOT',
                   })
                 },
                 { type: 'divider' },
@@ -421,11 +419,10 @@ export function Component() {
                           {
                             key: 'metadata',
                             label: (<span><ApartmentOutlined style={{ marginRight: 4 }} />元数据分析</span>),
-                            onClick: () => setAnalysisContext({
+                            onClick: () => openAnalysis({
                               nodeId: agent.id,
                               nodeName: agent.name,
-                              nodeType: 'ASSISTANT',
-                              spaceId: Number(localStorage.getItem('spaceId')) || undefined
+                              nodeType: 'COPILOT',
                             })
                           },
                           { type: 'divider' },
@@ -593,7 +590,7 @@ export function Component() {
       <MetadataAnalysisDrawer
         context={analysisContext}
         open={Boolean(analysisContext)}
-        onClose={() => setAnalysisContext(null)}
+        onClose={closeAnalysis}
       />
     </div>
   );
