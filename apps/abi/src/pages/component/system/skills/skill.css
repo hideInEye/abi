@@ -982,3 +982,31 @@
 .abi-assistant-card .ac-add-btn--danger:hover {
   box-shadow: 0 4px 14px rgba(239, 68, 68, 0.38);
 }
+
+/* ── 内置技能（skillType=0）标识：标题旁"系统"标签 + 底部锁定说明 ──
+   不改动共享 .ac-title 截断样式（助手卡片等也在用），用行包裹层承载标签 */
+.skill-hub-scope .abi-assistant-card .ac-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.skill-hub-scope .abi-assistant-card .ac-title-row .ac-title {
+  flex: 1;
+  min-width: 0;
+}
+.skill-hub-scope .abi-assistant-card .ac-builtin-tag {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 16px;
+  padding: 1px 8px;
+  border-radius: 8px;
+  background: rgba(91, 124, 247, 0.1);
+  color: #5b7cf7;
+  white-space: nowrap;
+}
+.skill-hub-scope .abi-assistant-card .ac-builtin-hint {
+  font-size: 11px;
+  color: #8494ad;
+  white-space: nowrap;
+}

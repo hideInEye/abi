@@ -42,6 +42,7 @@ import {
 } from '@/service/api/skill'
 
 import '../skill.css'
+import { isBuiltinSkill } from '../skill-type'
 
 type SkillItem = {
   skillId?: number | string
@@ -72,6 +73,7 @@ type SkillItem = {
   updateTime?: string
   publishedAt?: string
   labels?: any[]
+  skillType?: number | string
 }
 
 type VersionItem = {
@@ -366,6 +368,8 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
   const [loadingLeftVersionDetail, setLoadingLeftVersionDetail] = useState(false)
 
   const src: any = detail || skill || {}
+  // 内置技能为系统基本能力：详情页只读，隐藏版本发布/回滚/删除、标签管理、可见范围与删除技能
+  const isBuiltin = isBuiltinSkill(src.skillType)
   const skillId = skill?.id
   const skillName = src.bizName
   const namespace = src.spaceId
@@ -786,6 +790,7 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
                 </div>
               </div>
               <div className="sd-v5-hero__badges">
+                {isBuiltin && <span className="sd-v5-pill sd-v5-pill--ns">系统</span>}
                 {statusBadge && (
                   <span
                     className={`sd-v5-pill sd-v5-pill--${statusBadge.cls.includes('active') ? 'active' : statusBadge.cls.includes('hidden') ? 'hidden' : statusBadge.cls.includes('review') ? 'review' : statusBadge.cls.includes('rejected') ? 'rejected' : 'default'}`}
@@ -937,19 +942,20 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
                                   </div>
                                   <div className="sd-v5-ver__actions" onClick={(e) => e.stopPropagation()}>
                                     <span className="sd-v5-ver__time">{formatDateTime(v.publishedAt || v.createTime)}</span>
-                                    {vStatus.cls === 'offline' && (
+                                    {/* 内置技能版本由系统托管，不提供发布/回滚/删除 */}
+                                    {!isBuiltin && vStatus.cls === 'offline' && (
                                       <Button className="sd-v5-btn sd-v5-btn--primary" loading={publishingVid === vid} onClick={() => handlePublishVersion(v)}>
                                         发布
                                       </Button>
                                     )}
                                     {/* 回滚按钮只对“非当前启用版本”显示，与查看选中态（点击卡片）无关 */}
-                                    {vStatus.cls !== 'offline' && !isHeadline && (
+                                    {!isBuiltin && vStatus.cls !== 'offline' && !isHeadline && (
                                       <Button className="sd-v5-btn sd-v5-btn--primary" onClick={() => handleSetCurrentVersion(v)}>
                                         回滚
                                       </Button>
                                     )}
                                     {/* 当前启用版本不提供删除；删除按钮为纯文字白底红字 */}
-                                    {!isHeadline && (
+                                    {!isBuiltin && !isHeadline && (
                                       <Button className="sd-v5-btn sd-v5-btn--danger" onClick={() => handleDeleteVersion(v)}>
                                         删除
                                       </Button>
@@ -1037,7 +1043,8 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
               </div>
             </div>
 
-            {/* 标签管理 */}
+            {/* 标签管理（内置技能由系统托管，不提供标签编辑） */}
+            {!isBuiltin && (
             <div className="sd-v5-card">
               <div className="sd-v5-card__title">
                 <TagOutlined /> 标签管理
@@ -1067,8 +1074,10 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
                 </div>
               )}
             </div>
+            )}
 
-            {/* 可见范围 */}
+            {/* 可见范围（内置技能可见性由系统决定，不提供切换） */}
+            {!isBuiltin && (
             <div className="sd-v5-card">
               <div className="sd-v5-card__title">
                 <EyeOutlined /> 可见范围
@@ -1089,8 +1098,10 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
                   : '仅所属空间可见，其他空间无法检索和使用。'}
               </div>
             </div>
+            )}
 
-            {/* 生命周期管理 */}
+            {/* 生命周期管理（内置技能不可删除） */}
+            {!isBuiltin && (
             <div className="sd-v5-card sd-v5-card--danger">
               <div className="sd-v5-card__title sd-v5-card__title--danger">
                 <ReloadOutlined /> 生命周期管理
@@ -1106,6 +1117,7 @@ const SkillDetailDrawer: FC<Props> = ({ onClose, onDeleted, open, skill }) => {
                 删除技能
               </Button>
             </div>
+            )}
           </aside>
         </div>
       </Spin>

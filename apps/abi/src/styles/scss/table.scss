@@ -1184,6 +1184,14 @@ div:has(> .assistant-table-scroll .ant-table-tbody > tr.ant-table-placeholder) {
   background: rgba(130, 140, 200, 0.08);
   color: #768a9f;
 
+  // 标签内文本过长时省略，避免撑破 pill
+  .abi-db-tag-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+
   &::before {
     content: '';
     width: 6px;
@@ -1744,6 +1752,14 @@ div:has(> .assistant-table-scroll .ant-table-tbody > tr.ant-table-placeholder) {
     justify-content: space-between;
     padding: 16px 18px 10px;
     gap: 10px;
+
+    // 英文技术名标签过长会挤占中文名称空间，限宽并允许收缩
+    .abi-db-tag {
+      max-width: 50%;
+      min-width: 0;
+      flex-shrink: 1;
+      overflow: hidden;
+    }
   }
 
   .abi-data-card-title {

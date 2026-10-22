@@ -194,4 +194,6 @@ export function createFlatRequest<ResponseData = any, State = Record<string, unk
   return flatRequest
 }
 export { BACKEND_ERROR_CODE, REQUEST_ID_KEY }
+export { resolveBackendErrorMessage } from './error-message'
 export type { AxiosError, CreateAxiosDefaults }
+export type { BackendErrorLike } from './error-message'
