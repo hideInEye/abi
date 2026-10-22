@@ -17,6 +17,7 @@
 - 输出：业务页面、请求结果、路由状态、全局主题和菜单状态。
 - 注意事项：不要绕过 `src/service/request/index.ts`；不要把 ID 强转为 number，特别是 ontology 模块。
 - 测试建议：新增纯函数、mapper、validator、请求参数转换优先补 Vitest。
+- 公共元数据分析：`src/components/metadata-analysis/index.tsx` 提供按需加载的抽屉默认导出与 `useMetadataAnalysis`，新列表统一从该入口引用；仅打开抽屉后加载关系图依赖和查询。数据准备、本体网络、助手编排及智能体列表共用，不复制分析 UI。
 
 ## apps/chat
 

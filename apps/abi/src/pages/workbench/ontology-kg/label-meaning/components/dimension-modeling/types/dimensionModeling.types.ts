@@ -102,6 +102,7 @@ export interface DimensionRelatedMetric {
 
 export interface DimensionModelItem {
   alias?: string
+  dimId?: number | string
   bizDesc?: string
   dimCategory?: string
   dimType: DimensionType

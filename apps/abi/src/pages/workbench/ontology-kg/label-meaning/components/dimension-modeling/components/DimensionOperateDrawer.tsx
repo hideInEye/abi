@@ -423,7 +423,7 @@ export const DimensionOperateDrawer: React.FC<Props> = ({ editingItem, groupId, 
             className="mb-4"
             items={[
               { key: 'base', label: '基础信息' },
-              { key: 'metrics', label: `相关指标 (${relatedMetricTotal})` },
+              // { key: 'metrics', label: `相关指标 (${relatedMetricTotal})` },
               { key: 'preview', label: '预览数据' },
             ]}
             onChange={setActiveTab}

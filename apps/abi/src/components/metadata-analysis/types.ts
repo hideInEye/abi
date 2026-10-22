@@ -36,3 +36,9 @@ export interface MetadataAnalysisContext {
   nodeType: string
   spaceId?: number
 }
+
+export interface MetadataAnalysisDrawerProps {
+  context?: MetadataAnalysisContext | null
+  onClose: () => void
+  open: boolean
+}

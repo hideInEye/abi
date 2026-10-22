@@ -1,8 +1,10 @@
-import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
-import { Popconfirm, Table } from 'antd';
+import { EditOutlined } from '@ant-design/icons';
+import { Table } from 'antd';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
+import MetadataAnalysisDrawer, { useMetadataAnalysis } from '@/components/metadata-analysis';
 import { OntologyCardList } from '@/pages/workbench/ontology-kg/components/OntologyCardList';
+import { OntologyMetadataActions } from '@/pages/workbench/ontology-kg/components/OntologyMetadataActions';
 import { OntologyTablePagination } from '@/pages/workbench/ontology-kg/components/OntologyTablePagination';
 import type { OntologyViewMode } from '@/pages/workbench/ontology-kg/hooks/useOntologyViewControls';
 import { formatDateTime, formatDisplayValue } from '@/pages/workbench/ontology-kg/utils/table-display';
@@ -20,6 +22,10 @@ interface TagTableProps {
 }
 
 export const TagTable: React.FC<TagTableProps> = ({ dataSource, onDelete, onEdit, viewMode, visibleColumnKeys }) => {
+  const { analysisContext, openAnalysis, closeAnalysis } = useMetadataAnalysis();
+  const handleAnalysis = useCallback((record: TagGroup) => {
+    openAnalysis({ nodeId: record.tagId, nodeName: record.tagName, nodeType: 'LABLE' });
+  }, [openAnalysis]);
   const renderTagType = useCallback((tagType: string) => formatDisplayValue(tabTypeOptions.find(item => item.value === tagType)?.label), []);
   const renderTableActions = useCallback(
     (record: TagGroup) => (
@@ -27,29 +33,30 @@ export const TagTable: React.FC<TagTableProps> = ({ dataSource, onDelete, onEdit
         <AButton className="abi-action-link" icon={<EditOutlined />} size="small" variant="link" onClick={() => onEdit(record)}>
           编辑
         </AButton>
-        <Popconfirm cancelText="取消" description="确定要删除吗？" okText="确定" title="提示" onConfirm={() => onDelete(record.tagId)}>
-          <AButton className="abi-action-link-danger" icon={<DeleteOutlined />} size="small" variant="link">
-            删除
-          </AButton>
-        </Popconfirm>
+        <OntologyMetadataActions
+          deleteDescription="确定要删除吗？"
+          onAnalysis={() => handleAnalysis(record)}
+          onDelete={() => onDelete(record.tagId)}
+        />
       </div>
     ),
-    [onDelete, onEdit],
+    [onDelete, onEdit, handleAnalysis],
   );
   const renderCardActions = useCallback(
     (record: TagGroup) => (
-      <div className="flex items-center gap-1">
+      <div className="flex w-full items-center gap-1">
         <AButton className="abi-action-link" icon={<EditOutlined />} size="small" variant="link" onClick={() => onEdit(record)}>
           编辑
         </AButton>
-        <Popconfirm cancelText="取消" description="确定要删除吗？" okText="确定" title="提示" onConfirm={() => onDelete(record.tagId)}>
-          <AButton className="abi-action-link-danger" icon={<DeleteOutlined />} size="small" variant="link">
-            删除
-          </AButton>
-        </Popconfirm>
+        <OntologyMetadataActions
+          viewMode="card"
+          deleteDescription="确定要删除吗？"
+          onAnalysis={() => handleAnalysis(record)}
+          onDelete={() => onDelete(record.tagId)}
+        />
       </div>
     ),
-    [onDelete, onEdit],
+    [onDelete, onEdit, handleAnalysis],
   );
   const columns: any[] = useMemo(
     () => [
@@ -99,7 +106,7 @@ export const TagTable: React.FC<TagTableProps> = ({ dataSource, onDelete, onEdit
         fixed: 'right',
         key: 'action',
         title: '操作',
-        width: 168,
+        width: 200,
         render: (_: any, record: TagGroup) => renderTableActions(record),
       }
     ],
@@ -176,6 +183,7 @@ export const TagTable: React.FC<TagTableProps> = ({ dataSource, onDelete, onEdit
         </div>
       )}
       <OntologyTablePagination pageNum={currentPage} pageSize={pageSize} total={totalCount} onChange={handlePaginationChange} />
+      <MetadataAnalysisDrawer context={analysisContext} open={Boolean(analysisContext)} onClose={closeAnalysis} />
     </div>
   );
 };

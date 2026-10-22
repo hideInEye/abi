@@ -2,8 +2,7 @@
 import { message, Splitter } from 'antd'
 import { Suspense } from 'react'
 
-import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnalysisDrawer'
-import type { MetadataAnalysisContext } from '@/components/metadata-analysis/types'
+import MetadataAnalysisDrawer, { useMetadataAnalysis } from '@/components/metadata-analysis'
 import { deleteModel, fetchAddModel, fetchEditModel, fetchModelList, fetchProviderList, copyModel, setDefaultModel } from '@/service/api'
 import { getSpaceId } from '@/store/slice/app'
 import { useAppSelector } from '@/hooks/business/useStore'
@@ -18,7 +17,7 @@ export function Component() {
 
   const [searchValue, setSearchValue] = useState('')
   const [multimodalFilter, setMultimodalFilter] = useState<number | undefined>()
-  const [analysisContext, setAnalysisContext] = useState<MetadataAnalysisContext | null>(null)
+  const { analysisContext, openAnalysis, closeAnalysis } = useMetadataAnalysis()
   const [activeProviderId, setActiveProviderId] = useState<number | null>(null)
   const [activeTab, setActiveTab] = useState<'0' | '1' | '2'>('0')
   const [providers, setProviders] = useState<any[]>([])
@@ -221,7 +220,7 @@ export function Component() {
               onSetDefault={handleSetDefault}
               onDelete={handleDelete}
               onBatchDelete={handleBatchDelete}
-              onAnalysis={setAnalysisContext}
+              onAnalysis={openAnalysis}
             />
           </Suspense>
         </Splitter.Panel>
@@ -233,7 +232,7 @@ export function Component() {
       <MetadataAnalysisDrawer
         context={analysisContext}
         open={Boolean(analysisContext)}
-        onClose={() => setAnalysisContext(null)}
+        onClose={closeAnalysis}
       />
     </div>
   )

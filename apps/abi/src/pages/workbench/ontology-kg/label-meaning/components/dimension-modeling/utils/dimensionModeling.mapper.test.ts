@@ -3,6 +3,11 @@ import { describe, expect, it, vi } from 'vitest'
 import { buildDimensionBatchCreatePayload, buildDimensionBatchRows, buildDimensionFieldPayload, buildFormValues, buildSchemaFieldOptions, buildSubmitPayload, findSubmittedDimensionId, getDimensionFieldLookupKeys, getSubmittedDimensionId, isApiSuccess, mapDimensionFromApi, normalizeDimensionFieldSelectionKeys, normalizeDimensionSelectedFieldsToOptionKeys } from './dimensionModeling.mapper'
 
 describe('dimensionModeling mapper', () => {
+  it('keeps the original dimension primary key for metadata analysis', () => {
+    expect(mapDimensionFromApi({ dimId: '90071992547409931' }).dimId).toBe('90071992547409931')
+    expect(mapDimensionFromApi({ dim_id: '90071992547409933' }).dimId).toBe('90071992547409933')
+    expect(mapDimensionFromApi({ id: 42 }).dimId).toBe(42)
+  })
   it('treats only an explicit flat-request success as API success', () => {
     expect(isApiSuccess({ data: true, error: null, response: { data: { code: 200 } } })).toBe(true)
     expect(isApiSuccess({ error: new Error('failed'), response: { data: { code: 100 } } })).toBe(false)

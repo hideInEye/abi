@@ -23,6 +23,12 @@
 
 证据：`apps/abi/.env`、`apps/abi/src/service/request/index.ts`。
 
+## ABI 元数据分析
+
+- 复用 `queryLineageRelationList`：`POST /api/abi-data/api/v1/lineage/getRelation`，传当前 `spaceId`；血缘分析传 `targetNodeType`/`targetNodeId`，影响分析传 `sourceNodeType`/`sourceNodeId`。
+- 节点类型与主键：维度 `DIMENSION`/`dimId`，指标 `INDICATOR`/`indId`，标签 `LABLE`/`tagId`，实体 `ENTITY`/`id`，助手 `COPILOT`/`appId`（页面 `id`），模型 `LLM`/`modelId`，MCP `MCP`/`mapping_id`（不使用编辑、删除的 `pluginId`），工具 `TOOL`/`toolId`，技能 `SKILL`/`id`。保留 `LABLE` 拼写；节点 ID 转字符串，不转数值。
+- 数据准备原有类型不变，数据源 `DATA_SOURCE` 仍转换为接口的 `Data_Source`；解析结果前必须通过 flat-request 成功断言及内部业务失败检查。
+
 ## Chat 请求约定
 
 `apps/chat/src/service/request/index.ts` 使用 axios 实例：

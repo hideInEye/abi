@@ -1,7 +1,7 @@
 import { ApartmentOutlined, CopyOutlined, DeleteOutlined, DownOutlined, EditOutlined, LeftOutlined, MoreOutlined, PlusOutlined, RightOutlined, SearchOutlined, StarFilled, StarOutlined } from '@ant-design/icons'
 import { Dropdown, Select, Space } from 'antd'
 import { MODAL_TYPE_OPTIONS, PROVIDER_OPTIONS } from '@/constants/manage'
-import type { MetadataAnalysisContext } from '@/components/metadata-analysis/types'
+import type { MetadataAnalysisContext } from '@/components/metadata-analysis'
 import { useAppSelector } from '@/hooks/business/useStore'
 import { getSpaceId } from '@/store/slice/app'
 import { ViewControls } from '@/components/ViewControls'

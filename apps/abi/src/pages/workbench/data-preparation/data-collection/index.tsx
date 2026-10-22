@@ -2,9 +2,9 @@ import { ApartmentOutlined, DeleteOutlined, DownOutlined, EditOutlined, EyeOutli
 import { Dropdown, Empty, message } from 'antd';
 import { Suspense } from 'react';
 
-import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnalysisDrawer';
+import MetadataAnalysisDrawer from '@/components/metadata-analysis';
 import { DeferredRangePicker, DeferredSelect, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
-import type { MetadataAnalysisContext } from '@/components/metadata-analysis/types';
+import type { MetadataAnalysisContext } from '@/components/metadata-analysis';
 import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
 import { deleteCollection, fetchDataCollectionList } from '@/service/api';

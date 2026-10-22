@@ -2,8 +2,8 @@ import { ApartmentOutlined, DeleteOutlined, DownOutlined, EditOutlined, LeftOutl
 import { Dropdown, Empty, message } from 'antd';
 import type { TableProps } from 'antd';
 
-import MetadataAnalysisDrawer from '@/components/metadata-analysis/MetadataAnalysisDrawer';
-import type { MetadataAnalysisContext } from '@/components/metadata-analysis/types';
+import MetadataAnalysisDrawer from '@/components/metadata-analysis';
+import type { MetadataAnalysisContext } from '@/components/metadata-analysis';
 import { ViewControls } from '@/components/ViewControls';
 import type { ColumnOption } from '@/components/ViewControls';
 

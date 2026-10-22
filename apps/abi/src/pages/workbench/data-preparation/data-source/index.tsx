@@ -31,10 +31,10 @@ import {
   fetchDataSourceList,
   updateDataSource,
 } from "@/service/api";
-import MetadataAnalysisDrawer from "@/components/metadata-analysis/MetadataAnalysisDrawer";
+import MetadataAnalysisDrawer from "@/components/metadata-analysis";
 import { DeferredRangePicker, SearchFilterBar, SearchFilterField, getFilterPopupContainer } from '@/components/SearchFilterBar';
 import { filterByCreateTime } from '@/utils/date';
-import type { MetadataAnalysisContext } from "@/components/metadata-analysis/types";
+import type { MetadataAnalysisContext } from "@/components/metadata-analysis";
 import { ViewControls } from "@/components/ViewControls";
 import type { ColumnOption } from "@/components/ViewControls";
 import { useRouter } from "~/packages/simple-router/src/hooks/useRouter";

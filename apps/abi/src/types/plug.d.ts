@@ -38,6 +38,8 @@ export interface PluginAddParams {
 }
 
 export interface PluginItem extends PluginAddParams {
+  /** 元数据分析使用映射 ID，与编辑、删除使用的 MCP 服务 pluginId 不同。 */
+  mapping_id?: string | number;
   createBy: string;
   createTime: string;
   parseModeConfig: string;

@@ -5,13 +5,16 @@ export const NODE_TYPE_LABELS: Record<string, string> = {
   DATA_SOURCE: '数据源',
   DICTIONARY: '数据字典',
   DIMENSION: '维度',
+  ENTITY: '实体',
   INDICATOR: '指标',
   LABLE: '标签',
   LLM: '大模型',
   MCP: 'MCP插件',
   METIRC: '度量',
   PHYSICAL_TABLE: '数据表',
-  TABLE_SEMANTIC: '表语义'
+  TABLE_SEMANTIC: '表语义',
+  TOOL: '工具',
+  SKILL: '技能'
 }
 
 export const NODE_TYPE_COLORS: Record<string, string> = {
@@ -21,13 +24,16 @@ export const NODE_TYPE_COLORS: Record<string, string> = {
   DATA_SOURCE: '#0284c7',
   DICTIONARY: '#f59e0b',
   DIMENSION: '#f43f5e',
+  ENTITY: '#6366f1',
   INDICATOR: '#ef4444',
   LABLE: '#fb923c',
   LLM: '#8b5cf6',
   MCP: '#14b8a6',
   METIRC: '#ec4899',
   PHYSICAL_TABLE: '#64748b',
-  TABLE_SEMANTIC: '#22c55e'
+  TABLE_SEMANTIC: '#22c55e',
+  TOOL: '#0ea5e9',
+  SKILL: '#a855f7'
 }
 
 export const RELATION_TYPE_LABELS: Record<string, string> = {
