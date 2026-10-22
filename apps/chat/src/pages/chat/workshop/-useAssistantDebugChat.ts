@@ -7,7 +7,7 @@ import {
   parseExploreStreamEvent,
   reduceExploreEvent,
 } from '@/components/conversation/exploration-mode/exploreStreamReducer'
-import { buildMcpSourceVersionFields } from '@/components/conversation/exploration-mode/useExploreConversation'
+import { buildMcpSourceVersionFields } from '@/utils/exploration-mode/buildMcpSourceVersionFields'
 import type { ExploreItem, ExploreMcpSource } from '@/components/conversation/exploration-mode/types'
 
 interface UseAssistantDebugChatOptions {

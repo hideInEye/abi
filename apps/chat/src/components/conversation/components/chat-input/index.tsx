@@ -355,7 +355,9 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
     }, [assistantMcps, mcpGroupItems, selectedMCPs]);
 
     const handleSend = useCallback(() => {
-      if (!value.trim() || loading) return;
+      if (!value.trim()) return;
+      // 探索模式允许在任务执行中继续入队，其他模式 loading 时禁止发送
+      if (loading && selectedMode.key !== 'explore') return;
 
       // 先校验再发送和清空，避免父级拦截后用户已经输入的问题丢失。
       if (!hasSelectedConversationData(selectedData, selectedExcel)) {
@@ -780,9 +782,10 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
           <Input.TextArea
             autoFocus
             id="input-textarea"
-            disabled={loading}
+            disabled={loading && selectedMode.key !== 'explore'}
             placeholder={
-              loading ? '正在思考中,请稍后输入'
+              loading && selectedMode.key !== 'explore' ? '正在思考中,请稍后输入'
+                : selectedMode.key === 'explore' && loading ? '任务执行中，可继续输入新问题排队'
                 : selectedMode.key === 'report' ? '请输入报告主题或分析诉求，系统将生成结构化报告'
                 : deepThinkEnabled ? '深度思考模式已开启，请输入您的问题'
                   : '请输入问题，快速获取结果'
@@ -794,7 +797,7 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
             onCompositionEnd={handleCompositionEnd}
             onPaste={handlePaste}
             autoSize={{ minRows: 1, maxRows: 4 }}
-            style={{ border: 'none', boxShadow: 'none', padding: '0', resize: 'none', backgroundColor: 'transparent', cursor: loading ? 'not-allowed' : 'text', fontSize: 13, color: 'var(--ink)', lineHeight: 1.5, fontFamily: 'var(--font)' }}
+            style={{ border: 'none', boxShadow: 'none', padding: '0', resize: 'none', backgroundColor: 'transparent', cursor: (loading && selectedMode.key !== 'explore') ? 'not-allowed' : 'text', fontSize: 13, color: 'var(--ink)', lineHeight: 1.5, fontFamily: 'var(--font)' }}
             styles={{ textarea: { border: 'none', boxShadow: 'none', backgroundColor: 'transparent' } }}
           />
         </div>
@@ -907,14 +910,25 @@ const ChatInput: React.FC<ChatInputProps> = React.memo(
           <AudioRecorder onTranscribed={handleTranscribed} disabled={loading} />
 
           {/* Send / Stop Button */}
-          <button
-            type="button"
-            className="send-btn-glass"
-            onClick={loading ? onStop : handleSend}
-            style={loading ? { background: 'var(--danger)', boxShadow: '0 2px 8px rgba(239,68,68,0.3)' } : {}}
-          >
-            {loading ? <StopOutlined style={{ fontSize: 16 }} /> : <SendOutlined style={{ fontSize: 16 }} />}
-          </button>
+          {!(loading && selectedMode.key !== 'explore') ? (
+            <button
+              type="button"
+              className="send-btn-glass"
+              onClick={handleSend}
+              title={loading ? '发送排队' : '发送'}
+            >
+              <SendOutlined style={{ fontSize: 16 }} />
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="send-btn-glass"
+              onClick={onStop}
+              style={{ background: 'var(--danger)', boxShadow: '0 2px 8px rgba(239,68,68,0.3)' }}
+            >
+              <StopOutlined style={{ fontSize: 16 }} />
+            </button>
+          )}
         </div>
 
         {/* 隐藏的图片选择 input，由「上传图片」菜单触发 */}

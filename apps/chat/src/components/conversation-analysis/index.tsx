@@ -20,12 +20,18 @@ import {
   fetchAssistantBoundResources,
   type AssistantBoundResources,
 } from '../../pages/chat/workshop/-assistantResources'
+import { exploreService } from '@/store/exploration-mode/exploreService'
+import { useExploreStore } from '@/store/exploration-mode/exploreStore'
+
+import { ClockCircleOutlined } from '@ant-design/icons'
 
 const loadCreateModal = () => import('./CreateModal')
 const loadEditSessionModal = () => import('./EditSessionModal')
 const loadChatInput = () => import('../conversation/components/chat-input')
 const loadAppApi = () => import('../../service/api/app')
 const loadConversationApi = () => import('../../service/api/conv')
+const loadSpaceSelector = () => import('../layout/SpaceSelector').then(module => ({ default: module.SpaceSelector }))
+const loadScheduleTaskDrawer = () => import('../layout/ScheduleTaskDrawer')
 interface DeferredChatHeaderProps extends ChatHeaderProps {
   headerRef: React.Ref<any>
 }
@@ -138,11 +144,22 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
   const [selectedMode, setSelectedMode] = useState<ChatInputModeKey>('interact')
   const [reportPreviewOpen, setReportPreviewOpen] = useState(false)
   const [explorePreviewOpen, setExplorePreviewOpen] = useState(false)
+  const [studioPortalEl, setStudioPortalEl] = useState<HTMLDivElement | null>(null)
+  const [reportPortalEl, setReportPortalEl] = useState<HTMLDivElement | null>(null)
   const [deepThinkEnabled, setDeepThinkEnabled] = useState(false)
   const [uploadFileEnabled, setUploadFileEnabled] = useState(false)
   const [externalInputValue, setExternalInputValue] = useState('')
   const [creating, setCreating] = useState(false)
+  const [scheduleOpen, setScheduleOpen] = useState(false)
   const chatHeaderRef = useRef<any>(null)
+
+  // 离开聊天页面时中止所有后台探索 SSE，避免无主连接持续占用
+  useEffect(() => {
+    return () => {
+      exploreService.abortAll()
+      useExploreStore.getState().stopAll()
+    }
+  }, [])
 
   // 报告预览占用右侧空间时，幂等收起系统菜单，为双栏正文留出可读宽度。
   // 关闭报告不自动展开，避免覆盖用户在预览期间主动选择的侧栏状态。
@@ -675,66 +692,95 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
             fallback={<div aria-busy="true" className="h-full w-[12.5rem] shrink-0 animate-pulse border-r border-slate-200 bg-white/20" />}
           />
         )}
-        <div className="flex-1 min-w-0 flex flex-col">
-          {/* 顶部 header（永驻） */}
-          {!curConv && (interactiveReady ? (
-            <RetryableLazy
-              loader={loadChatHeader}
-              componentProps={{
-                headerRef: chatHeaderRef,
-                conv: curApp || {},
-                setConvContent: () => {},
-                onUpdateList: handleUpdateList,
-                setIsSharing: () => {},
-                onClose: () => {},
-                modelOptions,
-                currentModel,
-                onModelChange: handleModelChange,
-                onEmbedModelFound: setEmbedModelOverride,
-              }}
-              fallback={<header aria-busy="true" className="chat-header" style={{ boxSizing: 'border-box', height: 70 }} />}
-            />
-          ) : (
-            <header aria-busy="true" className="chat-header" style={{ boxSizing: 'border-box', height: 70 }} />
-          ))}
-          {/* 内容区域 */}
-          <div className="flex-1 min-h-0">
-            {curConv ? (
+        <div className="flex-1 min-w-0 flex">
+          {/* 中间内容区：标题栏 + 内容 + 输入框 */}
+          <div className="flex-1 min-w-0 flex flex-col">
+            {/* 顶部 header（永驻） */}
+            {!curConv && (interactiveReady ? (
               <RetryableLazy
-                loader={loadConversation}
+                loader={loadChatHeader}
                 componentProps={{
-                  conversationRef,
-                  fold: hideSidebar ? false : fold,
-                  conv: curConv,
-                  onClose: () => setCurConv(undefined),
+                  headerRef: chatHeaderRef,
+                  conv: curApp || {},
+                  setConvContent: () => {},
                   onUpdateList: handleUpdateList,
-                  onLoadingChange: setConvLoading,
-                  onReportLoadingChange: setReportLoading,
-                  onExploreLoadingChange: setExploreLoading,
-                  onReportPreviewChange: handleReportPreviewChange,
-                  onExplorePreviewChange: handleExplorePreviewChange,
-                  semanticId: selectedData?.schemaId,
-                  semanticGroupId: selectedData?.groupId,
-                  selectedExcel,
+                  setIsSharing: () => {},
+                  onClose: () => {},
                   modelOptions,
                   currentModel,
                   onModelChange: handleModelChange,
-                  embedModelId,
-                  deepThinkEnabled,
-                  spaceId: currentSpaceId,
-                  onHistorySemanticLoaded: setSelectedData,
-                  emptyContent: assistantWelcome,
+                  onEmbedModelFound: setEmbedModelOverride,
                 }}
-                fallback={<LazyFeatureFallback label="正在加载会话内容…" style={{ height: '100%' }} />}
+                fallback={<header aria-busy="true" className="chat-header" style={{ boxSizing: 'border-box', height: 70 }} />}
               />
-            ) : (!routeChatId || routeChatId === 'new') ? (
-              // 待命助手：展示类欢迎页（开场引导、无推荐示例）；绑定资源加载中空置，避免默认欢迎页闪烁。
-              (assistantWelcome ?? (assistantId !== '0' ? null : <NewChatWelcome onExampleClick={handleExampleClick} />))
-            ) : null}
-          </div>
+            ) : (
+              <header aria-busy="true" className="chat-header" style={{ boxSizing: 'border-box', height: 70 }} />
+            ))}
+            
+            {/* 定时任务和工作空间选择器 - 固定在中间栏顶部 */}
+            <div className="middle-column-topright">
+              <button
+                type="button"
+                className="header-schedule-btn"
+                onClick={() => setScheduleOpen(true)}
+                onFocus={() => void loadScheduleTaskDrawer()}
+                onMouseEnter={() => void loadScheduleTaskDrawer()}
+              >
+                <ClockCircleOutlined />
+                定时任务
+              </button>
+              <RetryableLazy
+                loader={loadSpaceSelector}
+                componentProps={{ collapsed: false }}
+                fallback={<div aria-busy="true" className="space-switcher-wrap"><div className="space-switcher-glass h-9 w-32 animate-pulse" /></div>}
+              />
+              {scheduleOpen && (
+                <RetryableLazy
+                  loader={loadScheduleTaskDrawer}
+                  componentProps={{ open: scheduleOpen, onClose: () => setScheduleOpen(false) }}
+                  fallback={<LazyFeatureFallback label="正在加载定时任务…" style={{ position: 'fixed', inset: '0 0 0 auto', zIndex: 1000, width: 480, minHeight: '100vh' }} />}
+                />
+              )}
+            </div>
+            {/* 内容区域：overflow-hidden 建立 BFC，确保内部 h-full 正确解析高度 */}
+            <div className="flex-1 min-h-0 overflow-hidden">
+              {curConv ? (
+                <RetryableLazy
+                  loader={loadConversation}
+                  componentProps={{
+                    conversationRef,
+                    fold: hideSidebar ? false : fold,
+                    conv: curConv,
+                    onClose: () => setCurConv(undefined),
+                    onUpdateList: handleUpdateList,
+                    onLoadingChange: setConvLoading,
+                    onReportLoadingChange: setReportLoading,
+                    onExploreLoadingChange: setExploreLoading,
+                    onReportPreviewChange: handleReportPreviewChange,
+                    onExplorePreviewChange: handleExplorePreviewChange,
+                    semanticId: selectedData?.schemaId,
+                    semanticGroupId: selectedData?.groupId,
+                    selectedExcel,
+                    modelOptions,
+                    currentModel,
+                    onModelChange: handleModelChange,
+                    embedModelId,
+                    deepThinkEnabled,
+                    spaceId: currentSpaceId,
+                    onHistorySemanticLoaded: setSelectedData,
+                    emptyContent: assistantWelcome,
+                    studioPortal: studioPortalEl,
+                    reportPortal: reportPortalEl,
+                  }}
+                  fallback={<LazyFeatureFallback label="正在加载会话内容…" style={{ height: '100%' }} />}
+                />
+              ) : (!routeChatId || routeChatId === 'new') ? (
+                (assistantWelcome ?? (assistantId !== '0' ? null : <NewChatWelcome onExampleClick={handleExampleClick} />))
+              ) : null}
+            </div>
 
-          {/* 动画层只改变可见性和占位高度，ChatInput 始终挂载以保留未发送草稿。 */}
-          <div className={`report-composer-presence ${reportPreviewOpen || explorePreviewOpen ? 'report-composer-hidden' : ''}`} aria-hidden={reportPreviewOpen || explorePreviewOpen}>
+            {/* 动画层只改变可见性和占位高度，ChatInput 始终挂载以保留未发送草稿。报告预览已移至独立面板，输入框保持可见。 */}
+            <div className="report-composer-presence">
             <div className="report-composer-presence-inner">
               <div className="composer-wrap">
                 <div className="max-w-[53.75rem] w-full m-auto">
@@ -792,6 +838,17 @@ const ConversationAnalysis: React.FC<ConversationAnalysisProps> = ({ spaceId: pr
               </div>
             </div>
           </div>
+          </div>
+
+          {/* 右侧独立面板：工作室和报告预览 */}
+          <div
+            ref={setStudioPortalEl}
+            className={`right-panel ${explorePreviewOpen ? 'right-panel-open' : ''}`}
+          />
+          <div
+            ref={setReportPortalEl}
+            className={`right-panel ${reportPreviewOpen ? 'right-panel-open' : ''}`}
+          />
         </div>
       </div>
       {visible && (

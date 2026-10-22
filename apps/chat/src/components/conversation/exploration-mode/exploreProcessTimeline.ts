@@ -64,7 +64,7 @@ export function reduceExploreProcess(item: ExploreItem, event: ExploreStreamEven
 }
 
 /** 中止或断流时结束仍在运行的节点，保留已完成结果。 */
-export function settleExploreItem(item: ExploreItem, status: Exclude<ExploreStatus, 'running'>, finishReason?: string, error?: ExploreItem['error']): ExploreItem {
+export function settleExploreItem(item: ExploreItem, status: Exclude<ExploreStatus, 'running' | 'queued'>, finishReason?: string, error?: ExploreItem['error']): ExploreItem {
   const stepStatus = status === 'completed' ? 'done' : status
   return {
     ...item,

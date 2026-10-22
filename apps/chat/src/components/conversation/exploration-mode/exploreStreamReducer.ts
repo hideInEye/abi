@@ -1,5 +1,5 @@
 import { reduceExploreProcess, settleExploreItem } from './exploreProcessTimeline'
-import type { ExploreItem, ExploreStep, ExploreStreamEvent, ExploreTask } from './types'
+import type { ExploreItem, ExploreStatus, ExploreStep, ExploreStreamEvent, ExploreTask } from './types'
 
 const EXPLORE_EVENT_TYPES = new Set([
   'plan.thought',
@@ -83,7 +83,8 @@ export function reduceExploreEvent(item: ExploreItem, event: ExploreStreamEvent)
   const next = reduceExploreSnapshot(item, event)
   if (next === item) return item
   const withProcess = { ...next, processTimeline: reduceExploreProcess(item, event) }
-  return withProcess.status === 'running' ? withProcess : settleExploreItem(withProcess, withProcess.status)
+  // reducer 只处理 running 项，此处 status 必为终态（completed/failed/cancelled）
+  return withProcess.status === 'running' ? withProcess : settleExploreItem(withProcess, withProcess.status as Exclude<ExploreStatus, 'running' | 'queued'>)
 }
 
 function reduceExploreSnapshot(item: ExploreItem, event: ExploreStreamEvent): ExploreItem {

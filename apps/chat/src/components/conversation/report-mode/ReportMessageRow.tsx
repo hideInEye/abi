@@ -95,7 +95,7 @@ const ReportMessageRow: React.FC<ReportMessageRowProps> = ({ report, onToggleThi
           <div className={styles.answerHeader}>
             <div className={styles.answerTitle}>
               <FileSearchOutlined />
-              报告生成
+              报告模式
               <span
                 className={`${styles.reportStatusBadge} ${STATUS_TONE_CLASS_NAMES[statusMeta.tone]}`}
                 data-status={report.status}

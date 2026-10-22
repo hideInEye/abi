@@ -107,6 +107,10 @@ type MessageListProps = {
   onCloseExplore?: () => void
   /** 探索代码块点击编辑时打开右侧代码编辑面板。 */
   onEditExploreCode?: (payload: ExploreCodeEditPayload) => void
+  /** 取消排队中的探索项。 */
+  onCancelExploreQueued?: (item: ExploreItem) => void
+  /** 停止当前执行中的探索任务。 */
+  onStopExplore?: () => void
   /** 当前在右侧工作室打开的探索项 id。 */
   activeExploreId?: string
   /** 报告预览占用右侧空间时隐藏问题导航，避免导航面板覆盖双栏内容。 */
@@ -158,6 +162,8 @@ const MessageList = ({
   exploreLocateStepId,
   onCloseExplore,
   onEditExploreCode,
+  onCancelExploreQueued,
+  onStopExplore,
   activeExploreId,
   hideMessageNavRail = false,
   emptyContent,
@@ -165,6 +171,30 @@ const MessageList = ({
   const containerRef = chatContainerRef ?? useRef<HTMLDivElement>(null)
   const [scrollTop, setScrollTop] = useState(0)
   const [containerHeight, setContainerHeight] = useState(0)
+
+  // ── 探索模式自动滚动到底部 ──
+  // 判断用户是否在底部附近（距底 120px 以内），是时跟随流式更新自动滚动
+  const isNearBottomRef = useRef(true)
+  const prevExploreCountRef = useRef(explorationItems.length)
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+    isNearBottomRef.current = distanceFromBottom < 120
+  })
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el || explorationItems.length === 0) return
+    // 新项入队或正在执行中的项有流式更新时，如果用户在底部附近则自动滚动
+    const hasRunning = explorationItems.some((item) => item.status === 'running' || item.status === 'queued')
+    const countChanged = explorationItems.length !== prevExploreCountRef.current
+    prevExploreCountRef.current = explorationItems.length
+    if ((hasRunning || countChanged) && isNearBottomRef.current) {
+      requestAnimationFrame(() => {
+        el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+      })
+    }
+  }, [explorationItems])
 
   // ── 查看语义 Modal 状态 ──
   const [semModalOpen, setSemModalOpen] = useState(false)
@@ -371,6 +401,10 @@ const MessageList = ({
             onOpen: () => onOpenExplore?.(exploration.id),
             onClose: onCloseExplore,
             onEditCode: onEditExploreCode,
+            onCancelQueued: exploration.status === 'queued' && onCancelExploreQueued
+              ? () => onCancelExploreQueued(exploration)
+              : undefined,
+            onStop: exploration.status === 'running' ? onStopExplore : undefined,
             onDelete: deleteRoundIndex !== undefined && onEnterDeleteMode
               ? () => onEnterDeleteMode({ deleteRoundIndex })
               : undefined,

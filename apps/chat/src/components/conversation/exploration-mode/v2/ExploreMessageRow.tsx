@@ -1,4 +1,4 @@
-import { CompassOutlined, CopyOutlined, DeleteOutlined, DislikeOutlined, ExpandOutlined, FileTextOutlined, LikeOutlined, RightOutlined, ShrinkOutlined } from '@ant-design/icons'
+import { ClockCircleOutlined, CloseOutlined, CompassOutlined, CopyOutlined, DeleteOutlined, DislikeOutlined, ExpandOutlined, FileTextOutlined, LikeOutlined, RightOutlined, ShrinkOutlined, StopOutlined } from '@ant-design/icons'
 import { Dropdown, Tooltip, message } from 'antd'
 import { type RefObject, useEffect, useId, useMemo, useRef, useState } from 'react'
 
@@ -23,13 +23,17 @@ export interface ExploreMessageRowProps {
   readonly onDelete?: (item: ExploreItem) => void
   readonly onEditCode?: (payload: ExploreCodeEditPayload) => void
   readonly onOpen?: () => void
+  /** 取消排队（仅 status='queued' 时生效） */
+  readonly onCancelQueued?: (item: ExploreItem) => void
+  /** 停止当前执行中的探索任务（仅 status='running' 时生效） */
+  readonly onStop?: () => void
   readonly scrollContainerRef?: RefObject<HTMLDivElement>
 }
 
-const STATUS_LABELS = { running: '探索执行中', completed: '探索已完成', failed: '探索失败', cancelled: '探索已取消' }
-const STATUS_BADGES = { running: '执行中', completed: '已完成', failed: '失败', cancelled: '已取消' }
+const STATUS_LABELS = { queued: '探索排队中', running: '探索执行中', completed: '探索已完成', failed: '探索失败', cancelled: '探索已取消' } as Record<string, string>
+const STATUS_BADGES = { queued: '排队中', running: '执行中', completed: '已完成', failed: '失败', cancelled: '已取消' } as Record<string, string>
 
-function ExploreMessage({ item, active, onOpen, onClose, onEditCode, onDelete, compact, scrollContainerRef, locateStepId }: ExploreMessageRowProps) {
+function ExploreMessage({ item, active, onOpen, onClose, onEditCode, onDelete, onCancelQueued, onStop, compact, scrollContainerRef, locateStepId }: ExploreMessageRowProps) {
   const processId = useId()
   const rootRef = useRef<HTMLElement>(null)
   const beforeToggle = useExploreScroll(item, scrollContainerRef)
@@ -81,6 +85,29 @@ function ExploreMessage({ item, active, onOpen, onClose, onEditCode, onDelete, c
     const timer = setTimeout(() => setHighlightId(undefined), 1600)
     return () => clearTimeout(timer)
   }, [highlightId])
+
+  // 排队中：简化卡片，等待标识在问题上方，与问题气泡等高
+  if (item.status === 'queued') {
+    return (
+      <article ref={rootRef} className={`${styles.message} ${compact ? styles.compact : ''}`} data-explore-id={item.id}>
+        <div className={styles.questionWrap}>
+          <div className={styles.questionColumn}>
+            {/* 等待执行标识：与问题气泡等高 */}
+            <div className={styles.queuedBadge}>
+              <ClockCircleOutlined />
+              <span>等待执行</span>
+            </div>
+            <div className={styles.question}>{item.question}</div>
+            <div className={styles.questionActions}>
+              <Tooltip title="复制"><button type="button" className={styles.questionActionButton} aria-label="复制" onClick={copyQuestion}><CopyOutlined /></button></Tooltip>
+              {onCancelQueued && <Tooltip title="取消排队"><button type="button" className={styles.questionActionButton} aria-label="取消排队" onClick={() => onCancelQueued(item)}><CloseOutlined /></button></Tooltip>}
+            </div>
+          </div>
+        </div>
+      </article>
+    )
+  }
+
   return (
     <article ref={rootRef} className={`${styles.message} ${compact ? styles.compact : ''}`} data-explore-id={item.id}>
       <div className={styles.questionWrap}>
@@ -88,6 +115,7 @@ function ExploreMessage({ item, active, onOpen, onClose, onEditCode, onDelete, c
           <div className={styles.question}>{item.question}</div>
           <div className={styles.questionActions}>
             <Tooltip title="复制"><button type="button" className={styles.questionActionButton} aria-label="复制" onClick={copyQuestion}><CopyOutlined /></button></Tooltip>
+            {item.status === 'running' && onStop && <Tooltip title="停止执行"><button type="button" className={`${styles.questionActionButton} ${styles.stopButton}`} aria-label="停止执行" onClick={onStop}><StopOutlined /></button></Tooltip>}
             {onDelete && <Tooltip title="删除"><button type="button" className={styles.questionActionButton} aria-label="删除" onClick={() => onDelete(item)}><DeleteOutlined /></button></Tooltip>}
           </div>
         </div>
@@ -97,7 +125,7 @@ function ExploreMessage({ item, active, onOpen, onClose, onEditCode, onDelete, c
           <button type="button" className={`${styles.toggle} ${styles.headerToggle}`} aria-label={STATUS_LABELS[item.status]} aria-expanded={open} aria-controls={processId}
             onClick={(event) => disclosure.toggle('process', automatic, event.currentTarget)}>
             <CompassOutlined />
-            <span className={styles.headerTitle}>探索分析</span>
+            <span className={styles.headerTitle}>探索模式</span>
             <span className={styles.statusBadge} data-status={item.status}><span className={styles.statusDot} aria-hidden="true" />{STATUS_BADGES[item.status]}</span>
             <RightOutlined className={`${styles.chevron} ${open ? styles.expanded : ''}`} />
           </button>
@@ -111,7 +139,6 @@ function ExploreMessage({ item, active, onOpen, onClose, onEditCode, onDelete, c
             <ExploreProcess blocks={blocks} disclosure={disclosure} onEditCode={onEditCode} highlightStepId={highlightId} />
             {!blocks.length && <p className={styles.metadata}>{item.status === 'running' ? '正在规划任务…' : '暂无已保存的过程详情'}</p>}
           </div>}
-          {item.status === 'running' && <p className={styles.hint}>正在处理中，请留在当前对话页面，离开将中断任务。</p>}
           {item.status === 'failed' && <p role="alert" className={styles.error}>{item.error?.message || '探索未完成。'}</p>}
           {item.status === 'cancelled' && <p className={styles.hint}>已停止探索。</p>}
           {summary && <section className={`${styles.finalSummary} ${open ? styles.summarySeparated : ''}`} aria-label="最终摘要"><ExploreRichText text={summary} /></section>}

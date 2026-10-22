@@ -1,6 +1,6 @@
 import type { ImageAttachment } from '../components/chat-input/imageAttachment'
 
-export type ExploreStatus = 'running' | 'completed' | 'failed' | 'cancelled'
+export type ExploreStatus = 'queued' | 'running' | 'completed' | 'failed' | 'cancelled'
 
 export type ExploreTaskStatus = 'pending' | 'in_progress' | 'completed' | 'failed' | 'cancelled' | string
 
@@ -81,6 +81,10 @@ export interface ExploreItem {
     message: string
   }
   createdAt: number
+  /** 排队队列项标识；status='queued' 时存在，出队执行后清除。用于取消排队。 */
+  queueId?: string
+  /** 队列中的位置（1-based）；status='queued' 时存在，出队执行后清除。用于 UI 显示排队位置。 */
+  queuePosition?: number
 }
 
 export type ExploreStreamEvent =

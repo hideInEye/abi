@@ -1569,18 +1569,17 @@ button {
   border-color: var(--accent);
 }
 
-/* ── Space Switcher 右上角入口 ── */
+/* ── Space Switcher 中间栏顶部入口 ── */
 .space-switcher-wrap {
   display: inline-flex;
 }
-.chat-space-topright {
-  position: absolute;
-  top: 14px;
-  right: 20px;
-  z-index: 20;
+.middle-column-topright {
   display: flex;
   align-items: center;
   gap: 10px;
+  padding: 10px 20px;
+  justify-content: flex-end;
+  flex-shrink: 0;
 }
 
 /* ── Space Picker Dropdown ── */
@@ -2006,13 +2005,12 @@ button {
 
 /* 用 Grid 轨道收展占位，同时用较慢的透明度和位移动画完成输入区淡入淡出。 */
 .report-composer-presence {
-  display: grid;
-  grid-template-rows: 1fr;
+  display: flex;
+  flex-direction: column;
   opacity: 1;
   transform: translateY(0);
   visibility: visible;
   transition:
-    grid-template-rows 0.6s cubic-bezier(0.22, 1, 0.36, 1),
     opacity 0.6s ease,
     transform 0.6s cubic-bezier(0.22, 1, 0.36, 1),
     visibility 0s linear;
@@ -2020,19 +2018,49 @@ button {
 
 .report-composer-presence-inner {
   min-height: 0;
+  overflow: hidden;
 }
 
 .report-composer-hidden {
-  grid-template-rows: 0fr;
+  height: 0;
   opacity: 0;
   pointer-events: none;
   transform: translateY(16px);
   visibility: hidden;
+  overflow: hidden;
   transition:
-    grid-template-rows 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+    height 0.6s cubic-bezier(0.22, 1, 0.36, 1),
     opacity 0.6s ease,
     transform 0.6s cubic-bezier(0.22, 1, 0.36, 1),
-    visibility 0s linear 0.6s;
+    visibility 0.6s ease;
+}
+
+/* 右侧独立面板：工作室和报告预览 */
+.right-panel {
+  display: flex;
+  width: 0;
+  min-width: 0;
+  min-height: 0;
+  flex-shrink: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    width 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.2s ease;
+}
+
+.right-panel-open {
+  width: 48%;
+  opacity: 1;
+  pointer-events: auto;
+  border-left: 1px solid rgba(130, 140, 200, 0.16);
+}
+
+.right-panel > * {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
 }
 
 

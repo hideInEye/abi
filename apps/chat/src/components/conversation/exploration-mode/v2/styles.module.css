@@ -150,6 +150,7 @@
 .questionActions { display: flex; align-items: center; gap: 2px; margin-top: 4px; opacity: 0; visibility: hidden; transition: opacity 0.15s ease; }
 .questionColumn:hover .questionActions, .questionColumn:focus-within .questionActions { opacity: 1; visibility: visible; }
 .actions button:hover, .questionActionButton:hover { color: var(--accent); background: var(--accent-soft); }
+.stopButton:hover { color: var(--danger) !important; background: color-mix(in srgb, var(--danger) 10%, transparent) !important; }
 
 @container (max-width: 440px) {
   .questionColumn { max-width: 95%; }
@@ -166,3 +167,20 @@
 .compact .answerBody { padding: 14px 12px 6px; }
 .compact .actions { margin-right: 12px; margin-left: 12px; }
 @media (hover: none) { .questionActions { opacity: 1; visibility: visible; } }
+
+/* 排队等待状态标识：位于问题气泡上方，与问题等高，无背景色 */
+.queuedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  color: var(--ink-2, #6b7280);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.75;
+  white-space: nowrap;
+}
+.queuedBadge > :global(.anticon) {
+  font-size: 14px;
+  animation: explore-chip-pulse 1.4s infinite;
+}
