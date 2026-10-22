@@ -37,7 +37,6 @@ export function fetchOperateNew(data: any = {}) {
       spaceId: data.spaceId ?? getSpaceId(store.getState()),
       favorType: data.favorType ?? 'chat',
       favorId: data.favorId ?? data.sessionId ?? data.chatId,
-      spaceId: resolveFavoriteSpaceId(data.spaceId),
     },
   });
 }
@@ -50,7 +49,6 @@ export function fetchOperateNewList(data: any = {}) {
     params: {
       spaceId: data.spaceId ?? getSpaceId(store.getState()),
       favorType: data.favorType ?? 'chat',
-      spaceId: resolveFavoriteSpaceId(data.spaceId),
       pageNum: data.pageNum ?? 1,
       pageSize: data.pageSize ?? 999,
     },

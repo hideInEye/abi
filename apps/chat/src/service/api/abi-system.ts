@@ -77,7 +77,6 @@ function buildFavoriteParams(data: FavoriteParams = {}) {
     spaceId: data.spaceId ?? getSpaceId(),
     favorType: data.favorType ?? 'chat',
     favorId: data.favorId ?? data.sessionId ?? data.chatId,
-    spaceId: resolveFavoriteSpaceId(data.spaceId),
   }
 }
 
@@ -120,7 +119,6 @@ export function fetchFavoriteList(data: FavoriteParams & { pageNum?: number; pag
     params: {
       spaceId: data.spaceId ?? getSpaceId(),
       favorType: data.favorType ?? 'chat',
-      spaceId: resolveFavoriteSpaceId(data.spaceId),
       pageNum: data.pageNum ?? 1,
       pageSize: data.pageSize ?? 999,
     },
