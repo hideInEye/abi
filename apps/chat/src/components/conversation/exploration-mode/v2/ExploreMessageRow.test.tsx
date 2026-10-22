@@ -70,7 +70,8 @@ describe('新版探索消息结构', () => {
     const markup = renderToStaticMarkup(<ExploreMessageRow item={{ ...completed(), status }} />)
     expect(markup).toContain('aria-label="探索执行过程"')
     expect(markup).not.toContain('探索已完成')
-    expect(markup).toContain('已收到的内容已保留')
+    expect(markup).not.toContain('已收到的内容已保留')
+    expect(markup).toContain(status === 'cancelled' ? '已停止探索' : '探索未完成')
   })
 
   it('无执行结果时保存为文档入口禁用', () => {

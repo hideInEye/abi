@@ -1,5 +1,5 @@
 import type { FlatRequestInstance } from '@sa/axios';
-import { BACKEND_ERROR_CODE } from '@sa/axios';
+import { BACKEND_ERROR_CODE, resolveBackendErrorMessage } from '@sa/axios';
 import { AxiosError } from 'axios';
 import type { AxiosInstance, AxiosResponse } from 'axios';
 
@@ -72,9 +72,11 @@ export function handleError(
   // }
 
   // get backend error message and code
-  if (error.code === BACKEND_ERROR_CODE) {
-    // 部分旧接口（如 chat-proxy 的 llmeval）用 err_msg 字段返回错误信息，作为 msg 的兜底，保证只弹出一条真实报错
-    message = error.response?.data?.msg || (error.response?.data as any)?.err_msg || message;
+  if (error.response) {
+    // 统一按错误枚举值归纳展示：优先后端归纳描述（部分旧接口如 chat-proxy 的 llmeval 用 err_msg 兜底），
+    // 泄漏的原始异常文本不回前端页面，回退前端枚举文案
+    const data = error.response.data as any;
+    message = resolveBackendErrorMessage({ code: data?.code ?? error.response.status, msg: data?.msg, message: data?.err_msg || data?.message });
   }
 
   // 业务码独立于 error.code 提取：后端可能以非 2xx（如 500）+ 响应体业务码 401 返回鉴权失效

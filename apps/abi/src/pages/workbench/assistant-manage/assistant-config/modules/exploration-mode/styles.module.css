@@ -434,10 +434,13 @@
 /* 左栏底部提示语：任务运行中提醒用户留在当前页面 */
 .runningHint {
   margin-top: auto;
-  color: var(--ink-3, #8a97ad);
+  color: var(--danger, #ef4444);
+  font-weight: 600;
   font-size: 12.5px;
   line-height: 1.7;
   padding: 12px 16px 14px;
+  border-radius: 12px;
+  background: rgba(239, 68, 68, 0.08);
 }
 
 /* ── 右侧全高工作室侧栏 ── */

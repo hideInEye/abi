@@ -40,6 +40,7 @@
 - ABI：`apps/abi/src/service/request/error.ts` 统一处理 backend fail 和 network error。
 - Chat：`apps/chat/src/service/request/index.ts` axios interceptors 中处理 401 和 console error。
 - Dashboard：`apps/dashboard/src/utils/FetchUtil.ts` 返回 `{ code, msg, data }`，并在 401 调用 token 过期流程。
+- 统一报错文案：`packages/axios` 的 `resolveBackendErrorMessage` 优先后端归纳描述，命中原始异常特征（堆栈/SQL/超长）时按错误枚举值回退前端归纳文案；abi/chat/chat-sdk 请求层统一经它展示，组件层不透传 `msg` 原文、不与请求层重复弹窗。
 
 ## 异步处理
 

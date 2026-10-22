@@ -2,6 +2,7 @@ import { store } from '@/store';
 import { getSpaceId } from '@/store/slice/app';
 
 import { apiRequest } from '../request';
+import { readPersistedSpaceId } from '../../utils/spaceStorage';
 
 export async function queryOperateRecordList(params: any) {
   const res: any = await apiRequest({
@@ -40,7 +41,7 @@ export function fetchOperateNew(data: any = {}) {
   });
 }
 
-// 收藏列表接口
+// 收藏列表接口，按当前空间查询
 export function fetchOperateNewList(data: any = {}) {
   return apiRequest({
     url: "/api/abi-system/favorite/list",

@@ -71,12 +71,10 @@ export const Component: React.FC & { loader?: () => Promise<any> } = () => {
 
   const handleCollect = async (id: string) => {
     const res: any = await fetchOperateNew({ sessionId: id, type: 2 });
-    if (res.response.data.code !== 200) {
-      message.error(res.response.data.msg);
-    } else {
-      message.success(res.response.data.msg);
-      getRecordList();
-    }
+    // 失败时请求层已全局弹后端 msg，此处不再重复弹错误提示
+    if (res.response.data.code !== 200) return;
+    message.success(res.response.data.msg);
+    getRecordList();
   };
 
   // 前端按收藏时间过滤 + 前端分页（apiFn 返回全量数据）

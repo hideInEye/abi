@@ -15,6 +15,7 @@ import { AssistantIconBlock } from '@/components/AssistantIcon';
 import type { AssistantIconKey } from '@/components/AssistantIcon';
 
 import SkillDetailDrawer from './modules/skill-detail-drawer';
+import { filterSkillsByTab, isBuiltinSkill } from './skill-type';
 import SkillEditDrawer from './modules/skill-edit-drawer';
 import SkillPublishDrawer from './modules/skill-publish-drawer';
 
@@ -180,6 +181,8 @@ export function Component() {
 
   // 广场卡片右上角「添加」：走收藏接口（addOrRemove 由后端切换状态），类型为 skill，按响应 favoriteStatus 回写，不做乐观更新、不落本地存储
   async function handleAddSkill(item: SkillItem) {
+    // 内置技能由系统默认下发，不存在添加动作
+    if (isBuiltinSkill(item.skillType)) return;
     const id = String(item.id);
     if (myIds.includes(id)) {
       message.info('已在我的技能中');
@@ -188,6 +191,8 @@ export function Component() {
     try {
       const res: any = await fetchOperateNew({ favorType: 'skill', favorId: item.id });
       const body = res?.response?.data;
+      // 仅后端明确返回 200 才算成功：失败时请求层已弹后端 msg，此处直接退出避免再叠成功弹窗
+      if (Number(body?.code) !== 200) return;
       const favorited = Number(body?.data?.favoriteStatus ?? body?.favoriteStatus) === 1;
       setMyIds(prev => (favorited ? [...prev.filter(v => v !== id), id] : prev.filter(v => v !== id)));
       message.success(favorited ? '添加成功' : '取消添加成功');
@@ -198,10 +203,14 @@ export function Component() {
 
   // 我的技能卡片右上角「移除」：同一收藏接口，addOrRemove 自动取消收藏，按响应 favoriteStatus 回写
   async function handleRemoveSkill(item: SkillItem) {
+    // 内置技能为系统基本能力，不可移除
+    if (isBuiltinSkill(item.skillType)) return;
     const id = String(item.id);
     try {
       const res: any = await fetchOperateNew({ favorType: 'skill', favorId: item.id });
       const body = res?.response?.data;
+      // 同上：非 200 时全局已弹错误提示，不再回写集合或弹成功
+      if (Number(body?.code) !== 200) return;
       const favorited = Number(body?.data?.favoriteStatus ?? body?.favoriteStatus) === 1;
       setMyIds(prev => (favorited ? [...prev.filter(v => v !== id), id] : prev.filter(v => v !== id)));
       message.success(favorited ? '添加成功' : '取消添加成功');
@@ -211,6 +220,8 @@ export function Component() {
   }
 
   function confirmDelete(item: SkillItem) {
+    // 内置技能为系统能力，不提供删除
+    if (isBuiltinSkill(item.skillType)) return;
     modal.confirm({
       title: '确认删除该技能？',
       content: `将删除${item.bizName}，删除后不可恢复。`,
@@ -243,10 +254,16 @@ export function Component() {
       cancelText: t('common.cancel'),
       onOk: async () => {
         try {
+          // 内置技能不可删除：即便被旧选中集带入也在此兜底拦截
+          const ids = selectedRowKeys.filter(k => !isBuiltinSkill(list.find(it => String(it.id) === String(k))?.skillType));
+          if (ids.length === 0) {
+            message.warning('所选技能为系统内置，不可删除');
+            return;
+          }
           await Promise.all(
-            selectedRowKeys.map(id => deleteSkillApi({ skillId: String(id) }))
+            ids.map(id => deleteSkillApi({ skillId: String(id) }))
           );
-          message.success(`成功删除 ${selectedRowKeys.length} 个技能`);
+          message.success(`成功删除 ${ids.length} 个技能`);
           setSelectedRowKeys([]);
           fetchList();
         } catch {
@@ -258,6 +275,8 @@ export function Component() {
 
   // 切换发布/取消发布
   async function toggleSkillStatus(item: SkillItem, publish: boolean) {
+    // 内置技能锁定开启，不接受发布/取消发布
+    if (isBuiltinSkill(item.skillType)) return;
     const nextStatus = publish ? '1' : '0';
     setList(prev => prev.map(it => (it.id === item.id ? { ...it, status: nextStatus } : it)));
     try {
@@ -292,20 +311,8 @@ export function Component() {
   );
 
   const visibleList = useMemo(() => {
-    // 广场可见性规则：公开（PUBLIC）全平台可见；私有（PRIVATE）仅所属空间内或已收藏（我的技能）可见
-    let arr = list.filter(it => {
-      const v = String(it.visibility || '').toUpperCase();
-      if (v !== 'PRIVATE') return true;
-      const inMySpace = String(it.spaceId ?? '') === String(spaceId ?? '');
-      return tab === 'mine'
-        ? inMySpace || myIds.includes(String(it.id))
-        : inMySpace;
-    });
-
-    // 「我的技能」：展示已添加的技能（以收藏接口返回为准）
-    if (tab === 'mine') {
-      arr = arr.filter(it => myIds.includes(String(it.id)));
-    }
+    // 广场/我的技能可见性过滤（内置技能恒可见、我的技能以收藏集合为准）统一走纯函数，见 skill-type.ts
+    let arr = filterSkillsByTab(list, { tab, myIds, spaceId });
 
     // 启用/隐藏状态
     if (statusFilter !== 'ALL') {
@@ -363,7 +370,8 @@ export function Component() {
     {
       title: '状态', dataIndex: 'status', key: 'status',
       align: 'center' as const, minWidth: 80,
-      render: (_: any, record: SkillItem) => <ASwitch checked={String(record.status) === '1'} size="default" onChange={(checked: boolean) => toggleSkillStatus(record, checked)} />
+      // 内置技能锁定为启用态且不可操作
+      render: (_: any, record: SkillItem) => <ASwitch checked={isBuiltinSkill(record.skillType) || String(record.status) === '1'} disabled={isBuiltinSkill(record.skillType)} size="default" onChange={(checked: boolean) => toggleSkillStatus(record, checked)} />
     },
     {
       title: '空间', dataIndex: 'spaceName', key: 'spaceName',
@@ -372,7 +380,14 @@ export function Component() {
     },
     {
       title: '操作', key: 'operate', align: 'center' as const, fixed: 'right' as const, minWidth: 200,
-      render: (_: any, record: SkillItem) => (
+      // 内置技能仅可查看，无编辑/更多入口
+      render: (_: any, record: SkillItem) => isBuiltinSkill(record.skillType) ? (
+        <div className="ds-action-group">
+          <Button className="abi-action-link" size="small" variant="link" onClick={() => goDetail(record)}>
+            <EyeOutlined style={{ marginRight: 3, fontSize: 12 }} />查看
+          </Button>
+        </div>
+      ) : (
         <div className="ds-action-group">
           <Button className="abi-action-link" size="small" variant="link" onClick={() => openEdit(record)}>
             <EditOutlined style={{ marginRight: 3, fontSize: 12 }} />编辑
@@ -559,6 +574,8 @@ export function Component() {
                       fixed: true,
                       selectedRowKeys,
                       onChange: (keys) => setSelectedRowKeys(keys),
+                      // 内置技能不可删除，禁止勾选
+                      getCheckboxProps: (record: any) => ({ disabled: isBuiltinSkill(record.skillType) }),
                     }}
                   />
                 </div>
@@ -575,6 +592,8 @@ export function Component() {
                       const tagCls = online ? '' : 'offline';
                       const iconKey = item.icon || skillIconKey(item.id);
                       const added = myIds.includes(String(item.id));
+                      // 内置技能（skillType=0）：系统下发恒可见，仅可查看，无添加/移除，发布等操作锁定
+                      const builtin = isBuiltinSkill(item.skillType);
                       return (
                         <div
                           key={item.id}
@@ -588,10 +607,13 @@ export function Component() {
                           <div className="ac-head">
                             <AssistantIconBlock iconKey={iconKey} radius={12} size={42} />
                             <div className="ac-main">
-                              <div className="ac-title" title={title}>{title}</div>
+                              <div className="ac-title-row">
+                                <div className="ac-title" title={title}>{title}</div>
+                                {builtin && <span className="ac-builtin-tag">系统</span>}
+                              </div>
                               <div className="ac-desc">{item.summary || '暂无描述'}</div>
                             </div>
-                            {tab === 'plaza' ? (
+                            {builtin ? null : tab === 'plaza' ? (
                               added ? (
                                 <button className="ac-add-btn ac-add-btn--added" onClick={e => { e.stopPropagation(); handleRemoveSkill(item); }}>
                                   已添加
@@ -607,9 +629,12 @@ export function Component() {
                               </button>
                             )}
                           </div>
-                          {/* 底部：状态标签 + 操作（对齐 chat：启用/停用按钮在右下） */}
+                          {/* 底部：状态标签 + 操作（对齐 chat：启用/停用按钮在右下）；内置技能仅展示锁定状态说明 */}
                           <div className="ac-footer" onClick={e => e.stopPropagation()}>
                             <span className={`ac-tag ${tagCls}`}>{statusLabel}</span>
+                            {builtin ? (
+                              <span className="ac-builtin-hint">系统内置 · 默认开启</span>
+                            ) : (
                             <div className="ac-actions">
                               <button className="ac-btn" onClick={() => toggleSkillStatus(item, !online)}>
                                 {online ? '取消发布' : '发布'}
@@ -639,6 +664,7 @@ export function Component() {
                                 <button className="ac-icon-btn"><MoreOutlined /></button>
                               </Dropdown>
                             </div>
+                            )}
                           </div>
                         </div>
                       );

@@ -112,8 +112,8 @@ function ExploreMessage({ item, active, onOpen, onClose, onEditCode, onDelete, c
             {!blocks.length && <p className={styles.metadata}>{item.status === 'running' ? '正在规划任务…' : '暂无已保存的过程详情'}</p>}
           </div>}
           {item.status === 'running' && <p className={styles.hint}>正在处理中，请留在当前对话页面，离开将中断任务。</p>}
-          {item.status === 'failed' && <p role="alert" className={styles.error}>{item.error?.message || '探索未完成，已收到的内容已保留。'}</p>}
-          {item.status === 'cancelled' && <p className={styles.hint}>已停止探索，已收到的内容已保留。</p>}
+          {item.status === 'failed' && <p role="alert" className={styles.error}>{item.error?.message || '探索未完成。'}</p>}
+          {item.status === 'cancelled' && <p className={styles.hint}>已停止探索。</p>}
           {summary && <section className={`${styles.finalSummary} ${open ? styles.summarySeparated : ''}`} aria-label="最终摘要"><ExploreRichText text={summary} /></section>}
         </div>
         <footer className={styles.actions}>

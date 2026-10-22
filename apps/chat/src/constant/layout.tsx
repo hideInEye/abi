@@ -91,6 +91,8 @@ export type SkillCard = {
   enabled: boolean
   /** 技能图标 key（后端存储，跨设备同步） */
   icon?: string
+  /** 技能类型：0 内置技能（系统下发，恒可见恒启用，仅可查看），缺省视为外部技能 */
+  skillType?: number | string
 }
 
 export const skillStoreCards: SkillCard[] = [

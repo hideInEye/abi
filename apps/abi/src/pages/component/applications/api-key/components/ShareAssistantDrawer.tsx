@@ -129,18 +129,17 @@ export function ShareAssistantDrawer({ apiKey, open, onClose }: ShareAssistantDr
     })
   }
 
-  // 列宽用 width 固定 + ellipsis 截断：scroll.x='max-content' 会让 fixed 列触发 auto 布局，长英文内容把列撑开、挤出中文列
   const columns: any[] = [
-    { align: 'center', dataIndex: 'id', ellipsis: true, key: 'appId', width: 120, title: '助手ID' },
-    { align: 'center', dataIndex: 'name', ellipsis: true, key: 'appName', width: 160, render: (value: string) => value || '-', title: '助手名称' },
-    { align: 'center', dataIndex: 'shareUrl', ellipsis: true, key: 'shareUrl', width: 220, render: (value: string) => value || '-', title: '分享链接' },
-    { align: 'center', dataIndex: 'createBy', key: 'createBy', width: 120, render: (value: string) => value || '-', title: '创建人' },
-    { align: 'center', dataIndex: 'createTime', key: 'createTime', width: 180, render: (value: string) => value || '-', title: '创建时间' },
+    { align: 'center', dataIndex: 'id', key: 'appId', minWidth: 120, title: '助手ID' },
+    { align: 'center', dataIndex: 'name', key: 'appName', minWidth: 160, render: (value: string) => value || '-', title: '助手名称' },
+    { align: 'center', dataIndex: 'shareUrl', ellipsis: true, key: 'shareUrl', minWidth: 220, render: (value: string) => value || '-', title: '分享链接' },
+    { align: 'center', dataIndex: 'createBy', key: 'createBy', minWidth: 120, render: (value: string) => value || '-', title: '创建人' },
+    { align: 'center', dataIndex: 'createTime', key: 'createTime', minWidth: 180, render: (value: string) => value || '-', title: '创建时间' },
     {
       align: 'center',
       fixed: 'right' as const,
       key: 'operate',
-      width: 100,
+      minWidth: 100,
       render: (_: unknown, record: AssistantRow) => (
         <AButton className="abi-action-link" size="small" variant="link" onClick={() => setShareAgent(record)}>
           <ShareAltOutlined style={{ marginRight: 3, fontSize: 12 }} />分享
@@ -162,7 +161,7 @@ export function ShareAssistantDrawer({ apiKey, open, onClose }: ShareAssistantDr
                   dataSource={pagedList}
                   pagination={false}
                   rowKey="id"
-                  scroll={{ x: 900 }}
+                  scroll={{ x: 'max-content' }}
                   size="middle"
                   className="abi-std-table"
                 />
