@@ -1,3 +1,6 @@
+import { store } from '@/store';
+import { getSpaceId } from '@/store/slice/app';
+
 import { apiRequest } from '../request';
 import { readPersistedSpaceId } from '../../utils/spaceStorage';
 
@@ -24,17 +27,14 @@ export const getOperateRecordList = (type: string, pagination?: {pageNumber: num
   });
 }
 
-// 收藏接口按空间隔离：spaceId 优先调用方传入，否则取当前空间；用户由后端从 token 解析，不再传参
-function resolveFavoriteSpaceId(spaceId?: string | number) {
-  return (spaceId ?? readPersistedSpaceId()) || undefined;
-}
-
 // 新版收藏（收藏/取消收藏，状态由后端切换）
 export function fetchOperateNew(data: any = {}) {
   return apiRequest({
     url: "/api/abi-system/favorite/addOrRemove",
     method: "post",
     params: {
+      // 收藏按当前空间隔离，默认读取 store，避免恢复历史缓存中的空间。
+      spaceId: data.spaceId ?? getSpaceId(store.getState()),
       favorType: data.favorType ?? 'chat',
       favorId: data.favorId ?? data.sessionId ?? data.chatId,
       spaceId: resolveFavoriteSpaceId(data.spaceId),
@@ -48,6 +48,7 @@ export function fetchOperateNewList(data: any = {}) {
     url: "/api/abi-system/favorite/list",
     method: "get",
     params: {
+      spaceId: data.spaceId ?? getSpaceId(store.getState()),
       favorType: data.favorType ?? 'chat',
       spaceId: resolveFavoriteSpaceId(data.spaceId),
       pageNum: data.pageNum ?? 1,

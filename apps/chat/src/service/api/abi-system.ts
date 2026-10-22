@@ -65,20 +65,16 @@ export function fetchOperate(_data: any) {
 interface FavoriteParams {
   favorId?: string | number
   favorType?: string
-  spaceId?: string | number
+  spaceId?: number | string
   // 兼容旧调用（对话 ID）
   sessionId?: string | number
   chatId?: string | number
 }
 
-// 收藏接口按空间隔离：spaceId 优先调用方传入，否则取当前空间；用户由后端从 token 解析，不再传参
-function resolveFavoriteSpaceId(spaceId?: string | number) {
-  return (spaceId ?? getSpaceId()) || undefined
-}
-
-// 统一构造收藏相关接口的 query 参数：favorType + favorId + spaceId
+// 收藏按空间隔离，未显式指定时在请求发起时读取当前空间，避免沿用旧空间。
 function buildFavoriteParams(data: FavoriteParams = {}) {
   return {
+    spaceId: data.spaceId ?? getSpaceId(),
     favorType: data.favorType ?? 'chat',
     favorId: data.favorId ?? data.sessionId ?? data.chatId,
     spaceId: resolveFavoriteSpaceId(data.spaceId),
@@ -116,12 +112,13 @@ export function fetchOperateRecordList(type: string) {
   });
 }
 
-// 收藏列表（应用工坊-我的收藏），按当前空间查询
+// 收藏列表（应用工坊-我的收藏）
 export function fetchFavoriteList(data: FavoriteParams & { pageNum?: number; pageSize?: number } = {}) {
   return request({
     url: "/api/abi-system/favorite/list",
     method: "get",
     params: {
+      spaceId: data.spaceId ?? getSpaceId(),
       favorType: data.favorType ?? 'chat',
       spaceId: resolveFavoriteSpaceId(data.spaceId),
       pageNum: data.pageNum ?? 1,

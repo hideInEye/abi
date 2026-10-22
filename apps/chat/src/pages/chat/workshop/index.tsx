@@ -145,7 +145,7 @@ function WorkshopView() {
     setLoading(true)
     const req =
       tab === 'my-collect'
-        ? fetchFavoriteList()
+        ? fetchFavoriteList({spaceId: getSpaceId()})
         : fetchOperateRecordList(tab === 'recently-used' ? '1' : '3')
     req
       .then((res: any) => {

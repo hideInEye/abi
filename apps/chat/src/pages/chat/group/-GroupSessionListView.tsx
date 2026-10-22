@@ -248,7 +248,7 @@ const GroupSessionListView: React.FC<GroupSessionListViewProps> = ({
   const handleSessionMenuOpenChange = useCallback(async (open: boolean, session: any) => {
     if (!open) return
     try {
-      const res: any = await fetchIsFavorite({ favorId: session.chat_id })
+      const res: any = await fetchIsFavorite({ favorId: session.chat_id, spaceId: getSpaceId() })
       const favorited = Number(res?.data?.favoriteStatus) === 1
       setFavoriteChatIds((prev) => {
         const next = new Set(prev)

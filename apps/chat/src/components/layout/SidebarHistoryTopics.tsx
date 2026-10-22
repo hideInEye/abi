@@ -10,6 +10,7 @@ import { useConversationGroups } from '@/hooks/layout/useConversationGroups'
 import { useHistoryTopics } from '@/hooks/layout/useHistoryTopics'
 import { deleteBatchSession, deleteSession, moveSessionToGroup, updateApp } from '@/service/api/app'
 import { fetchIsFavorite, fetchOperateNew } from '@/service/api/abi-system'
+import { getSpaceId } from '@/utils'
 
 const loadCreateModal = () => import('@/components/conversation-analysis/CreateModal')
 const loadEditSessionModal = () => import('@/components/conversation-analysis/EditSessionModal')
@@ -346,7 +347,7 @@ export function SidebarHistoryTopics({ collapsed, suppressActive = false }: Side
       const app = findAppByChatId(chatId)
       if (!app) return
       try {
-        const res: any = await fetchIsFavorite({ favorId: app.chat_id })
+        const res: any = await fetchIsFavorite({ favorId: app.chat_id, spaceId: getSpaceId() })
         const favorited = Number(res?.data?.favoriteStatus) === 1
         setFavoriteChatIds((prev) => {
           const next = new Set(prev)

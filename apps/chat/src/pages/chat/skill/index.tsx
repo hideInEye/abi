@@ -276,9 +276,11 @@ function SkillStoreView() {
     // 内置技能由系统下发，不存在添加/移除
     if (isBuiltinSkill(card.skillType)) return
     try {
-      const res: any = await fetchOperateNew({ favorType: 'skill', favorId: card.key })
-      // 失败时请求层已统一弹归纳文案，此处不重复弹、也不透传后端原文
-      if (res?.code !== 200) return
+      const res: any = await fetchOperateNew({ favorType: 'skill', favorId: card.key, spaceId: getSpaceId() })
+      if (res?.code !== 200) {
+        message.error(res?.message || res?.msg || '操作失败，请稍后再试')
+        return
+      }
       const favorited = Number(res?.data?.favoriteStatus) === 1
       setMyIds((prev) => {
         const next = new Set(prev)

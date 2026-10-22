@@ -401,6 +401,7 @@ export const DimensionBatchMappingDrawer: React.FC<Props> = ({ groupId, groupNam
               placeholder="请选择数据"
               showSearch
               treeData={dataTree}
+              treeExpandAction="click"
               filterTreeNode={(inputValue, treeNode) => String((treeNode as { searchLabel?: number | string })?.searchLabel || '').toLowerCase().includes(inputValue.toLowerCase())}
               value={hasValue(selectedSemanticSchemaId) ? selectedSemanticSchemaId : undefined}
               onTreeExpand={handleTreeExpand}

@@ -465,6 +465,7 @@ const RuleExpressionBuilder = forwardRef<RuleExpressionBuilderHandle, RuleExpres
                                     allowClear
                                     showSearch
                                     treeDefaultExpandAll
+                                    treeExpandAction="click"
                                     dropdownRender={renderFieldDropdown}
                                     fieldNames={{ label: 'title', value: 'value' }}
                                     placeholder="请选择字段"

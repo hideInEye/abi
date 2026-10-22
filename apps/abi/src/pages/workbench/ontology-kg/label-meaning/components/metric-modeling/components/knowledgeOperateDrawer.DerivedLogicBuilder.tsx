@@ -258,6 +258,7 @@ export const KnowledgeOperateDerivedLogicBuilder: React.FC<Props> = ({
                 showSearch
                 treeCheckable
                 treeDefaultExpandAll
+                treeExpandAction="click"
                 loading={dimensionLoading}
                 maxTagCount="responsive"
                 placeholder="请选择主体维度"
