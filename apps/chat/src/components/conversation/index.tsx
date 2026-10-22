@@ -1,6 +1,6 @@
 import { Button, Checkbox, Form, Modal, notification, Segmented } from 'antd'
 import React, { useEffect, useImperativeHandle, useState } from 'react'
-import { flushSync } from 'react-dom'
+import { createPortal, flushSync } from 'react-dom'
 import dayjs from 'dayjs'
 
 import type { ReportSourceVersionFields } from '@/service/api/report'
@@ -394,7 +394,7 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
         </div>
       )}
 
-      <div ref={bodyRef} className={`${reportStyles.body} ${reportPreview.visible || explorePreview.visible || Boolean(codeEditor) ? reportStyles.bodySplit : ''}`}>
+      <div ref={bodyRef} className={`${reportStyles.body} ${reportPreview.visible && !props.reportPortal ? reportStyles.bodySplit : ''}`}>
         <div className={`${reportStyles.conversationPane} ${reportPreview.mounted && reportController.mobileView === 'report' ? reportStyles.mobileHidden : ''}`}>
           <MessageList
             conv={conv}
@@ -434,6 +434,10 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
             exploreLocateStepId={exploreStepId}
             onCloseExplore={closeExplore}
             onEditExploreCode={openCodeEditor}
+            onCancelExploreQueued={(item: any) => {
+              if (item.queueId) exploreController.cancelQueued(item.queueId)
+            }}
+            onStopExplore={exploreController.stopGenerating}
             activeExploreId={activeExploreId}
             hideMessageNavRail={reportPreview.mounted || explorePreview.mounted}
             emptyContent={props.emptyContent}
@@ -441,29 +445,51 @@ const Conversation = React.forwardRef<ConversationHandle, ConversationProps>((pr
         </div>
 
         {reportPreview.renderedReport && (
-          <div
-            className={`${reportStyles.reportPaneWrap} ${reportPreview.visible ? reportStyles.reportPaneWrapOpen : ''} ${reportController.mobileView === 'conversation' ? reportStyles.mobileHidden : ''}`}
-            data-transition-phase={reportPreview.phase}
-          >
-            <RetryableLazy
-              loader={loadReportPreviewPane}
-              componentProps={{ report: reportPreview.renderedReport, animate: reportController.animateReportPreview, onClose: reportController.closeReport }}
-              fallback={<LazyFeatureFallback label="正在加载报告预览…" style={{ width: '100%', height: '100%', minHeight: 360 }} />}
-            />
-          </div>
+          props.reportPortal
+            ? createPortal(
+                <RetryableLazy
+                  loader={loadReportPreviewPane}
+                  componentProps={{ report: reportPreview.renderedReport, animate: reportController.animateReportPreview, onClose: reportController.closeReport }}
+                  fallback={<LazyFeatureFallback label="正在加载报告预览…" style={{ width: '100%', height: '100%', minHeight: 360 }} />}
+                />,
+                props.reportPortal
+              )
+            : (
+              <div
+                className={`${reportStyles.reportPaneWrap} ${reportPreview.visible ? reportStyles.reportPaneWrapOpen : ''} ${reportController.mobileView === 'conversation' ? reportStyles.mobileHidden : ''}`}
+                data-transition-phase={reportPreview.phase}
+              >
+                <RetryableLazy
+                  loader={loadReportPreviewPane}
+                  componentProps={{ report: reportPreview.renderedReport, animate: reportController.animateReportPreview, onClose: reportController.closeReport }}
+                  fallback={<LazyFeatureFallback label="正在加载报告预览…" style={{ width: '100%', height: '100%', minHeight: 360 }} />}
+                />
+              </div>
+            )
         )}
 
         {explorePreview.renderedItem && !reportPreview.mounted && !codeEditor && (
-          <div
-            className={`${reportStyles.reportPaneWrap} ${explorePreview.visible ? reportStyles.reportPaneWrapOpen : ''}`}
-            data-transition-phase={explorePreview.phase}
-          >
-            <RetryableLazy
-              loader={loadExplorePreviewPane}
-              componentProps={{ item: explorePreview.renderedItem, onClose: closeExplore, frozenWidth: exploreFrozenWidth, activeStepId: exploreStepId, onScreenChange: handleExploreScreenChange }}
-              fallback={<LazyFeatureFallback label="正在加载探索结果…" style={{ width: '100%', height: '100%', minHeight: 360 }} />}
-            />
-          </div>
+          props.studioPortal
+            ? createPortal(
+                <RetryableLazy
+                  loader={loadExplorePreviewPane}
+                  componentProps={{ item: explorePreview.renderedItem, onClose: closeExplore, frozenWidth: exploreFrozenWidth, activeStepId: exploreStepId, onScreenChange: handleExploreScreenChange }}
+                  fallback={<LazyFeatureFallback label="正在加载探索结果…" style={{ width: '100%', height: '100%', minHeight: 360 }} />}
+                />,
+                props.studioPortal
+              )
+            : (
+              <div
+                className={`${reportStyles.reportPaneWrap} ${explorePreview.visible ? reportStyles.reportPaneWrapOpen : ''}`}
+                data-transition-phase={explorePreview.phase}
+              >
+                <RetryableLazy
+                  loader={loadExplorePreviewPane}
+                  componentProps={{ item: explorePreview.renderedItem, onClose: closeExplore, frozenWidth: exploreFrozenWidth, activeStepId: exploreStepId, onScreenChange: handleExploreScreenChange }}
+                  fallback={<LazyFeatureFallback label="正在加载探索结果…" style={{ width: '100%', height: '100%', minHeight: 360 }} />}
+                />
+              </div>
+            )
         )}
 
         {codeEditor && !reportPreview.mounted && (

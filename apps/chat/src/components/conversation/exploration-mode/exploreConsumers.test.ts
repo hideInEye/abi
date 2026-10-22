@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useAssistantDebugChat } from '../../../pages/chat/workshop/-useAssistantDebugChat'
 import { streamExplorePlan } from '../../../service/api/conv'
+import { useExploreStore } from '@/store/exploration-mode/exploreStore'
 
 import type { ExploreStreamEvent } from './types'
 import { useExploreConversation } from './useExploreConversation'
@@ -22,7 +23,14 @@ vi.mock('react', () => ({
     return state.slots[index]
   },
   useCallback: (callback: unknown) => callback,
-  useEffect: () => undefined,
+  // useEffect 只在首次 render 时执行（模拟 React 的依赖稳定语义），
+  // 后续 render 不重跑，避免 debug hook 的 resetSession 清空已建立的状态。
+  useEffect: (cb: Function) => {
+    const index = state.cursor++
+    if (!(index in state.slots)) {
+      state.slots[index] = cb()
+    }
+  },
 }))
 vi.mock('antd', () => ({ message: { error: vi.fn() } }))
 vi.mock('../../../service/api/conv', () => ({ streamExplorePlan: vi.fn(), fetchConvMaxRound: vi.fn(async () => ({ code: 200, data: 9 })) }))
@@ -37,6 +45,8 @@ beforeEach(() => {
   state.slots = []
   state.cursor = 0
   vi.clearAllMocks()
+  // 清除 Zustand store 的全局状态，避免跨测试污染
+  useExploreStore.getState().reset()
   vi.mocked(streamExplorePlan).mockImplementation(() => new Promise(() => undefined))
 })
 

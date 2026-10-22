@@ -2,6 +2,7 @@
   position: relative;
   display: flex;
   min-height: 0;
+  height: 100%;
   flex: 1;
   overflow: hidden;
 }
@@ -13,6 +14,7 @@
   flex: 0 0 100%;
   flex-direction: column;
   overflow: hidden;
+  will-change: width, flex-basis;
   transition:
     width 0.3s cubic-bezier(0.22, 1, 0.36, 1),
     flex-basis 0.3s cubic-bezier(0.22, 1, 0.36, 1),

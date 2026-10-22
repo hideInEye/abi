@@ -59,6 +59,10 @@ export interface ConversationProps {
   onHistorySemanticLoaded?: (data: { name: string; schemaId?: number | string; groupId?: number | string; groupName?: string } | null) => void
   /** 消息列表为空时展示的占位内容（如助手会话开场引导欢迎页） */
   emptyContent?: ReactNode
+  /** 工作室面板 Portal 目标容器；由父级提供，工作室内容将渲染到该容器中。 */
+  studioPortal?: HTMLElement | null
+  /** 报告面板 Portal 目标容器；由父级提供，报告内容将渲染到该容器中。 */
+  reportPortal?: HTMLElement | null
 }
 
 interface ConfirmDeleteOptions {

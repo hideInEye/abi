@@ -1,4 +1,3 @@
-import { ClockCircleOutlined } from '@ant-design/icons'
 import { Outlet, createFileRoute, useNavigate, useRouterState } from '@tanstack/react-router'
 import { Fragment, useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import React from 'react'
@@ -18,8 +17,6 @@ import { getCurrentUserName, subscribeCurrentUser } from '@/utils/identity'
 const SKILL_STORE_ROUTE = '/chat/skill'
 const WORKSHOP_ROUTE = '/chat/workshop'
 
-const loadScheduleTaskDrawer = () => import('@/components/layout/ScheduleTaskDrawer').then(module => ({ default: module.ScheduleTaskDrawer }))
-const loadSpaceSelector = () => import('@/components/layout/SpaceSelector').then(module => ({ default: module.SpaceSelector }))
 const loadWorkbenchSidebarPanels = () => import('@/components/layout/WorkbenchSidebarPanels')
 const appLogoUrl = new URL('../../assets/imgs/home_logo.png', import.meta.url).href
 
@@ -59,7 +56,6 @@ function ChatWorkbenchLayoutContent() {
 
   const [collapsed, setCollapsed] = useState(false)
   const [newChatNonce, setNewChatNonce] = useState(0)
-  const [scheduleOpen, setScheduleOpen] = useState(false)
 
   // 技能商店 / 应用工坊已改为独立路由，激活态直接由 pathname 派生
   const showSkillStore = pathname.startsWith(SKILL_STORE_ROUTE)
@@ -160,30 +156,6 @@ function ChatWorkbenchLayoutContent() {
 
       <div className="min-w-0 flex flex-1 flex-col" style={{ background: 'transparent' }}>
         <main className="content-glass relative h-full min-h-0 overflow-hidden">
-          <div className="chat-space-topright">
-            <button
-              type="button"
-              className="header-schedule-btn"
-              onClick={() => setScheduleOpen(true)}
-              onFocus={() => void loadScheduleTaskDrawer()}
-              onMouseEnter={() => void loadScheduleTaskDrawer()}
-            >
-              <ClockCircleOutlined />
-              定时任务
-            </button>
-            <RetryableLazy
-              loader={loadSpaceSelector}
-              componentProps={{ collapsed: false }}
-              fallback={<div aria-busy="true" className="space-switcher-wrap"><div className="space-switcher-glass h-9 w-32 animate-pulse" /></div>}
-            />
-            {scheduleOpen && (
-              <RetryableLazy
-                loader={loadScheduleTaskDrawer}
-                componentProps={{ open: scheduleOpen, onClose: () => setScheduleOpen(false) }}
-                fallback={<LazyFeatureFallback label="正在加载定时任务…" style={{ position: 'fixed', inset: '0 0 0 auto', zIndex: 1000, width: 480, minHeight: '100vh' }} />}
-              />
-            )}
-          </div>
           <SidebarCollapseProvider value={sidebarCollapseContext}>
             <Fragment key={newChatNonce}>
               <Outlet />
